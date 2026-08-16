@@ -1,0 +1,27 @@
+# Dependencias
+node_modules/
+
+# Construcción y salida
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+*.log
+dev.log
+dev.err.log
+
+# .NET / Visual Studio
+bin/
+obj/
+.vs/
+*.user
+*.suo
+Backend/Publish/
+
+# Secretos (contiene contraseña de la BD)
+Backend/FamKon_store_api/appsettings.json
+
+# Sistema
+.DS_Store
+Thumbs.db

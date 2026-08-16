@@ -12,14 +12,16 @@ Backend de la tienda en línea FamKon. Desarrollado con **ASP.NET Core Web API (
 
 | Paquete | Versión | Propósito |
 | ------- | ------- | --------- |
+| Microsoft.EntityFrameworkCore.Design | 9.0.0 | Soporte de diseño de EF Core (migraciones) |
 | Oracle.EntityFrameworkCore | 9.23.26300 | ORM de EF Core para la base de datos Oracle |
 | Swashbuckle.AspNetCore | 10.2.3 | Documentación e interfaz Swagger de los endpoints |
 
-### Comandos de instalación (por si se vuelve a reconstruir el proyecto)
+### Comandos de instalación manual (por si se reconstruye el proyecto)
 
 ```bash
+dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0
 dotnet add package Oracle.EntityFrameworkCore --version 9.23.26300
-dotnet add package Swashbuckle.AspNetCore
+dotnet add package Swashbuckle.AspNetCore --version 10.2.3
 ```
 
 > Nota: no se pudo usar la última versión de Oracle.EntityFrameworkCore (10.x) porque requiere .NET 10. Para .NET 8 se usa la versión 9.x.
@@ -74,6 +76,8 @@ La cadena de conexión está en `appsettings.json`:
   }
 }
 ```
+
+> **Importante:** `appsettings.json` contiene la contraseña de la base de datos y **no se sube al repositorio** (está en `.gitignore`). Al clonar el proyecto, crea este archivo localmente con tu contraseña.
 
 ## Endpoints de la API
 

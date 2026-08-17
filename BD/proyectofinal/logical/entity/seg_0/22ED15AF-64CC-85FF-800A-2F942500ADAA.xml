@@ -1,0 +1,64 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="22ED15AF-64CC-85FF-800A-2F942500ADAA" name="aulas">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:52:19 UTC</createdTime>
+<generatorID>8B05A7FE-4FF3-1EEB-C6A0-8BAAC593103C</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="id aula" id="92882B14-39A4-B359-9506-8CB5FE5DA976">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:52:19 UTC</createdTime>
+<generatorID>02E9A74F-62DD-CA67-02DB-B8900EAB6C8A</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="nom aula" id="BEBCD672-3409-C909-F080-0C17466F1BB2">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:52:19 UTC</createdTime>
+<generatorID>15BEDEDC-3EF0-D8E5-8CAA-9D45C7043DED</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>60 CHAR</dataTypeSize>
+<ownDataTypeParameters>60 CHAR,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="6D19F246-0847-5E0B-7FF9-E3359A6A13C6" name="aulas PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:52:19 UTC</createdTime>
+<generatorID>4318DD26-0205-0E27-17C0-A7E93A6D880F</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<shouldEngineer>false</shouldEngineer>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="false"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>92882B14-39A4-B359-9506-8CB5FE5DA976</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

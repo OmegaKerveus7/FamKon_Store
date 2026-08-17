@@ -1,0 +1,20 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="ventas_metodos_pagos_FK" directorySegmentName="seg_0" id="C9102D78-9B72-374A-CF25-2BDA4E9B8792">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>C8CC91BE-CF29-89A4-012B-355CC04542FE</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<sourcePk>85884809-1521-FD93-76C7-36BA03909550</sourcePk>
+<identifying>false</identifying>
+<optionalSource>false</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>A8934A7C-2DE5-1A34-A25C-DC21D1F20915</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>E839FB21-173D-C9AD-9F61-BC4E1605B414</targetEntity>
+<transferable>true</transferable>
+<deleteRule>CASCADE</deleteRule>
+</Relation>

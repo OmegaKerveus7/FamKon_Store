@@ -1,0 +1,172 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="F1A561DA-5705-2150-D0C6-0A8B3FF39705" name="usauarios">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:33:48 UTC</createdTime>
+<generatorID>61D2BC63-06DE-97DD-4783-82249AB802B8</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="id usuario" id="FF3BC0F2-E1E3-7CE0-39B1-2BBC04D24062">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:33:48 UTC</createdTime>
+<generatorID>043D304D-636C-41A0-2BCF-FB11F9866CC7</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="roles id rol" id="70E7CAAE-8FDB-2F49-ECB6-E511148E29CA">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:33:48 UTC</createdTime>
+<generatorID>8645AF9F-B704-C93A-CF61-1EA2409BA63B</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<referedAttribute>67F30593-714E-E58D-D230-3D4E557B2E76</referedAttribute>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="codigo qr" id="A0F482D3-292A-B49F-8959-F95F5A9C16D3">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:43:37 UTC</createdTime>
+<generatorID>23E458CB-0F4B-6C93-6A06-EC0DD9267CEB</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT025</logicalDatatype>
+<dataTypeSize>8 CHAR</dataTypeSize>
+<ownDataTypeParameters>8 CHAR,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="nombres" id="EE6BF330-81D0-4541-62F0-06EB81F32A50">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:43:37 UTC</createdTime>
+<generatorID>D53C87A1-9758-A605-6055-51C4F9A27A04</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>120 CHAR</dataTypeSize>
+<ownDataTypeParameters>120 CHAR,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="apellidos" id="04B439CF-1206-EFCD-FFA0-8FB1D82E72F4">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:43:37 UTC</createdTime>
+<generatorID>C0096D97-A02F-3955-E54D-145ACAA961E7</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>120 CHAR</dataTypeSize>
+<ownDataTypeParameters>120 CHAR,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="correo" id="BE6CE8F4-4533-AE0A-6218-981A1ECCCB7F">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:43:37 UTC</createdTime>
+<generatorID>947352FB-4FBF-D4EF-7C9A-1D8D8559753E</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>100 CHAR</dataTypeSize>
+<ownDataTypeParameters>100 CHAR,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="contraseña" id="261C278D-E347-58CB-5C9B-C8A198EC56D5">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:43:37 UTC</createdTime>
+<generatorID>0B9BEDBD-E208-2CD1-2B3A-CCA2AE7167C6</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>200 CHAR</dataTypeSize>
+<ownDataTypeParameters>200 CHAR,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="foto o" id="B73FBAE1-6CE0-1944-497E-2A18147CE977">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:43:37 UTC</createdTime>
+<generatorID>7AC78727-E5CC-F15E-CBB1-9716867EC9AB</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT028</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="foto e" id="70F24983-E282-0674-58B2-B227FC9D68C2">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:43:37 UTC</createdTime>
+<generatorID>583C470D-53F7-3B9F-57AF-859888C65CA8</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT028</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="fecha nacaimiento" id="56912496-04F3-0896-980F-80CEC7FDF7F6">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:43:37 UTC</createdTime>
+<generatorID>3F3CDAD0-5A9C-927E-5638-CC3EEE1F270C</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT007</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="396A13A9-F2B6-26A5-5B31-39A852604367" name="usauarios PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:33:48 UTC</createdTime>
+<generatorID>E51035E6-BC3E-765E-FF1B-9C43F842DA76</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<shouldEngineer>false</shouldEngineer>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="false"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>FF3BC0F2-E1E3-7CE0-39B1-2BBC04D24062</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

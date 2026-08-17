@@ -1,0 +1,63 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="A87C8FE6-7E0F-E19A-23AA-8882325B33FA" name="roles">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:36:05 UTC</createdTime>
+<generatorID>3397D753-EE74-3DEA-77FC-C725DDF98DC0</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="id rol" id="67F30593-714E-E58D-D230-3D4E557B2E76">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:36:05 UTC</createdTime>
+<generatorID>8E4A0EB3-50F8-C18A-6730-D208A84876C3</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="nom rol" directorySegmentName="seg_0" id="C9D2AA2C-0D35-D402-B6F4-3F46C7232B8A">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:43:37 UTC</createdTime>
+<generatorID>CC0ECFBF-2C22-B125-AD36-E5E8C992F45D</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>60 CHAR</dataTypeSize>
+<ownDataTypeParameters>60 CHAR,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="DF9216CB-23DB-F0B4-FC63-B5425EF902B0" name="roles PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:36:05 UTC</createdTime>
+<generatorID>9BA3ABC5-7440-990E-1AB9-E2F87C8B8FE0</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<shouldEngineer>false</shouldEngineer>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="false"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>67F30593-714E-E58D-D230-3D4E557B2E76</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

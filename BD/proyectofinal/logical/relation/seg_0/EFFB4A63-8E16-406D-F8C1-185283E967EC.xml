@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="productos marcas FK" directorySegmentName="seg_0" id="EFFB4A63-8E16-406D-F8C1-185283E967EC">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:22:21 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<sourcePk>78D28BB3-7ECC-4F0F-7CD1-61A00DA095B2</sourcePk>
+<identifying>false</identifying>
+<optionalSource>false</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>2EFC19B7-2F33-B0C9-D4DE-83AE7FCCD489</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>A5F72A31-E37F-3E24-3C95-BF97B16B666E</targetEntity>
+<transferable>true</transferable>
+<deleteRule>CASCADE</deleteRule>
+</Relation>

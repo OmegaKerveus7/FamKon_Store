@@ -1,0 +1,20 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="inventario productos FK" directorySegmentName="seg_0" id="FCE493CC-B452-9467-9B24-494516069FAA">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:37:40 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<sourceTransferable>false</sourceTransferable>
+<sourcePk>77BF3035-A55E-9AB5-F840-1D6C96991B9E</sourcePk>
+<identifying>false</identifying>
+<optionalSource>false</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>A5F72A31-E37F-3E24-3C95-BF97B16B666E</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>67E64A0C-A2AB-C0C4-BF3A-758D6DE41357</targetEntity>
+<transferable>true</transferable>
+<deleteRule>CASCADE</deleteRule>
+</Relation>

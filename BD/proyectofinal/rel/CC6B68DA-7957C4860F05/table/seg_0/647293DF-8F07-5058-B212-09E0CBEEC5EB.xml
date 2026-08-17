@@ -1,0 +1,69 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="647293DF-8F07-5058-B212-09E0CBEEC5EB" name="hitsorial_ventas">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:58:30 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<ordsAlias>table_14</ordsAlias>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_hitorial_venta" id="9751E486-5967-BAB2-F3C1-4D99818B0310">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:08:19 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="id_venta" id="DC3FC1BE-EF12-9048-13E5-55C0185C7F7F">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:08:32 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="fecha_venta" id="BA62C6EC-844F-4B96-38C3-22E8D967A9EB">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:09:25 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT008</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="decripcion" id="7FC395E4-4760-9408-032B-74C0FB93A2E8">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:09:25 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>250 CHAR</dataTypeSize>
+<ownDataTypeParameters>250 CHAR,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="739A4E91-F01E-9C05-8D21-927B58951EFF" name="hitsorial_ventas_PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:08:19 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="9751E486-5967-BAB2-F3C1-4D99818B0310"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

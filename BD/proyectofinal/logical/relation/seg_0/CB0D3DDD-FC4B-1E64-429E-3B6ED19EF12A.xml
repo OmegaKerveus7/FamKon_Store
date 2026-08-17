@@ -1,0 +1,20 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="ventas_rutas_FK" directorySegmentName="seg_0" id="CB0D3DDD-FC4B-1E64-429E-3B6ED19EF12A">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>FCA96FF0-3A40-61FA-5DDE-FCA6A6097CFF</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<sourcePk>134202CC-5E50-FE44-7EAD-74581EB5BCBB</sourcePk>
+<identifying>false</identifying>
+<optionalSource>false</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>BED7A01D-BA97-B76E-DA39-C3A32453B8E1</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>E839FB21-173D-C9AD-9F61-BC4E1605B414</targetEntity>
+<transferable>true</transferable>
+<deleteRule>CASCADE</deleteRule>
+</Relation>

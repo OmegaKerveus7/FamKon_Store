@@ -1,0 +1,16 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="01E2756B-DD3C-A880-BBEF-C766052D1BD8" containerWithKeyObject="2A19EAC1-6F18-F752-7C9D-29DB482AEF4E" localFKIndex="EF42923E-8B3A-F674-A2EE-DB28F972DB99" name="rutas_edificios_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:50:46 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<referredTableLongName>edificios</referredTableLongName>
+<deleteRule>CASCADE</deleteRule>
+<referredTableID>75A82C2B-EF2A-B798-B9C1-EF7185D128BD</referredTableID>
+<keyObject>F8C753B0-59D0-E28C-C35E-E9858949468C</keyObject>
+<referredKeyID>F8C753B0-59D0-E28C-C35E-E9858949468C</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>id_edificio</refColNames>
+<transferable>false</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

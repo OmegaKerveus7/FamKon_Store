@@ -1,0 +1,63 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="2EFC19B7-2F33-B0C9-D4DE-83AE7FCCD489" name="marcas">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:22:13 UTC</createdTime>
+<generatorID>7261BF03-3BD7-2054-99D4-280634420B76</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="id marca" id="CFC5940D-62D6-FCC8-7AEE-765CF4A18679">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:22:13 UTC</createdTime>
+<generatorID>E1CDE37E-9F66-B2E3-4A6C-1314A831C21E</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="nom marca" id="2680EC38-6A9C-DE41-CA73-F55D17BA4882">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:22:13 UTC</createdTime>
+<generatorID>42D9D607-A495-7018-E116-9B24A21631A9</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>60 CHAR</dataTypeSize>
+<ownDataTypeParameters>60 CHAR,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="78D28BB3-7ECC-4F0F-7CD1-61A00DA095B2" name="marcas PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:22:13 UTC</createdTime>
+<generatorID>A74E5135-EDA2-3EC1-6C65-15235A7AAB57</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<shouldEngineer>false</shouldEngineer>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="false"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>CFC5940D-62D6-FCC8-7AEE-765CF4A18679</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

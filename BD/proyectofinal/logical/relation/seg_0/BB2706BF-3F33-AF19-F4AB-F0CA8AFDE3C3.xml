@@ -1,0 +1,20 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="ventas_usauarios_FKv2" directorySegmentName="seg_0" id="BB2706BF-3F33-AF19-F4AB-F0CA8AFDE3C3">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>F773DED7-A13C-B54F-D3DE-0C4ADC89E09A</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<sourcePk>396A13A9-F2B6-26A5-5B31-39A852604367</sourcePk>
+<identifying>false</identifying>
+<optionalSource>false</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>F1A561DA-5705-2150-D0C6-0A8B3FF39705</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>E839FB21-173D-C9AD-9F61-BC4E1605B414</targetEntity>
+<transferable>true</transferable>
+<deleteRule>CASCADE</deleteRule>
+</Relation>

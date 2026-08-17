@@ -1,0 +1,83 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="F77FCC31-962E-26D8-7F6D-AD71DD69054A" name="inventario">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:24:22 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<ordsAlias>table_11</ordsAlias>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_inventario" id="CBA89779-18AA-C7CB-5209-A9EF0DCE09CE">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:26:10 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="producto" id="5461C389-C8EA-EAC7-B16A-B4E51DA3D032">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:36:54 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="0A34C334-B266-9B7A-47CA-70BFC57A28A5" referredColumn="08B2EE5A-2F7C-9E6D-3096-20BF9B181FF2"/>
+</associations>
+</Column>
+<Column name="cantidad" id="5839C0E0-B08B-F039-9DC7-32E7BBF5291B">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:36:54 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="precio_venta" id="F8E8BE9F-6745-394B-7F3D-08A305C3CBEC">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:37:16 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<dataTypeScale>2</dataTypeScale>
+<ownDataTypeParameters>,6,2</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="0D417EA2-0274-4FB1-2EDA-1EA60EF5897F" name="inventario_PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:26:10 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="CBA89779-18AA-C7CB-5209-A9EF0DCE09CE"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="489494A8-A128-798A-2082-02017FDA1160" name="inventario_productos_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:37:55 UTC</createdTime>
+<generatorID>FCE493CC-B452-9467-9B24-494516069FAA</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="5461C389-C8EA-EAC7-B16A-B4E51DA3D032"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

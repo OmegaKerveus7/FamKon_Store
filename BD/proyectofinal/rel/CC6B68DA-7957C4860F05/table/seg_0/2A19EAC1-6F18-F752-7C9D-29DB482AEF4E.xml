@@ -1,0 +1,106 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="2A19EAC1-6F18-F752-7C9D-29DB482AEF4E" name="rutas">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:49:14 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<ordsAlias>table_6</ordsAlias>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_ruta" id="663DF83B-FA02-83BB-9F15-FF92A0310105">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:50:01 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="edificios" id="9FCF8AA3-93DC-B241-89C1-8CFA80C5DE22">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:50:01 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="01E2756B-DD3C-A880-BBEF-C766052D1BD8" referredColumn="CCFAB340-9407-AB6C-5AC3-F60DF128EBCC"/>
+</associations>
+</Column>
+<Column name="nivel" id="D2A48EE7-40CF-4686-914C-144474E5C53C">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:50:01 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="CBC6F4B7-87CC-D5B8-69CD-4ADF5ABF6531" referredColumn="F1593B3D-750C-538E-E982-A5FBA844190A"/>
+</associations>
+</Column>
+<Column name="aula" id="52899A02-4289-9044-7EFC-CAC2D9FC05C3">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:50:18 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="30257991-0D79-8B4D-6008-78C47EA98861" referredColumn="02E9A74F-62DD-CA67-02DB-B8900EAB6C8A"/>
+</associations>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="925DD0A4-BB9B-F160-FD0D-940593620903" name="rutas_PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:50:01 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="663DF83B-FA02-83BB-9F15-FF92A0310105"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="8DF65769-92A4-10C2-D745-A10875A959F3" name="rutas_niveles_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:50:23 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="D2A48EE7-40CF-4686-914C-144474E5C53C"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="EF42923E-8B3A-F674-A2EE-DB28F972DB99" name="rutas_edificios_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:50:46 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="9FCF8AA3-93DC-B241-89C1-8CFA80C5DE22"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="97CA12EA-8755-48E9-CA0F-4845F883F203" name="rutas_aulas_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:51:22 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="52899A02-4289-9044-7EFC-CAC2D9FC05C3"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

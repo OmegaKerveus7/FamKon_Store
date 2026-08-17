@@ -1,0 +1,187 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="D0CBBD9A-75FC-D61E-5C12-C63E4B19767B" name="ventas">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:53:52 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<ordsAlias>table_12</ordsAlias>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_hitorial_venta" id="FEF121F9-7E56-8F60-BE3F-98CB70845ED1">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:54:21 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="26B9B121-7154-744C-A577-60AF365DE073" referredColumn="9751E486-5967-BAB2-F3C1-4D99818B0310"/>
+</associations>
+</Column>
+<Column name="producto" id="73984F86-6F71-BDB1-0FC7-14E467E0E58F">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:55:08 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="15E8BB55-FEB9-BB65-D6B3-495CDAE99231" referredColumn="08B2EE5A-2F7C-9E6D-3096-20BF9B181FF2"/>
+</associations>
+</Column>
+<Column name="precio_final" id="3029885F-1AE6-19C5-0264-F112A11F1B53">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:56:40 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<dataTypeScale>2</dataTypeScale>
+<ownDataTypeParameters>,6,2</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="cantidad" id="2312F3B0-96CF-4808-186E-CFDC8A000FDC">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:56:40 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="cliente" id="DD2C3898-A5AF-2A16-9617-CB37D430076A">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:57:37 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="132FE110-4A4C-BA54-6036-1B8C84B0D767" referredColumn="043D304D-636C-41A0-2BCF-FB11F9866CC7"/>
+</associations>
+</Column>
+<Column name="repartidor" id="EDFC6CB9-5EB5-BBF7-592A-37AE77F47D24">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:57:37 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="F773DED7-A13C-B54F-D3DE-0C4ADC89E09A" referredColumn="043D304D-636C-41A0-2BCF-FB11F9866CC7"/>
+</associations>
+</Column>
+<Column name="metodos_pago" id="2F81DE5F-214C-6DA8-C3DA-8CF45A3CEECD">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:58:07 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="C8CC91BE-CF29-89A4-012B-355CC04542FE" referredColumn="309F51C0-981B-566E-7631-15C595579190"/>
+</associations>
+</Column>
+<Column name="rutas_id_ruta" id="748FAD91-3083-2844-C738-BBD9E1194338">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:17:05 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="FCA96FF0-3A40-61FA-5DDE-FCA6A6097CFF" referredColumn="663DF83B-FA02-83BB-9F15-FF92A0310105"/>
+</associations>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="6EC7327B-D170-E4C2-E067-92B21A95D1D5" name="ventas_PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 21:54:21 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="FEF121F9-7E56-8F60-BE3F-98CB70845ED1"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="29D9E544-7D7B-2E80-93FC-ACAAD4614E4A" name="ventas_productos_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:01:15 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="73984F86-6F71-BDB1-0FC7-14E467E0E58F"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="372870FD-C385-531C-F1E1-96D2E25034D8" name="ventas_hitsorial_ventas_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:09:34 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="FEF121F9-7E56-8F60-BE3F-98CB70845ED1"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="C04ADCC7-7D32-E915-8D36-C0E7DEBC6FA0" name="ventas_metodos_pagos_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:11:45 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="2F81DE5F-214C-6DA8-C3DA-8CF45A3CEECD"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="F1265782-4AEA-1F8A-3F98-A430FBE6C716" name="ventas_usauarios_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:15:01 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="DD2C3898-A5AF-2A16-9617-CB37D430076A"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="5C4D3F1C-924E-A184-FF66-38C3CFE10CCE" name="ventas_usauarios_FKv1">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:15:33 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="EDFC6CB9-5EB5-BBF7-592A-37AE77F47D24"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="6830A157-35A7-8185-79E1-28BFBAC14918" name="ventas_rutas_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:17:09 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="748FAD91-3083-2844-C738-BBD9E1194338"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

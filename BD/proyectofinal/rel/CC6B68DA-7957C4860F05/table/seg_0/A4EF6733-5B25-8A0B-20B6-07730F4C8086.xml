@@ -1,0 +1,48 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="A4EF6733-5B25-8A0B-20B6-07730F4C8086" name="metodos_pagos">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:10:44 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<ordsAlias>table_15</ordsAlias>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_metodo_pago" id="309F51C0-981B-566E-7631-15C595579190">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:11:39 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="metodo_pago" id="D5E638BB-05B1-1A51-2D67-C85EB0C941DC">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:11:39 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>25 CHAR</dataTypeSize>
+<ownDataTypeParameters>25 CHAR,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="4CF07E4D-63EB-6557-7023-08DB1EF8E112" name="metodos_pagos_PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:11:39 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="309F51C0-981B-566E-7631-15C595579190"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

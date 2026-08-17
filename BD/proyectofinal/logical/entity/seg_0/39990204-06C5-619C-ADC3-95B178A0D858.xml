@@ -1,0 +1,63 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="39990204-06C5-619C-ADC3-95B178A0D858" name="niveles">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:52:19 UTC</createdTime>
+<generatorID>6E315464-67EB-8211-3D75-52A834E705A7</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="id nivel" id="F5DFA974-BA3E-099B-D41F-93BCB808AC08">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:52:19 UTC</createdTime>
+<generatorID>F1593B3D-750C-538E-E982-A5FBA844190A</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="nom nivel" id="7C277991-BA5A-44DB-7EF7-B900EB9B4856">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:52:19 UTC</createdTime>
+<generatorID>F3073B24-5194-7C0D-8B25-712679B2E015</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>10 CHAR</dataTypeSize>
+<ownDataTypeParameters>10 CHAR,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="CB6DAA47-B772-42F4-2212-BB693E0AD3C8" name="niveles PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:52:19 UTC</createdTime>
+<generatorID>DE28D74B-A1E1-35E3-91B0-6E3CC132225C</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<shouldEngineer>false</shouldEngineer>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="false"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>F5DFA974-BA3E-099B-D41F-93BCB808AC08</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

@@ -1,0 +1,16 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="C8CC91BE-CF29-89A4-012B-355CC04542FE" containerWithKeyObject="D0CBBD9A-75FC-D61E-5C12-C63E4B19767B" localFKIndex="C04ADCC7-7D32-E915-8D36-C0E7DEBC6FA0" name="ventas_metodos_pagos_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:11:45 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<referredTableLongName>metodos_pagos</referredTableLongName>
+<deleteRule>CASCADE</deleteRule>
+<referredTableID>A4EF6733-5B25-8A0B-20B6-07730F4C8086</referredTableID>
+<keyObject>4CF07E4D-63EB-6557-7023-08DB1EF8E112</keyObject>
+<referredKeyID>4CF07E4D-63EB-6557-7023-08DB1EF8E112</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>id_metodo_pago</refColNames>
+<transferable>false</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

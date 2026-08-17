@@ -1,0 +1,148 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Entity class="oracle.dbtools.crest.model.design.logical.Entity" directorySegmentName="seg_0" id="E839FB21-173D-C9AD-9F61-BC4E1605B414" name="ventas">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>D0CBBD9A-75FC-D61E-5C12-C63E4B19767B</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<adequatelyNormalized>NO</adequatelyNormalized>
+<expectedVolumes>0</expectedVolumes>
+<fwdEngineeringStrategyName>Single Table</fwdEngineeringStrategyName>
+<growthPercent>0</growthPercent>
+<growthType>Year</growthType>
+<maxVolumes>9999999</maxVolumes>
+<minVolumes>0</minVolumes>
+<normalForm>Third</normalForm>
+<attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
+<Attribute name="id venta" id="51DC3468-DC5E-7C54-B14F-1D1DCCD876EA">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>3E5ACF50-C0E9-F9DE-2CAB-E77AB09BF661</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<referedAttribute>7424A9F6-B4AF-B6EE-617D-55D1BE6F3406</referedAttribute>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="id producto" id="283C5CAC-2483-9866-C5E7-68EB314E48DF">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>807BBDC8-3F42-5278-0C97-34A131AEF04A</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<referedAttribute>53D2692D-FD81-FFAC-28C0-08D08BE5B592</referedAttribute>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="precio final" id="CAC3C666-189D-785B-08C9-21574279FC6A">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>3029885F-1AE6-19C5-0264-F112A11F1B53</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<dataTypeScale>2</dataTypeScale>
+<ownDataTypeParameters>,6,2</ownDataTypeParameters>
+</Attribute>
+<Attribute name="cantidad" id="F29F6640-B11A-93DA-28FD-9870E3CBBAC5">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>2312F3B0-96CF-4808-186E-CFDC8A000FDC</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="usuario" id="41217F3B-2CE7-ED78-64C9-0E2A594DED1C">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>8F74ADCF-5DCD-66C6-F8D3-14404C09F63E</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<referedAttribute>FF3BC0F2-E1E3-7CE0-39B1-2BBC04D24062</referedAttribute>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="trabajador" id="8D3E19F0-502E-2B03-B7F3-B6167A43D12F">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>BB2706BF-3F33-AF19-F4AB-F0CA8AFDE3C3</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<referedAttribute>FF3BC0F2-E1E3-7CE0-39B1-2BBC04D24062</referedAttribute>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="metodo pago" id="DEE16B87-AB66-CBFB-8983-A97B472E7054">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>C9102D78-9B72-374A-CF25-2BDA4E9B8792</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<referedAttribute>9FDFC2FC-6333-7F45-1AF0-D38B0A32ACFD</referedAttribute>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+<Attribute name="ubicacion" id="0E2404E9-8A77-B84D-2617-FCDE90A98B83">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>CB0D3DDD-FC4B-1E64-429E-3B6ED19EF12A</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<referedAttribute>7A7406C6-E2F8-EC76-235F-1FD7DACDA4FF</referedAttribute>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+</Attribute>
+</attributes>
+<identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
+<identifier id="464E9AF3-42E6-1E26-07A6-AB5B1070069B" name="ventas PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>6EC7327B-D170-E4C2-E067-92B21A95D1D5</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<shouldEngineer>false</shouldEngineer>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="false"/>
+</engineerTo>
+<pk>true</pk>
+<usedAttributes>
+<attributeRef>51DC3468-DC5E-7C54-B14F-1D1DCCD876EA</attributeRef>
+</usedAttributes>
+</identifier>
+</identifiers>
+</Entity>

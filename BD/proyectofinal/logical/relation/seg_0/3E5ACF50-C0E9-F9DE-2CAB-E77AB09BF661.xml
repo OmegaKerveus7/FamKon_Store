@@ -1,0 +1,21 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="ventas_hitsorial_ventas_FK" directorySegmentName="seg_0" id="3E5ACF50-C0E9-F9DE-2CAB-E77AB09BF661">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 22:40:00 UTC</createdTime>
+<generatorID>26B9B121-7154-744C-A577-60AF365DE073</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<sourcePk>43749AB4-12E6-5D16-E19A-4F0AF963C440</sourcePk>
+<dominantRole>889AF79C-9FA3-E803-A692-B328A746DD5F</dominantRole>
+<identifying>true</identifying>
+<optionalSource>false</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>889AF79C-9FA3-E803-A692-B328A746DD5F</sourceEntity>
+<targetCardinalityString>1</targetCardinalityString>
+<targetEntity>E839FB21-173D-C9AD-9F61-BC4E1605B414</targetEntity>
+<transferable>true</transferable>
+<deleteRule>CASCADE</deleteRule>
+</Relation>

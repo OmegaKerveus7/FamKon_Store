@@ -1,0 +1,16 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="CBC6F4B7-87CC-D5B8-69CD-4ADF5ABF6531" containerWithKeyObject="2A19EAC1-6F18-F752-7C9D-29DB482AEF4E" localFKIndex="8DF65769-92A4-10C2-D745-A10875A959F3" name="rutas_niveles_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:50:23 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<referredTableLongName>niveles</referredTableLongName>
+<deleteRule>CASCADE</deleteRule>
+<referredTableID>6E315464-67EB-8211-3D75-52A834E705A7</referredTableID>
+<keyObject>DE28D74B-A1E1-35E3-91B0-6E3CC132225C</keyObject>
+<referredKeyID>DE28D74B-A1E1-35E3-91B0-6E3CC132225C</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>id_nivel</refColNames>
+<transferable>false</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

@@ -1,0 +1,48 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="8B05A7FE-4FF3-1EEB-C6A0-8BAAC593103C" name="aulas">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:48:14 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<ordsAlias>table_5</ordsAlias>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_aula" id="02E9A74F-62DD-CA67-02DB-B8900EAB6C8A">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:48:33 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementColumn>true</autoIncrementColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="nom_aula" id="15BEDEDC-3EF0-D8E5-8CAA-9D45C7043DED">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:49:10 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>60 CHAR</dataTypeSize>
+<ownDataTypeParameters>60 CHAR,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="4318DD26-0205-0E27-17C0-A7E93A6D880F" name="aulas_PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:51:18 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="02E9A74F-62DD-CA67-02DB-B8900EAB6C8A"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

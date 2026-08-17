@@ -1,0 +1,145 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="61D2BC63-06DE-97DD-4783-82249AB802B8" name="usauarios">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:33:02 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<ordsAlias>table_12</ordsAlias>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="id_usuario" id="043D304D-636C-41A0-2BCF-FB11F9866CC7">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:33:29 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="role" id="BBC3410C-0E4C-F3FC-C2AC-3460AAA0B42E">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:33:42 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="F5703205-B307-0C4F-F4B1-3E496119167D" referredColumn="8E4A0EB3-50F8-C18A-6730-D208A84876C3"/>
+</associations>
+</Column>
+<Column name="codigo_qr" id="23E458CB-0F4B-6C93-6A06-EC0DD9267CEB">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:40:07 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT025</logicalDatatype>
+<dataTypeSize>8 CHAR</dataTypeSize>
+<ownDataTypeParameters>8 CHAR,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="nombres" id="D53C87A1-9758-A605-6055-51C4F9A27A04">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:40:45 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>120 CHAR</dataTypeSize>
+<ownDataTypeParameters>120 CHAR,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="apellidos" id="C0096D97-A02F-3955-E54D-145ACAA961E7">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:41:07 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>120 CHAR</dataTypeSize>
+<ownDataTypeParameters>120 CHAR,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="correo" id="947352FB-4FBF-D4EF-7C9A-1D8D8559753E">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:41:31 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>100 CHAR</dataTypeSize>
+<ownDataTypeParameters>100 CHAR,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="contraseña" id="0B9BEDBD-E208-2CD1-2B3A-CCA2AE7167C6">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:41:49 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>200 CHAR</dataTypeSize>
+<ownDataTypeParameters>200 CHAR,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="foto_o" id="7AC78727-E5CC-F15E-CBB1-9716867EC9AB">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:42:02 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT028</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="foto_e" id="583C470D-53F7-3B9F-57AF-859888C65CA8">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:42:25 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT028</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="fecha_nacaimiento" id="3F3CDAD0-5A9C-927E-5638-CC3EEE1F270C">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:42:48 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT007</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="E51035E6-BC3E-765E-FF1B-9C43F842DA76" name="usauarios_PK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:33:29 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="043D304D-636C-41A0-2BCF-FB11F9866CC7"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="9F9FA077-88F0-3E42-2841-2E9AFDB74B92" name="usauarios_roles_FK">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:35:33 UTC</createdTime>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="BBC3410C-0E4C-F3FC-C2AC-3460AAA0B42E"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

@@ -1,0 +1,20 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="rutas_niveles_FK" directorySegmentName="seg_0" id="8FCC677B-B60F-A848-A582-EDF70E6A4CD2">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-17 17:52:19 UTC</createdTime>
+<generatorID>CBC6F4B7-87CC-D5B8-69CD-4ADF5ABF6531</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<sourcePk>CB6DAA47-B772-42F4-2212-BB693E0AD3C8</sourcePk>
+<identifying>false</identifying>
+<optionalSource>false</optionalSource>
+<optionalTarget>false</optionalTarget>
+<sourceCardinality>1</sourceCardinality>
+<sourceEntity>39990204-06C5-619C-ADC3-95B178A0D858</sourceEntity>
+<targetCardinalityString>*</targetCardinalityString>
+<targetEntity>BED7A01D-BA97-B76E-DA39-C3A32453B8E1</targetEntity>
+<transferable>true</transferable>
+<deleteRule>CASCADE</deleteRule>
+</Relation>

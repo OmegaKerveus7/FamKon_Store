@@ -1,5 +1,5 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
-<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="ventas_usauarios_FKv2" directorySegmentName="seg_0" id="BB2706BF-3F33-AF19-F4AB-F0CA8AFDE3C3">
+<Relation class="oracle.dbtools.crest.model.design.logical.Relation" name="ventas usauarios FKv1" directorySegmentName="seg_0" id="BB2706BF-3F33-AF19-F4AB-F0CA8AFDE3C3">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 22:40:00 UTC</createdTime>
 <generatorID>F773DED7-A13C-B54F-D3DE-0C4ADC89E09A</generatorID>
@@ -7,6 +7,7 @@
 <engineerTo>
 <item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
 </engineerTo>
+<targetTransferable>false</targetTransferable>
 <sourcePk>396A13A9-F2B6-26A5-5B31-39A852604367</sourcePk>
 <identifying>false</identifying>
 <optionalSource>false</optionalSource>

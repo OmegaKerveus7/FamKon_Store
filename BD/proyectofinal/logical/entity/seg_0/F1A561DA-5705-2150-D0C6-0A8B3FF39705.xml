@@ -29,7 +29,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
 </Attribute>
-<Attribute name="roles id rol" id="70E7CAAE-8FDB-2F49-ECB6-E511148E29CA">
+<Attribute name="role" id="70E7CAAE-8FDB-2F49-ECB6-E511148E29CA">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 17:33:48 UTC</createdTime>
 <generatorID>8645AF9F-B704-C93A-CF61-1EA2409BA63B</generatorID>

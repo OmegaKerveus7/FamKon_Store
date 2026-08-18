@@ -43,6 +43,20 @@
 <dataTypeSize>60 CHAR</dataTypeSize>
 <ownDataTypeParameters>60 CHAR,,</ownDataTypeParameters>
 </Attribute>
+<Attribute name="descripcion" id="D0EB8636-C925-CF78-682E-1DF66954DA39">
+<createdBy>tobia</createdBy>
+<createdTime>2026-08-18 04:02:54 UTC</createdTime>
+<generatorID>5C2D04C8-FA53-A8BF-7D15-B3E741028D8C</generatorID>
+<ownerDesignName>proyectofinal</ownerDesignName>
+<engineerTo>
+<item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
+</engineerTo>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>250 CHAR</dataTypeSize>
+<ownDataTypeParameters>250 CHAR,,</ownDataTypeParameters>
+</Attribute>
 </attributes>
 <identifiers itemClass="oracle.dbtools.crest.model.design.logical.CandidateKey">
 <identifier id="DF9216CB-23DB-F0B4-FC63-B5425EF902B0" name="roles PK">

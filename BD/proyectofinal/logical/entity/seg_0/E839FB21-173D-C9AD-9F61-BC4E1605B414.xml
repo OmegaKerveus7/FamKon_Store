@@ -16,7 +16,7 @@
 <minVolumes>0</minVolumes>
 <normalForm>Third</normalForm>
 <attributes itemClass="oracle.dbtools.crest.model.design.logical.Attribute">
-<Attribute name="id venta" id="51DC3468-DC5E-7C54-B14F-1D1DCCD876EA">
+<Attribute name="id hitorial venta" id="51DC3468-DC5E-7C54-B14F-1D1DCCD876EA">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 22:40:00 UTC</createdTime>
 <generatorID>3E5ACF50-C0E9-F9DE-2CAB-E77AB09BF661</generatorID>
@@ -30,7 +30,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
 </Attribute>
-<Attribute name="id producto" id="283C5CAC-2483-9866-C5E7-68EB314E48DF">
+<Attribute name="producto" id="283C5CAC-2483-9866-C5E7-68EB314E48DF">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 22:40:00 UTC</createdTime>
 <generatorID>807BBDC8-3F42-5278-0C97-34A131AEF04A</generatorID>
@@ -72,7 +72,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
 </Attribute>
-<Attribute name="usuario" id="41217F3B-2CE7-ED78-64C9-0E2A594DED1C">
+<Attribute name="cliente" id="41217F3B-2CE7-ED78-64C9-0E2A594DED1C">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 22:40:00 UTC</createdTime>
 <generatorID>8F74ADCF-5DCD-66C6-F8D3-14404C09F63E</generatorID>
@@ -86,7 +86,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
 </Attribute>
-<Attribute name="trabajador" id="8D3E19F0-502E-2B03-B7F3-B6167A43D12F">
+<Attribute name="repartidor" id="8D3E19F0-502E-2B03-B7F3-B6167A43D12F">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 22:40:00 UTC</createdTime>
 <generatorID>BB2706BF-3F33-AF19-F4AB-F0CA8AFDE3C3</generatorID>
@@ -100,7 +100,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
 </Attribute>
-<Attribute name="metodo pago" id="DEE16B87-AB66-CBFB-8983-A97B472E7054">
+<Attribute name="metodos pago" id="DEE16B87-AB66-CBFB-8983-A97B472E7054">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 22:40:00 UTC</createdTime>
 <generatorID>C9102D78-9B72-374A-CF25-2BDA4E9B8792</generatorID>
@@ -114,7 +114,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
 </Attribute>
-<Attribute name="ubicacion" id="0E2404E9-8A77-B84D-2617-FCDE90A98B83">
+<Attribute name="rutas id ruta" id="0E2404E9-8A77-B84D-2617-FCDE90A98B83">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 22:40:00 UTC</createdTime>
 <generatorID>CB0D3DDD-FC4B-1E64-429E-3B6ED19EF12A</generatorID>

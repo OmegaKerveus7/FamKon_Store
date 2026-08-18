@@ -7,14 +7,15 @@
 <engineerTo>
 <item key="CC6B68DA-688E-D736-82EC-7957C4860F05" value="true"/>
 </engineerTo>
+<targetTransferable>false</targetTransferable>
 <sourcePk>77BF3035-A55E-9AB5-F840-1D6C96991B9E</sourcePk>
 <identifying>false</identifying>
-<optionalSource>true</optionalSource>
+<optionalSource>false</optionalSource>
 <optionalTarget>false</optionalTarget>
 <sourceCardinality>1</sourceCardinality>
 <sourceEntity>A5F72A31-E37F-3E24-3C95-BF97B16B666E</sourceEntity>
 <targetCardinalityString>*</targetCardinalityString>
 <targetEntity>E839FB21-173D-C9AD-9F61-BC4E1605B414</targetEntity>
 <transferable>true</transferable>
-<deleteRule>NO ACTION</deleteRule>
+<deleteRule>CASCADE</deleteRule>
 </Relation>

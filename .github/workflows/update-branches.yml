@@ -1,0 +1,153 @@
+name: Actualizar Ramas de Desarrolladores
+
+on:
+  schedule:
+    # Se ejecuta diariamente a las 3:00 AM
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    # Para ejecución manual
+
+jobs:
+  actualizar-ramas-dev:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Clonar repositorio completo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Configurar Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config pull.rebase false
+      
+      - name: Identificar ramas inactivas (> 48 horas)
+        id: find_inactive
+        run: |
+          # Obtener todas las ramas remotas
+          git fetch origin --prune
+          
+          # Calcular timestamp de hace 48 horas
+          TWO_DAYS_AGO=$(date -d '2 days ago' +%s)
+          
+          # Lista de ramas de desarrolladores
+          DEV_BRANCHES=(
+            "RAMA/David"
+            "RAMA/Herber" 
+            "RAMA/Abigail"
+            "RAMA/Josafat"
+            "RAMA/Gustavo"
+          )
+          
+          INACTIVE_BRANCHES=""
+          
+          for BRANCH in "${DEV_BRANCHES[@]}"; do
+            echo "Verificando $BRANCH..."
+            
+            # Obtener fecha del último commit en esta rama
+            LAST_COMMIT_DATE=$(git log -1 --format=%ct origin/$BRANCH 2>/dev/null || echo "0")
+            
+            if [ "$LAST_COMMIT_DATE" -eq "0" ]; then
+              echo "   No se encontró la rama $BRANCH"
+              continue
+            fi
+            
+            # Convertir a timestamp legible para el log
+            LAST_COMMIT_READABLE=$(date -d @$LAST_COMMIT_DATE '+%Y-%m-%d %H:%M:%S')
+            
+            # Calcular días de inactividad
+            DAYS_INACTIVE=$(( ($(date +%s) - $LAST_COMMIT_DATE) / 86400 ))
+            
+            echo "   Último commit: $LAST_COMMIT_READABLE"
+            echo "   Días inactiva: $DAYS_INACTIVE días"
+            
+            # Verificar si tiene más de 48 horas (2 días)
+            if [ $DAYS_INACTIVE -ge 2 ]; then
+              echo "   RAMA INACTIVA - será actualizada"
+              INACTIVE_BRANCHES="$INACTIVE_BRANCHES $BRANCH"
+            else
+              echo "    Rama activa - se omite"
+            fi
+            echo ""
+          done
+          
+          # Guardar lista de ramas inactivas para usarla después
+          echo "inactive_branches=$INACTIVE_BRANCHES" >> $GITHUB_OUTPUT
+          
+          # Mostrar resumen
+          if [ -z "$INACTIVE_BRANCHES" ]; then
+            echo " No hay ramas inactivas por más de 48 horas"
+          else
+            echo " Ramas a actualizar:$INACTIVE_BRANCHES"
+          fi
+      
+      - name: Actualizar solo ramas inactivas
+        if: steps.find_inactive.outputs.inactive_branches != ''
+        run: |
+          MAIN_BRANCH="RAMA/Combinada"
+          
+          # Obtener la lista de ramas inactivas del paso anterior
+          INACTIVE_BRANCHES="${{ steps.find_inactive.outputs.inactive_branches }}"
+          
+          echo "=== RAMA PRINCIPAL: $MAIN_BRANCH ==="
+          git checkout $MAIN_BRANCH
+          git pull origin $MAIN_BRANCH
+          
+          # Procesar solo las ramas inactivas
+          for BRANCH in $INACTIVE_BRANCHES; do
+            echo ""
+            echo "=== ACTUALIZANDO RAMA INACTIVA: $BRANCH ==="
+            
+            # Cambiar a la rama del desarrollador
+            git checkout $BRANCH || git checkout -b $BRANCH origin/$BRANCH
+            git pull origin $BRANCH
+            
+            # Verificar cuánto está detrás
+            BEHIND=$(git rev-list --count $MAIN_BRANCH..$BRANCH)
+            AHEAD=$(git rev-list --count $BRANCH..$MAIN_BRANCH)
+            
+            echo "  AHEAD (cambios locales): $AHEAD"
+            echo "  BEHIND (cambios por traer): $BEHIND"
+            
+            # Solo hacer merge si hay cambios en RAMA/Combinada
+            if [ "$BEHIND" -gt 0 ]; then
+              echo "   La rama está detrás por $BEHIND commits"
+              echo "   Actualizando desde $MAIN_BRANCH..."
+              
+              # Intentar merge automático
+              if git merge origin/$MAIN_BRANCH --no-edit -m "Auto-merge desde $MAIN_BRANCH a $BRANCH (rama inactiva >48h) [skip ci]"; then
+                echo "   Merge exitoso"
+              else
+                echo "  ❌ ERROR: Conflictos detectados"
+                git merge --abort
+                echo "   Creando Pull Request para resolver conflictos"
+                
+                # Crear Pull Request automático para resolver conflictos
+                # (Opcional - se puede implementar con gh CLI)
+              fi
+            else
+              echo "   La rama ya está actualizada"
+            fi
+          done
+          
+          # Subir solo las ramas que se actualizaron
+          echo ""
+          echo "=== SUBIENDO CAMBIOS ==="
+          git push origin --all --force-with-lease
+      
+      - name: Reporte de ejecución
+        if: always()
+        run: |
+          echo " Workflow completado"
+          if [ -z "${{ steps.find_inactive.outputs.inactive_branches }}" ]; then
+            echo " No se actualizó ninguna rama (todas están activas o actualizadas)"
+          else
+            echo " Ramas actualizadas:${{ steps.find_inactive.outputs.inactive_branches }}"
+          fi

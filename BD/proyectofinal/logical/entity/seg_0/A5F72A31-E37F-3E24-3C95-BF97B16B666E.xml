@@ -58,7 +58,7 @@
 <dataTypeScale>2</dataTypeScale>
 <ownDataTypeParameters>,6,2</ownDataTypeParameters>
 </Attribute>
-<Attribute name="marcas id marca" id="2E962D0B-B605-2AA7-16DA-AC0CB1304ABB">
+<Attribute name="marca" id="2E962D0B-B605-2AA7-16DA-AC0CB1304ABB">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 21:22:13 UTC</createdTime>
 <generatorID>EFFB4A63-8E16-406D-F8C1-185283E967EC</generatorID>
@@ -72,7 +72,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
 </Attribute>
-<Attribute name="marcas id marca1" id="3D70B578-CCEA-3DD5-EA40-556FEF2F84D8">
+<Attribute name="marca1" id="3D70B578-CCEA-3DD5-EA40-556FEF2F84D8">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 21:22:21 UTC</createdTime>
 <generatorID>EFFB4A63-8E16-406D-F8C1-185283E967EC</generatorID>

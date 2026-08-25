@@ -10,7 +10,7 @@ export interface Usuario {
   id: number;
   nombre: string;
   correo: string | null;
-  nombreUsuario: string | null;
+  nickname: string | null;
   contrasena: string;
   imagenOriginalBase64: string;
   codigoQr: string | null;
@@ -43,12 +43,12 @@ export async function checkEstado(): Promise<{ ok: boolean; estado: EstadoRespon
 
 export async function login(
   correo?: string,
-  nombreUsuario?: string,
+  nickname?: string,
   contrasena = "",
 ): Promise<Usuario> {
   return request<Usuario>("/login", {
     method: "POST",
-    body: JSON.stringify({ correo, nombreUsuario, contrasena }),
+    body: JSON.stringify({ correo, nickname, contrasena }),
   });
 }
 

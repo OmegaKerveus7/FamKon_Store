@@ -29,7 +29,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
 </Attribute>
-<Attribute name="id producto" id="07FC1629-0890-8086-9C5D-EC86C50FFF75">
+<Attribute name="producto" id="07FC1629-0890-8086-9C5D-EC86C50FFF75">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 21:37:36 UTC</createdTime>
 <generatorID>FCE493CC-B452-9467-9B24-494516069FAA</generatorID>
@@ -71,7 +71,7 @@
 <dataTypeScale>2</dataTypeScale>
 <ownDataTypeParameters>,6,2</ownDataTypeParameters>
 </Attribute>
-<Attribute name="id producto2" id="F1404122-F270-0B7F-900B-FC55263D7FD9">
+<Attribute name="producto1" id="F1404122-F270-0B7F-900B-FC55263D7FD9">
 <createdBy>tobia</createdBy>
 <createdTime>2026-08-17 21:37:40 UTC</createdTime>
 <generatorID>FCE493CC-B452-9467-9B24-494516069FAA</generatorID>

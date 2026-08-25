@@ -4,9 +4,16 @@ namespace FamKon_store_api.Data
 {
     public interface IUsuarioRepository
     {
-        Task<Usuario?> ObtenerPorCredenciales(string? correo, string? nombreUsuario, string contrasena);
-        Task<Usuario?> ObtenerPorRostro(string imagenOriginalBase64);
+        Task<LoginResult> LoginPorCredencialesAsync(string? correo, string? nickname, string contrasena);
+        Task<LoginResult> LoginPorQrAsync(string codigoQr);
+        Task<Usuario?> ObtenerPorIdAsync(int idUsuario);
         Task<Usuario?> ObtenerPorIdentificacionAsync(string identificacion);
-        Task<Usuario?> ObtenerPorCarnet(string? codigoQr, string? identificacion);
+    }
+
+    public class LoginResult
+    {
+        public int CodigoS { get; set; }
+        public string Mensaje { get; set; } = string.Empty;
+        public Usuario? Usuario { get; set; }
     }
 }

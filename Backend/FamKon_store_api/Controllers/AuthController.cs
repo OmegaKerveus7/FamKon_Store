@@ -20,32 +20,65 @@ namespace FamKon_store_api.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<Usuario>> Login([FromBody] LoginRequest request)
+        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Correo) && string.IsNullOrWhiteSpace(request.NombreUsuario))
-                return BadRequest("Debe enviar el correo o el nombre de usuario.");
+            if (string.IsNullOrWhiteSpace(request.Correo) && string.IsNullOrWhiteSpace(request.Nickname))
+                return BadRequest(new LoginResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Debe enviar el correo o el nickname."
+                });
 
-            var usuario = await _usuarioRepository.ObtenerPorCredenciales(request.Correo, request.NombreUsuario, request.Contrasena);
-            if (usuario is null)
-                return Unauthorized("Correo/usuario o contraseña incorrectos.");
+            if (string.IsNullOrWhiteSpace(request.Contrasena))
+                return BadRequest(new LoginResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Debe enviar la contraseña."
+                });
 
-            return Ok(usuario);
+            var resultado = await _usuarioRepository.LoginPorCredencialesAsync(
+                request.Correo, request.Nickname, request.Contrasena);
+
+            if (resultado.CodigoS != 200 || resultado.Usuario is null)
+                return Unauthorized(new LoginResponse
+                {
+                    CodigoS = resultado.CodigoS,
+                    Mensaje = resultado.Mensaje
+                });
+
+            return Ok(new LoginResponse
+            {
+                CodigoS = 200,
+                Mensaje = resultado.Mensaje,
+                Data = resultado.Usuario
+            });
         }
 
         [HttpPost("login/facial")]
-        public async Task<ActionResult<Usuario>> LoginFacial([FromBody] FacialLoginRequest request)
+        public async Task<ActionResult<LoginResponse>> LoginFacial([FromBody] FacialLoginRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ImagenCompararBase64))
-                return BadRequest("Debe enviar la imagen a comparar.");
+                return BadRequest(new LoginResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Debe enviar la imagen a comparar."
+                });
 
-            var usuarioPorIdentificacion = !string.IsNullOrWhiteSpace(request.Identificacion)
-                ? await _usuarioRepository.ObtenerPorIdentificacionAsync(request.Identificacion)
-                : null;
+            Usuario? usuario_bd = null;
 
-            var imagenOriginal = usuarioPorIdentificacion?.ImagenOriginalBase64 ?? request.ImagenOriginalBase64;
+            if (!string.IsNullOrWhiteSpace(request.Identificacion))
+            {
+                usuario_bd = await _usuarioRepository.ObtenerPorIdentificacionAsync(request.Identificacion);
+            }
+
+            var imagenOriginal = usuario_bd?.FotoOriginal ?? request.ImagenOriginalBase64;
 
             if (string.IsNullOrWhiteSpace(imagenOriginal))
-                return BadRequest("Debe enviar la imagen original o la identificación del usuario.");
+                return BadRequest(new LoginResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Debe enviar la imagen original o la identificación del usuario."
+                });
 
             try
             {
@@ -53,41 +86,108 @@ namespace FamKon_store_api.Controllers
                 var segmentarComparar = await _biometricService.SegmentarRostroAsync(request.ImagenCompararBase64);
 
                 if (segmentarOriginal is null || segmentarComparar is null)
-                    return StatusCode(StatusCodes.Status502BadGateway, "La API de segmentación no respondió correctamente.");
+                    return StatusCode(StatusCodes.Status502BadGateway, new LoginResponse
+                    {
+                        CodigoS = 502,
+                        Mensaje = "La API de segmentación no respondió correctamente."
+                    });
+
+                if (!segmentarOriginal.Segmentado || !segmentarComparar.Segmentado)
+                    return BadRequest(new LoginResponse
+                    {
+                        CodigoS = 400,
+                        Mensaje = "No se pudo segmentar el rostro de una o ambas imágenes."
+                    });
 
                 var verificar = await _biometricService.VerificarRostroAsync(
                     segmentarOriginal.Rostro,
                     segmentarComparar.Rostro);
 
                 if (verificar is null)
-                    return StatusCode(StatusCodes.Status502BadGateway, "La API de verificación no respondió correctamente.");
+                    return StatusCode(StatusCodes.Status502BadGateway, new LoginResponse
+                    {
+                        CodigoS = 502,
+                        Mensaje = "La API de verificación no respondió correctamente."
+                    });
 
                 if (!verificar.Coincide)
-                    return Unauthorized("Los rostros no coinciden.");
+                    return Unauthorized(new LoginResponse
+                    {
+                        CodigoS = 401,
+                        Mensaje = "Los rostros no coinciden."
+                    });
 
-                var usuario = usuarioPorIdentificacion ?? await _usuarioRepository.ObtenerPorRostro(imagenOriginal);
-                if (usuario is null)
-                    return Unauthorized("No se encontró el usuario del rostro.");
+                if (usuario_bd is null)
+                    return Unauthorized(new LoginResponse
+                    {
+                        CodigoS = 401,
+                        Mensaje = "No se encontró el usuario del rostro."
+                    });
 
-                return Ok(usuario);
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 200,
+                    Mensaje = "Login facial exitoso.",
+                    Data = usuario_bd
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error al consumir el servicio biométrico: " + ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, new LoginResponse
+                {
+                    CodigoS = 500,
+                    Mensaje = "Error al consumir el servicio biométrico: " + ex.Message
+                });
             }
         }
 
         [HttpPost("login/carnet")]
-        public async Task<ActionResult<Usuario>> LoginCarnet([FromBody] CarnetLoginRequest request)
+        public async Task<ActionResult<LoginResponse>> LoginCarnet([FromBody] CarnetLoginRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.CarnetImagenBase64) && string.IsNullOrWhiteSpace(request.CodigoQr) && string.IsNullOrWhiteSpace(request.Identificacion))
-                return BadRequest("Debe enviar la imagen del carnet, el código QR o la identificación.");
+            if (string.IsNullOrWhiteSpace(request.CodigoQr) && string.IsNullOrWhiteSpace(request.Identificacion))
+                return BadRequest(new LoginResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Debe enviar el código QR o la identificación."
+                });
 
-            var usuario = await _usuarioRepository.ObtenerPorCarnet(request.CodigoQr, request.Identificacion);
-            if (usuario is null)
-                return Unauthorized("No se pudo reconocer el carnet.");
+            LoginResult? resultado = null;
 
-            return Ok(usuario);
+            if (!string.IsNullOrWhiteSpace(request.CodigoQr))
+            {
+                resultado = await _usuarioRepository.LoginPorQrAsync(request.CodigoQr);
+            }
+
+            if (resultado is null || resultado.CodigoS != 200)
+            {
+                if (!string.IsNullOrWhiteSpace(request.Identificacion))
+                {
+                    var usuario = await _usuarioRepository.ObtenerPorIdentificacionAsync(request.Identificacion);
+                    if (usuario is not null)
+                    {
+                        resultado = new LoginResult
+                        {
+                            CodigoS = 200,
+                            Mensaje = "Login por identificación exitoso.",
+                            Usuario = usuario
+                        };
+                    }
+                }
+            }
+
+            if (resultado is null || resultado.CodigoS != 200 || resultado.Usuario is null)
+                return Unauthorized(new LoginResponse
+                {
+                    CodigoS = 401,
+                    Mensaje = "No se pudo autenticar con el carnet o código QR."
+                });
+
+            return Ok(new LoginResponse
+            {
+                CodigoS = 200,
+                Mensaje = resultado.Mensaje,
+                Data = resultado.Usuario
+            });
         }
     }
 }

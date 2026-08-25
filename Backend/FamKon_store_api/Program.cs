@@ -13,7 +13,11 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseOracle(builder.Configuration.GetConnectionString("Oracle")));
-builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IUsuarioRepository>(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    return new UsuarioRepository(configuration);
+});
 builder.Services.AddHttpClient<FamKon_store_api.Services.BiometricService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(15);

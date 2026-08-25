@@ -19,8 +19,7 @@ obj/
 *.suo
 Backend/Publish/
 
-# Secretos (contiene contraseña de la BD)
-Backend/FamKon_store_api/appsettings.json
+
 
 # Sistema
 .DS_Store

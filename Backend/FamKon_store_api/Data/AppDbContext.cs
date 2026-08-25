@@ -19,10 +19,16 @@ namespace FamKon_store_api.Data
                 entity.HasKey(u => u.Id);
 
                 entity.Property(u => u.Id)
+                    .HasColumnName("ID_USUARIO")
                     .ValueGeneratedOnAdd();
 
-                entity.Property(u => u.Nombre)
-                    .HasColumnName("NOMBRE")
+                entity.Property(u => u.Nombres)
+                    .HasColumnName("NOMBRES")
+                    .HasMaxLength(200)
+                    .IsRequired();
+
+                entity.Property(u => u.Apellidos)
+                    .HasColumnName("APELLIDOS")
                     .HasMaxLength(200)
                     .IsRequired();
 
@@ -30,28 +36,35 @@ namespace FamKon_store_api.Data
                     .HasColumnName("CORREO")
                     .HasMaxLength(200);
 
-                entity.Property(u => u.NombreUsuario)
-                    .HasColumnName("NOMBRE_USUARIO")
+                entity.Property(u => u.Nickname)
+                    .HasColumnName("NICKNAME")
                     .HasMaxLength(100);
 
                 entity.Property(u => u.Contrasena)
-                    .HasColumnName("CONTRASENA")
+                    .HasColumnName("CONTRASEÑA")
                     .HasMaxLength(200)
                     .IsRequired();
 
-                entity.Property(u => u.ImagenOriginalBase64)
-                    .HasColumnName("IMAGEN_ORIGINAL")
+                entity.Property(u => u.FotoOriginal)
+                    .HasColumnName("FOTO_O")
+                    .HasColumnType("CLOB");
+
+                entity.Property(u => u.FotoEditada)
+                    .HasColumnName("FOTO_E")
                     .HasColumnType("CLOB");
 
                 entity.Property(u => u.CodigoQr)
                     .HasColumnName("CODIGO_QR")
-                    .HasMaxLength(100);
+                    .HasMaxLength(8);
 
-                entity.Property(u => u.Rol)
-                    .HasColumnName("ROL");
+                entity.Property(u => u.Role)
+                    .HasColumnName("ROLE");
+
+                entity.Property(u => u.FechaNacimiento)
+                    .HasColumnName("FECHA_NACAIMIENTO");
 
                 entity.HasIndex(u => u.Correo);
-                entity.HasIndex(u => u.NombreUsuario);
+                entity.HasIndex(u => u.Nickname);
                 entity.HasIndex(u => u.CodigoQr);
             });
         }

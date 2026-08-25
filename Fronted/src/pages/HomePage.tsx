@@ -37,7 +37,7 @@ export default function HomePage() {
             <span className="font-semibold">Correo:</span> {usuario?.correo ?? "—"}
           </p>
           <p>
-            <span className="font-semibold">Usuario:</span> {usuario?.nombreUsuario ?? "—"}
+            <span className="font-semibold">Nickname:</span> {usuario?.nickname ?? "—"}
           </p>
           <p>
             <span className="font-semibold">Rol:</span> {usuario?.rol}

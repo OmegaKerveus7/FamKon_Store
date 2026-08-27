@@ -28,16 +28,9 @@ dotnet add package Swashbuckle.AspNetCore --version 10.2.3
 
 ## Configuración del backend
 
-### Paso 1: Crear `appsettings.json`
+### `appsettings.json`
 
-> **IMPORTANTE:** `appsettings.json` contiene credenciales sensibles (contraseña de BD, URLs de APIs) y **NO se sube al repositorio**. Cada desarrollador debe crear su propio archivo.
-
-1. Copia el archivo de ejemplo:
-   ```bash
-   cp appsettings.example.json appsettings.json
-   ```
-
-2. Edita `appsettings.json` y rellena tus credenciales:
+El archivo `appsettings.json` contiene la configuración de conexión a la base de datos y las URLs de los servicios biométricos:
 
 ```json
 {
@@ -49,11 +42,11 @@ dotnet add package Swashbuckle.AspNetCore --version 10.2.3
   },
   "AllowedHosts": "*",
   "ConnectionStrings": {
-    "Oracle": "User Id=TU_USUARIO;Password=TU_CONTRASEÑA;Data Source=TU_HOST:PUERTO/SERVICIO;"
+    "Oracle": "User Id=system;Password=...;Data Source=www.server.daossystem.pro:5626/XEPDB1;"
   },
   "Biometric": {
-    "SegmentarUrl": "http://TU_HOST:PUERTO/Rostro/Segmentar",
-    "VerificarUrl": "http://TU_HOST:PUERTO/Rostro/Verificar"
+    "SegmentarUrl": "http://www.server.daossystem.pro:3405/Rostro/Segmentar",
+    "VerificarUrl": "http://www.server.daossystem.pro:3405/Rostro/Verificar"
   }
 }
 ```
@@ -64,7 +57,7 @@ dotnet add package Swashbuckle.AspNetCore --version 10.2.3
 | `Biometric.SegmentarUrl` | URL del servicio de segmentación facial |
 | `Biometric.VerificarUrl` | URL del servicio de verificación facial |
 
-### Paso 2 (opcional): `appsettings.Development.json`
+### `appsettings.Development.json`
 
 Si necesitas configuración específica de desarrollo, crea `appsettings.Development.json`:
 

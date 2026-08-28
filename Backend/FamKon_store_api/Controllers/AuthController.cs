@@ -189,5 +189,70 @@ namespace FamKon_store_api.Controllers
                 Data = resultado.Usuario
             });
         }
+
+        [HttpPost("registro")]
+        public async Task<ActionResult<RegistroResponse>> Registrar(
+    [FromBody] RegistroRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Nombres))
+            {
+                return BadRequest(new RegistroResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Los nombres son obligatorios."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Apellidos))
+            {
+                return BadRequest(new RegistroResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Los apellidos son obligatorios."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.FotoOriginalBase64))
+            {
+                return BadRequest(new RegistroResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "La fotografía original es obligatoria."
+                });
+            }
+
+            if (request.FechaNacimiento == default ||
+                request.FechaNacimiento.Date > DateTime.Today)
+            {
+                return BadRequest(new RegistroResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "La fecha de nacimiento no es válida."
+                });
+            }
+
+            var resultado =
+                await _usuarioRepository.RegistrarCompradorAsync(request);
+
+            var response = new RegistroResponse
+            {
+                CodigoS = resultado.CodigoS,
+                Mensaje = resultado.Mensaje,
+                Data = resultado.Data
+            };
+
+            return resultado.CodigoS switch
+            {
+                200 => Ok(response),
+                400 => BadRequest(response),
+                404 => NotFound(response),
+                409 => Conflict(response),
+                _ => StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    response)
+            };
+        }
+
+
     }
 }

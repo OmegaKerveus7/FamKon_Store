@@ -3,6 +3,7 @@ using Oracle.ManagedDataAccess.Client;
 using Oracle.ManagedDataAccess.Types;
 using System.Data;
 using System.Text.Json;
+using FamKon_store_api.Models.DTOs;
 
 namespace FamKon_store_api.Data
 {
@@ -145,7 +146,157 @@ namespace FamKon_store_api.Data
             var result = await LoginPorCredencialesAsync(identificacion, identificacion, "");
             return result.CodigoS == 200 ? result.Usuario : null;
         }
+        public async Task<RegistroResult> RegistrarCompradorAsync(
+    RegistroRequest request)
+        {
+            try
+            {
+                using var connection = new OracleConnection(_connectionString);
+                await connection.OpenAsync();
 
+                using var command = new OracleCommand(
+                    "PKG_USUARIOS.CRUD",
+                    connection);
+
+                command.CommandType = CommandType.StoredProcedure;
+                command.BindByName = true;
+
+                // Valores controlados por el backend
+                command.Parameters.Add(
+                    "p_id_usuario",
+                    OracleDbType.Decimal).Value = DBNull.Value;
+
+                command.Parameters.Add(
+                    "p_role",
+                    OracleDbType.Decimal).Value = 4;
+
+                command.Parameters.Add(
+                    "p_codigo_qr",
+                    OracleDbType.Char).Value = DBNull.Value;
+
+                // Valores enviados por el comprador
+                command.Parameters.Add(
+                    "p_nombres",
+                    OracleDbType.Varchar2).Value = request.Nombres.Trim();
+
+                command.Parameters.Add(
+                    "p_apellidos",
+                    OracleDbType.Varchar2).Value = request.Apellidos.Trim();
+
+                command.Parameters.Add(
+                    "p_correo",
+                    OracleDbType.Varchar2).Value = request.Correo.Trim();
+
+                command.Parameters.Add(
+                    "p_contraseña",
+                    OracleDbType.Varchar2).Value = request.Contrasena;
+
+                command.Parameters.Add(
+                    "p_foto_o",
+                    OracleDbType.Clob).Value = request.FotoOriginalBase64;
+
+                command.Parameters.Add(
+                    "p_foto_e",
+                    OracleDbType.Clob).Value =
+                        string.IsNullOrWhiteSpace(request.FotoEditadaBase64)
+                            ? request.FotoOriginalBase64
+                            : request.FotoEditadaBase64;
+
+                command.Parameters.Add(
+                    "p_fecha_nacimiento",
+                    OracleDbType.Date).Value = request.FechaNacimiento;
+
+                command.Parameters.Add(
+                    "p_nickname",
+                    OracleDbType.Varchar2).Value = request.Nickname.Trim();
+
+                // Usuario responsable de la operación
+                command.Parameters.Add(
+                    "p_usuario",
+                    OracleDbType.NVarchar2).Value = "REGISTRO_PUBLICO";
+
+                // Parámetros de salida
+                command.Parameters.Add(
+                    "p_codigo_s",
+                    OracleDbType.Decimal).Direction = ParameterDirection.Output;
+
+                command.Parameters.Add(
+                    "p_mensaje",
+                    OracleDbType.NVarchar2,
+                    500).Direction = ParameterDirection.Output;
+
+                command.Parameters.Add(
+                    "p_data",
+                    OracleDbType.NVarchar2,
+                    4000).Direction = ParameterDirection.Output;
+
+                // Indica al CRUD que debe crear
+                command.Parameters.Add(
+                    "p_opcion",
+                    OracleDbType.NVarchar2).Value = "C";
+
+                await command.ExecuteNonQueryAsync();
+
+                var codigo = Convert.ToInt32(
+                    ((OracleDecimal)command.Parameters["p_codigo_s"].Value).Value);
+
+                var mensaje =
+                    command.Parameters["p_mensaje"].Value?.ToString()
+                    ?? string.Empty;
+
+                var dataValue = command.Parameters["p_data"].Value;
+
+                string? json = null;
+
+                if (dataValue is OracleString oracleString)
+                {
+                    if (!oracleString.IsNull)
+                    {
+                        json = oracleString.Value;
+                    }
+                }
+                else if (dataValue is not null && dataValue != DBNull.Value)
+                {
+                    json = dataValue.ToString();
+                }
+
+                RegistroData? data = null;
+
+                // Solo existe información del usuario cuando el SP respondió exitosamente.
+                if (codigo == 200 && !string.IsNullOrWhiteSpace(json))
+                {
+                    using var document = JsonDocument.Parse(json);
+                    var root = document.RootElement;
+
+                    data = new RegistroData
+                    {
+                        IdUsuario = root.GetProperty("id_usuario").GetInt32(),
+
+                        Nickname = root.GetProperty("nickname").GetString()
+                            ?? string.Empty,
+
+                        CodigoQr = root.GetProperty("codigo_qr").GetString()
+                            ?? string.Empty
+                    };
+                }
+
+                return new RegistroResult
+                {
+                    CodigoS = codigo,
+                    Mensaje = mensaje,
+                    Data = data
+                };
+            }
+            catch
+            {
+                return new RegistroResult
+                {
+                    CodigoS = 500,
+                    Mensaje = "No fue posible registrar al comprador.",
+                    Data = null
+                };
+            }
+        }
         private static Usuario ParsearUsuario(string jsonData)
         {
             using var doc = JsonDocument.Parse(jsonData);

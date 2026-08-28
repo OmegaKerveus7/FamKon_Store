@@ -12,11 +12,13 @@ namespace FamKon_store_api.Controllers
     {
         private readonly IUsuarioRepository _usuarioRepository;
         private readonly BiometricService _biometricService;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IUsuarioRepository usuarioRepository, BiometricService biometricService)
+        public AuthController(IUsuarioRepository usuarioRepository, BiometricService biometricService, ILogger<AuthController> logger)
         {
             _usuarioRepository = usuarioRepository;
             _biometricService = biometricService;
+            _logger = logger;
         }
 
         [HttpPost("login")]
@@ -266,6 +268,9 @@ namespace FamKon_store_api.Controllers
         public async Task<ActionResult<RegistroResponse>> Registrar(
     [FromBody] RegistroRequest request)
         {
+            _logger.LogInformation("Registro: iniciando con nickname={Nickname} correo={Correo} fotoOriginal chars={FotoOChars}",
+                request.Nickname, request.Correo, request.FotoOriginalBase64?.Length ?? 0);
+
             if (string.IsNullOrWhiteSpace(request.Nombres))
             {
                 return BadRequest(new RegistroResponse
@@ -303,8 +308,48 @@ namespace FamKon_store_api.Controllers
                 });
             }
 
-            var resultado =
-                await _usuarioRepository.RegistrarCompradorAsync(request);
+            // Normalizar base64: eliminar prefijo data:*;base64, si existe
+            static string StripBase64Prefix(string s)
+            {
+                if (string.IsNullOrWhiteSpace(s)) return string.Empty;
+                var idx = s.IndexOf("base64,", StringComparison.OrdinalIgnoreCase);
+                return idx >= 0 ? s.Substring(idx + 7) : s;
+            }
+
+            var fotoOriginal = StripBase64Prefix(request.FotoOriginalBase64);
+            var fotoEditada = string.IsNullOrWhiteSpace(request.FotoEditadaBase64)
+                ? fotoOriginal
+                : StripBase64Prefix(request.FotoEditadaBase64!);
+
+            _logger.LogInformation("Registro: después normalización foto_o chars={FotoOChars} foto_e chars={FotoEChars} (es igual: {SonIguales})",
+                fotoOriginal.Length, fotoEditada.Length, fotoOriginal.Equals(fotoEditada));
+
+            // Validar que las cadenas sean base64 válidas (decodificables)
+            try
+            {
+                var bytesO = Convert.FromBase64String(fotoOriginal);
+                var bytesE = Convert.FromBase64String(fotoEditada);
+                _logger.LogInformation("Registro: base64 validado foto_o bytes={BytesO} foto_e bytes={BytesE}",
+                    bytesO.Length, bytesE.Length);
+            }
+            catch (FormatException ex)
+            {
+                _logger.LogWarning(ex, "Registro: base64 inválido");
+                return BadRequest(new RegistroResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Las imágenes deben enviarse en Base64 válido."
+                });
+            }
+
+            // Reemplazar en el request las versiones normalizadas antes de enviarlo al repositorio
+            request.FotoOriginalBase64 = fotoOriginal;
+            request.FotoEditadaBase64 = fotoEditada;
+
+            var resultado = await _usuarioRepository.RegistrarCompradorAsync(request);
+
+            _logger.LogInformation("Registro: completado código={Codigo} mensaje={Mensaje} data={Data}",
+                resultado.CodigoS, resultado.Mensaje, resultado.Data is not null ? "OK" : "NULL");
 
             var response = new RegistroResponse
             {

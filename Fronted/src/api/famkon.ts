@@ -137,3 +137,20 @@ export async function loginCarnet(opts: {
 export function stripBase64Prefix(dataUrl: string): string {
   return dataUrl.replace(/^data:image\/[^;]+;base64,/, "");
 }
+
+export async function actualizarFoto(opts: {
+  correo: string;
+  contrasena: string;
+  fotoOriginalBase64: string;
+}): Promise<Usuario> {
+  const res = await request<{ codigoS: number; mensaje: string; data: Usuario | null }>("/actualizar-foto", {
+    method: "PUT",
+    body: JSON.stringify({
+      correo: opts.correo,
+      contrasena: opts.contrasena,
+      fotoOriginalBase64: opts.fotoOriginalBase64,
+    }),
+  });
+  if (!res.data) throw new Error(res.mensaje || "No se pudo actualizar la foto.");
+  return res.data;
+}

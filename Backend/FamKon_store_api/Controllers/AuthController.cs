@@ -190,6 +190,78 @@ namespace FamKon_store_api.Controllers
             });
         }
 
+        [HttpPut("actualizar-foto")]
+        public async Task<ActionResult<LoginResponse>> ActualizarFoto([FromBody] ActualizarFotoRequest request)
+        {
+            try
+            {
+                if (request is null)
+                    return BadRequest(new LoginResponse
+                    {
+                        CodigoS = 400,
+                        Mensaje = "El cuerpo de la solicitud es obligatorio."
+                    });
+
+                if (string.IsNullOrWhiteSpace(request.Correo))
+                    return BadRequest(new LoginResponse
+                    {
+                        CodigoS = 400,
+                        Mensaje = "El correo es obligatorio."
+                    });
+
+                if (string.IsNullOrWhiteSpace(request.Contrasena))
+                    return BadRequest(new LoginResponse
+                    {
+                        CodigoS = 400,
+                        Mensaje = "La contraseña es obligatoria."
+                    });
+
+                if (string.IsNullOrWhiteSpace(request.FotoOriginalBase64))
+                    return BadRequest(new LoginResponse
+                    {
+                        CodigoS = 400,
+                        Mensaje = "La nueva foto es obligatoria."
+                    });
+
+                var resultado = await _usuarioRepository.LoginPorCredencialesAsync(
+                    request.Correo, null, request.Contrasena);
+
+                if (resultado.CodigoS != 200 || resultado.Usuario is null)
+                    return Unauthorized(new LoginResponse
+                    {
+                        CodigoS = 401,
+                        Mensaje = "Credenciales incorrectas."
+                    });
+
+                var actualizado = await _usuarioRepository.ActualizarFotoAsync(
+                    resultado.Usuario.Id, request.FotoOriginalBase64);
+
+                if (!actualizado)
+                    return StatusCode(StatusCodes.Status500InternalServerError, new LoginResponse
+                    {
+                        CodigoS = 500,
+                        Mensaje = "No se pudo actualizar la foto."
+                    });
+
+                resultado.Usuario.FotoOriginal = request.FotoOriginalBase64;
+
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 200,
+                    Mensaje = "Foto actualizada correctamente.",
+                    Data = resultado.Usuario
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new LoginResponse
+                {
+                    CodigoS = 500,
+                    Mensaje = "Error interno: " + ex.Message
+                });
+            }
+        }
+
         [HttpPost("registro")]
         public async Task<ActionResult<RegistroResponse>> Registrar(
     [FromBody] RegistroRequest request)

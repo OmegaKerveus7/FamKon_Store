@@ -17,8 +17,14 @@ namespace FamKon_store_api.Data
         Task<Usuario?> ObtenerPorIdentificacionAsync(
             string identificacion);
 
+        Task<Usuario?> ObtenerPorCorreoONicknameAsync(
+            string correoONickname);
+
         Task<RegistroResult> RegistrarCompradorAsync(
             RegistroRequest request);
+
+        Task<bool> ActualizarFotoAsync(
+            int idUsuario, string fotoOriginalBase64);
     }
 
     public class LoginResult

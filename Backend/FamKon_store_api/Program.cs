@@ -5,7 +5,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.MaxDepth = 64;
+    });
+builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(options =>
+{
+    options.Limits.MaxRequestBufferSize = 10 * 1024 * 1024;
+    options.Limits.MaxRequestBodySize = 10 * 1024 * 1024;
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("PermitirFrontend", policy =>

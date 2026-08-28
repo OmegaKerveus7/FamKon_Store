@@ -10,10 +10,17 @@ namespace FamKon_store_api.Data
     public class UsuarioRepository : IUsuarioRepository
     {
         private readonly string _connectionString;
+        private readonly ILogger<UsuarioRepository> _logger;
 
-        public UsuarioRepository(IConfiguration configuration)
+        public UsuarioRepository(
+       IConfiguration configuration,
+       ILogger<UsuarioRepository> logger)
         {
-            _connectionString = configuration.GetConnectionString("Oracle") ?? string.Empty;
+            _connectionString =
+                configuration.GetConnectionString("Oracle")
+                ?? string.Empty;
+
+            _logger = logger;
         }
 
         public async Task<LoginResult> LoginPorCredencialesAsync(string? correo, string? nickname, string contrasena)
@@ -287,8 +294,13 @@ namespace FamKon_store_api.Data
                     Data = data
                 };
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(
+                    ex,
+                    "Error al registrar al comprador con nickname {Nickname}",
+                    request.Nickname);
+
                 return new RegistroResult
                 {
                     CodigoS = 500,

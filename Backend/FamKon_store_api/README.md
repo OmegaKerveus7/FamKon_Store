@@ -30,6 +30,8 @@ dotnet add package Swashbuckle.AspNetCore --version 10.2.3
 
 ### `appsettings.json`
 
+El archivo `appsettings.json` contiene la configuración de conexión a la base de datos y las URLs de los servicios biométricos:
+
 ```json
 {
   "Logging": {
@@ -39,6 +41,9 @@ dotnet add package Swashbuckle.AspNetCore --version 10.2.3
     }
   },
   "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "Oracle": "User Id=system;Password=...;Data Source=www.server.daossystem.pro:5626/XEPDB1;"
+  },
   "Biometric": {
     "SegmentarUrl": "http://www.server.daossystem.pro:3405/Rostro/Segmentar",
     "VerificarUrl": "http://www.server.daossystem.pro:3405/Rostro/Verificar"
@@ -46,11 +51,15 @@ dotnet add package Swashbuckle.AspNetCore --version 10.2.3
 }
 ```
 
-- **Logging**: nivel de registro de la aplicación (`Information` por defecto, `Warning` para ASP.NET Core).
-- **AllowedHosts**: hosts permitidos para la API (`*` permite todos).
-- **Biometric**: URLs de las dos APIs de reconocimiento facial (segmentar y verificar).
+| Campo | Descripción |
+| ----- | ----------- |
+| `ConnectionStrings.Oracle` | Cadena de conexión a Oracle (usuario, contraseña, host, puerto, servicio) |
+| `Biometric.SegmentarUrl` | URL del servicio de segmentación facial |
+| `Biometric.VerificarUrl` | URL del servicio de verificación facial |
 
 ### `appsettings.Development.json`
+
+Si necesitas configuración específica de desarrollo, crea `appsettings.Development.json`:
 
 ```json
 {
@@ -62,22 +71,6 @@ dotnet add package Swashbuckle.AspNetCore --version 10.2.3
   }
 }
 ```
-
-Configuración de logging exclusiva del entorno de desarrollo.
-
-### Conexión Oracle
-
-La cadena de conexión está en `appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "Oracle": "User Id=system;Password=...;Data Source=www.server.daossystem.pro:5626/XEPDB1;"
-  }
-}
-```
-
-> **Importante:** `appsettings.json` contiene la contraseña de la base de datos y **no se sube al repositorio** (está en `.gitignore`). Al clonar el proyecto, crea este archivo localmente con tu contraseña.
 
 ## Endpoints de la API
 
@@ -152,6 +145,11 @@ Al ejecutar la API en entorno de desarrollo, Swagger queda disponible en:
 ## Cómo ejecutar
 
 ```bash
+# 1. Restaurar paquetes NuGet
 dotnet restore
+
+# 2. Ejecutar el servidor
 dotnet run
 ```
+
+La API estará disponible en `http://localhost:5299` (puerto definido en `Properties/launchSettings.json`).

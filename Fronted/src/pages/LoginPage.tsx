@@ -112,7 +112,16 @@ export default function LoginPage() {
               {cargando ? "Ingresando..." : "Ingresar"}
             </button>
           </form>
-
+              <p className="text-center text-sm text-slate-500">
+                  ¿Aún no tienes una cuenta?{" "}
+                 <button
+                   type="button"
+                    onClick={() => navigate("/registro")}
+                    className="font-semibold text-amber-600 hover:text-amber-700 hover:underline"
+                  >
+                    Crear cuenta
+                  </button>
+                </p>
           <div className="flex items-center gap-3">
             <span className="h-px flex-1 bg-slate-200" />
             <span className="text-xs font-medium uppercase tracking-wide text-slate-400">o accede con</span>

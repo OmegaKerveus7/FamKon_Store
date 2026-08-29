@@ -7,7 +7,7 @@ import CarnetLoginPage from "./pages/CarnetLoginPage";
 import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "./context/AuthContext";
-
+import RegistroPage from "./pages/RegistroPage";
 function RequireAuth({ children }: { children: ReactNode }) {
   const { usuario } = useAuth();
   if (!usuario) return <Navigate to="/login" replace />;
@@ -19,8 +19,10 @@ export default function App() {
     <Routes>
       <Route path="/" element={<IndexPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/registro" element={<RegistroPage />} />
       <Route path="/login/facial" element={<FacialLoginPage />} />
       <Route path="/login/carnet" element={<CarnetLoginPage />} />
+      
       <Route
         path="/inicio"
         element={

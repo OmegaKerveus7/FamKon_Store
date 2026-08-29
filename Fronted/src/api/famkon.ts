@@ -17,19 +17,62 @@ export interface Usuario {
   rol: number;
 }
 
+export interface RegistroRequest {
+  nombres: string;
+  apellidos: string;
+  correo: string;
+  contrasena: string;
+  fechaNacimiento: string;
+  nickname: string;
+  fotoOriginalBase64: string;
+  fotoEditadaBase64?: string;
+}
+
+export interface RegistroData {
+  idUsuario: number;
+  nickname: string;
+  codigoQr: string;
+}
+
+export interface RegistroResponse {
+  codigoS: number;
+  mensaje: string;
+  data: RegistroData | null;
+}
+
 const BASE_URL = "/api/famkon";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
     ...init,
   });
+
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `Error ${res.status}`);
+    let mensaje = `Error ${res.status}`;
+
+    if (text) {
+      try {
+        const respuesta = JSON.parse(text) as {
+          mensaje?: string;
+        };
+
+        mensaje = respuesta.mensaje || mensaje;
+      } catch {
+        mensaje = text;
+      }
+    }
+
+    throw new Error(mensaje);
   }
+
   return (await res.json()) as T;
 }
+
 
 export async function checkEstado(): Promise<{ ok: boolean; estado: EstadoResponse | null }> {
   try {
@@ -49,6 +92,15 @@ export async function login(
   return request<Usuario>("/login", {
     method: "POST",
     body: JSON.stringify({ correo, nickname, contrasena }),
+  });
+}
+
+export async function registrarComprador(
+  datos: RegistroRequest,
+): Promise<RegistroResponse> {
+  return request<RegistroResponse>("/registro", {
+    method: "POST",
+    body: JSON.stringify(datos),
   });
 }
 
@@ -84,4 +136,21 @@ export async function loginCarnet(opts: {
 
 export function stripBase64Prefix(dataUrl: string): string {
   return dataUrl.replace(/^data:image\/[^;]+;base64,/, "");
+}
+
+export async function actualizarFoto(opts: {
+  correo: string;
+  contrasena: string;
+  fotoOriginalBase64: string;
+}): Promise<Usuario> {
+  const res = await request<{ codigoS: number; mensaje: string; data: Usuario | null }>("/actualizar-foto", {
+    method: "PUT",
+    body: JSON.stringify({
+      correo: opts.correo,
+      contrasena: opts.contrasena,
+      fotoOriginalBase64: opts.fotoOriginalBase64,
+    }),
+  });
+  if (!res.data) throw new Error(res.mensaje || "No se pudo actualizar la foto.");
+  return res.data;
 }

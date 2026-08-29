@@ -19,11 +19,6 @@ obj/
 *.suo
 Backend/Publish/
 
-# Configuración sensible (credenciales, APIs)
-appsettings.json
-appsettings.*.json
-!appsettings.example.json
-
 # Perfiles de publicación y configuración local
 Properties/PublishProfiles/
 *.pubxml

@@ -12,11 +12,13 @@ namespace FamKon_store_api.Controllers
     {
         private readonly IUsuarioRepository _usuarioRepository;
         private readonly BiometricService _biometricService;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IUsuarioRepository usuarioRepository, BiometricService biometricService)
+        public AuthController(IUsuarioRepository usuarioRepository, BiometricService biometricService, ILogger<AuthController> logger)
         {
             _usuarioRepository = usuarioRepository;
             _biometricService = biometricService;
+            _logger = logger;
         }
 
         [HttpPost("login")]
@@ -189,5 +191,185 @@ namespace FamKon_store_api.Controllers
                 Data = resultado.Usuario
             });
         }
+
+        [HttpPut("actualizar-foto")]
+        public async Task<ActionResult<LoginResponse>> ActualizarFoto([FromBody] ActualizarFotoRequest request)
+        {
+            try
+            {
+                if (request is null)
+                    return BadRequest(new LoginResponse
+                    {
+                        CodigoS = 400,
+                        Mensaje = "El cuerpo de la solicitud es obligatorio."
+                    });
+
+                if (string.IsNullOrWhiteSpace(request.Correo))
+                    return BadRequest(new LoginResponse
+                    {
+                        CodigoS = 400,
+                        Mensaje = "El correo es obligatorio."
+                    });
+
+                if (string.IsNullOrWhiteSpace(request.Contrasena))
+                    return BadRequest(new LoginResponse
+                    {
+                        CodigoS = 400,
+                        Mensaje = "La contraseña es obligatoria."
+                    });
+
+                if (string.IsNullOrWhiteSpace(request.FotoOriginalBase64))
+                    return BadRequest(new LoginResponse
+                    {
+                        CodigoS = 400,
+                        Mensaje = "La nueva foto es obligatoria."
+                    });
+
+                var resultado = await _usuarioRepository.LoginPorCredencialesAsync(
+                    request.Correo, null, request.Contrasena);
+
+                if (resultado.CodigoS != 200 || resultado.Usuario is null)
+                    return Unauthorized(new LoginResponse
+                    {
+                        CodigoS = 401,
+                        Mensaje = "Credenciales incorrectas."
+                    });
+
+                var actualizado = await _usuarioRepository.ActualizarFotoAsync(
+                    resultado.Usuario.Id, request.FotoOriginalBase64);
+
+                if (!actualizado)
+                    return StatusCode(StatusCodes.Status500InternalServerError, new LoginResponse
+                    {
+                        CodigoS = 500,
+                        Mensaje = "No se pudo actualizar la foto."
+                    });
+
+                resultado.Usuario.FotoOriginal = request.FotoOriginalBase64;
+
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 200,
+                    Mensaje = "Foto actualizada correctamente.",
+                    Data = resultado.Usuario
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new LoginResponse
+                {
+                    CodigoS = 500,
+                    Mensaje = "Error interno: " + ex.Message
+                });
+            }
+        }
+
+        [HttpPost("registro")]
+        public async Task<ActionResult<RegistroResponse>> Registrar(
+    [FromBody] RegistroRequest request)
+        {
+            _logger.LogInformation("Registro: iniciando con nickname={Nickname} correo={Correo} fotoOriginal chars={FotoOChars}",
+                request.Nickname, request.Correo, request.FotoOriginalBase64?.Length ?? 0);
+
+            if (string.IsNullOrWhiteSpace(request.Nombres))
+            {
+                return BadRequest(new RegistroResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Los nombres son obligatorios."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Apellidos))
+            {
+                return BadRequest(new RegistroResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Los apellidos son obligatorios."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.FotoOriginalBase64))
+            {
+                return BadRequest(new RegistroResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "La fotografía original es obligatoria."
+                });
+            }
+
+            if (request.FechaNacimiento == default ||
+                request.FechaNacimiento.Date > DateTime.Today)
+            {
+                return BadRequest(new RegistroResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "La fecha de nacimiento no es válida."
+                });
+            }
+
+            // Normalizar base64: eliminar prefijo data:*;base64, si existe
+            static string StripBase64Prefix(string s)
+            {
+                if (string.IsNullOrWhiteSpace(s)) return string.Empty;
+                var idx = s.IndexOf("base64,", StringComparison.OrdinalIgnoreCase);
+                return idx >= 0 ? s.Substring(idx + 7) : s;
+            }
+
+            var fotoOriginal = StripBase64Prefix(request.FotoOriginalBase64);
+            var fotoEditada = string.IsNullOrWhiteSpace(request.FotoEditadaBase64)
+                ? fotoOriginal
+                : StripBase64Prefix(request.FotoEditadaBase64!);
+
+            _logger.LogInformation("Registro: después normalización foto_o chars={FotoOChars} foto_e chars={FotoEChars} (es igual: {SonIguales})",
+                fotoOriginal.Length, fotoEditada.Length, fotoOriginal.Equals(fotoEditada));
+
+            // Validar que las cadenas sean base64 válidas (decodificables)
+            try
+            {
+                var bytesO = Convert.FromBase64String(fotoOriginal);
+                var bytesE = Convert.FromBase64String(fotoEditada);
+                _logger.LogInformation("Registro: base64 validado foto_o bytes={BytesO} foto_e bytes={BytesE}",
+                    bytesO.Length, bytesE.Length);
+            }
+            catch (FormatException ex)
+            {
+                _logger.LogWarning(ex, "Registro: base64 inválido");
+                return BadRequest(new RegistroResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Las imágenes deben enviarse en Base64 válido."
+                });
+            }
+
+            // Reemplazar en el request las versiones normalizadas antes de enviarlo al repositorio
+            request.FotoOriginalBase64 = fotoOriginal;
+            request.FotoEditadaBase64 = fotoEditada;
+
+            var resultado = await _usuarioRepository.RegistrarCompradorAsync(request);
+
+            _logger.LogInformation("Registro: completado código={Codigo} mensaje={Mensaje} data={Data}",
+                resultado.CodigoS, resultado.Mensaje, resultado.Data is not null ? "OK" : "NULL");
+
+            var response = new RegistroResponse
+            {
+                CodigoS = resultado.CodigoS,
+                Mensaje = resultado.Mensaje,
+                Data = resultado.Data
+            };
+
+            return resultado.CodigoS switch
+            {
+                200 => Ok(response),
+                400 => BadRequest(response),
+                404 => NotFound(response),
+                409 => Conflict(response),
+                _ => StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    response)
+            };
+        }
+
+
     }
 }

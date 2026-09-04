@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="D4887412-2831-1A0A-43E9-412187381106" containerWithKeyObject="030F7DAD-B29A-A902-0581-E96540795D63" localFKIndex="2DF5F1CD-0A83-585B-B496-48E68578B835" name="FK_PAGO_ESTADO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_PAGO_ESTADO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.ESTADO_PAGO</referredTableLongName>
+<deleteRule>NO ACTION</deleteRule>
+<referredTableID>E8605009-FEDB-39B7-4DC3-4709BBA14E7C</referredTableID>
+<keyObject>B899A803-8A3A-E7A8-E34D-20C60D9D9EB2</keyObject>
+<referredKeyID>B899A803-8A3A-E7A8-E34D-20C60D9D9EB2</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>ID_ESTADO_PAGO</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

@@ -1,0 +1,123 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableProxyOraclev20c class="oracle.dbtools.crest.model.design.storage.oracle.v20c.TableProxyOraclev20c" name="ARCHIVO" directorySegmentName="seg_0" id="014AD4BD-1BC3-F333-DCB0-ADDCE5EC784F">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<logging>YES</logging>
+<partitionedRowMovement>DISABLE</partitionedRowMovement>
+<segment>58E774B6-609D-EFF9-E85C-5F91BC2A3313</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<temporaryChanged>false</temporaryChanged>
+<accessDriverType>oracle_loader</accessDriverType>
+<rejectLimit></rejectLimit>
+<inMemory>NO</inMemory>
+<columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
+<ColumnProxy name="ID_USUARIO_CARGA" id="1B32AB28-23C5-9EEA-1D2F-7F0E9102ED77">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="CONTENIDO" id="2809E40C-EE06-A38B-8C8E-8027C5FA02BE">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ACTIVO" id="32103B59-C0D5-E43F-62B7-4AFF32543639">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<defaultValue>&apos;S&apos;</defaultValue>
+</ColumnProxy>
+<ColumnProxy name="HASH_SHA256" id="36A34C0C-9351-D4B4-D5CB-A15565B46978">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="NOMBRE_ARCHIVO" id="38045826-DA13-1663-7F6A-58D5977EE125">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="MIME_TYPE" id="403E1B5A-B403-9603-6229-00A6E8FD40A5">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="FECHA_CARGA" id="54ECA742-6B85-0728-32FF-AB2C34D281A1">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<defaultValue>SYSTIMESTAMP</defaultValue>
+</ColumnProxy>
+<ColumnProxy name="TIPO_ARCHIVO" id="6586C639-FD34-0F0A-FE74-FE27162D934F">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="TAMANO_BYTES" id="701E75D8-2ED4-3501-6B3A-C0CB3CA41765">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ID_ARCHIVO" id="F46A27B5-8A9A-2161-51A2-2474E5E9F41C">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<autoIncrementDDL>IDENTITY_CLAUSE</autoIncrementDDL>
+</ColumnProxy>
+</columnProxies>
+<indexProxies>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="PK_ARCHIVO" id="DE6AB1ED-D814-5D78-22B5-724675B55E6C">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:46 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<segment>97153218-79D5-4BF4-45C4-FCEBF005C482</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+</IndexProxy>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="IX_ARCHIVO_USUARIO" id="FBF200EB-97B5-2143-069E-FAD91E315B2B">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:46 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<segment>97153218-79D5-4BF4-45C4-FCEBF005C482</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+</IndexProxy>
+</indexProxies>
+<foreignKeys>
+<ForeignKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.FKProxyOraclev10g" name="FK_ARCHIVO_USUARIO" id="51ED748D-8810-BA67-3A42-FBB86D875271">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ForeignKey>
+</foreignKeys>
+<lobStorages>
+<LobStorage class="oracle.dbtools.crest.model.design.storage.oracle.v11g.LobStorageOraclev11g" name="SYS_LOB0000076214C00008$$" id="E0E8F5A7-3C11-1D06-C54F-FD7783D50F27">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:58 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<cache>NOCACHE</cache>
+<chunk>8192</chunk>
+<column>CONTENIDO</column>
+<compression>NO</compression>
+<duplication>KEEP_DUPLICATES</duplication>
+<logging>YES</logging>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<lobStorageType>SECUREFILE</lobStorageType>
+</LobStorage>
+</lobStorages>
+<primaryKeys>
+<PrimaryKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.PKProxyOraclev10g" name="PK_ARCHIVO" id="E3C8CD00-F3D3-966D-0B23-CFD12DDC6B2D">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:53 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<segment>97153218-79D5-4BF4-45C4-FCEBF005C482</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<existingIndex>DE6AB1ED-D814-5D78-22B5-724675B55E6C</existingIndex>
+<indexSegment>97153218-79D5-4BF4-45C4-FCEBF005C482</indexSegment>
+<indexSort>SORTED</indexSort>
+<usingIndex>BY INDEX NAME</usingIndex>
+</PrimaryKey>
+</primaryKeys>
+</TableProxyOraclev20c>

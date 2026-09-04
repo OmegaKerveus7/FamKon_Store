@@ -1,0 +1,99 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableProxyOraclev20c class="oracle.dbtools.crest.model.design.storage.oracle.v20c.TableProxyOraclev20c" name="PERMISO" directorySegmentName="seg_0" id="B65854CA-2F65-286D-D96B-B427E03EA0D9">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<logging>YES</logging>
+<partitionedRowMovement>DISABLE</partitionedRowMovement>
+<segment>3CE50B1C-7529-B75B-24D5-EF33607B8670</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<temporaryChanged>false</temporaryChanged>
+<accessDriverType>oracle_loader</accessDriverType>
+<rejectLimit></rejectLimit>
+<inMemory>NO</inMemory>
+<columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
+<ColumnProxy name="ACTIVO" id="3D97D08B-A42D-9E4D-CF34-EC8E8297B1A6">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<defaultValue>&apos;S&apos;</defaultValue>
+</ColumnProxy>
+<ColumnProxy name="FECHA_CREACION" id="3E248CAA-EDE4-7094-84D8-D7C728E29F40">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<defaultValue>SYSTIMESTAMP</defaultValue>
+</ColumnProxy>
+<ColumnProxy name="CODIGO" id="4310A85E-9A1A-2FD0-2B97-4F9450D35998">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ID_PERMISO" id="5639E146-74AA-F7CC-7CB5-CC99039BF78C">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<autoIncrementDDL>IDENTITY_CLAUSE</autoIncrementDDL>
+</ColumnProxy>
+<ColumnProxy name="DESCRIPCION" id="822A2CF2-058F-4833-107D-B377DF3CF5B3">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="NOMBRE" id="C7F0560B-83E6-8C1D-0785-B7A69A16E0E9">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="MODULO" id="DCF42679-956B-B806-9361-0A385B574921">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+</columnProxies>
+<indexProxies>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="UK_PERMISO_CODIGO" id="78E07D28-EB65-012B-0BF6-E434DC9D1269">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<segment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+</IndexProxy>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="PK_PERMISO" id="9EB8AC38-6B2E-0B10-4FA5-4AEF98FCDF55">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<segment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+</IndexProxy>
+</indexProxies>
+<primaryKeys>
+<PrimaryKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.PKProxyOraclev10g" name="PK_PERMISO" id="3FB29E04-4394-BB0A-E7BC-384A6B6BFD5E">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:53 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<segment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<existingIndex>9EB8AC38-6B2E-0B10-4FA5-4AEF98FCDF55</existingIndex>
+<indexSegment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</indexSegment>
+<indexSort>SORTED</indexSort>
+<usingIndex>BY INDEX NAME</usingIndex>
+</PrimaryKey>
+</primaryKeys>
+<uniqueKeys>
+<UniqueKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.UniqueOraclev10g" name="UK_PERMISO_CODIGO" id="1FC1FD50-E3D8-E5E6-1E5D-661482A3DA78">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:53 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<segment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<existingIndex>78E07D28-EB65-012B-0BF6-E434DC9D1269</existingIndex>
+<indexSegment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</indexSegment>
+<indexSort>SORTED</indexSort>
+<usingIndex>BY INDEX NAME</usingIndex>
+</UniqueKey>
+</uniqueKeys>
+</TableProxyOraclev20c>

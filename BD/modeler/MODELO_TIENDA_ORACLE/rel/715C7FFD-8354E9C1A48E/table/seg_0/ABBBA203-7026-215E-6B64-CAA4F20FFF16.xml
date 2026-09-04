@@ -1,0 +1,284 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="ABBBA203-7026-215E-6B64-CAA4F20FFF16" schemaObject="935ADA5A-58F4-77E9-E261-9E0928D0FEB3" name="CARRITO_DETALLE">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>CARRITO_DETALLE</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<commentInRDBMS><![CDATA[Productos, cantidades y precios agregados al carrito.]]></commentInRDBMS>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID_CARRITO_DETALLE" id="3D48B9DC-49F2-B96C-9949-F838D146FD5A">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>CARRITO_DETALLE</sourceObjSchema>
+<sourceObjName>ID_CARRITO_DETALLE</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>19</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,19,0</ownDataTypeParameters>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
+<defaultOntNull>true</defaultOntNull>
+<autoIncrementCycle>false</autoIncrementCycle>
+<autoIncrementDisableCache>false</autoIncrementDisableCache>
+<autoIncrementCache>20</autoIncrementCache>
+<autoIncrementOrder>false</autoIncrementOrder>
+</Column>
+<Column name="ID_CARRITO" id="9F5EB1CA-EE2E-2B09-A9A0-271049E5D745">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>CARRITO_DETALLE</sourceObjSchema>
+<sourceObjName>ID_CARRITO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>19</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,19,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="ACD955D0-7174-5AAF-C7CC-205D4C892744" referredColumn="8FF92B99-A853-89E4-D6D2-804C7DBF931D"/>
+</associations>
+</Column>
+<Column name="ID_PRODUCTO" id="73B7B292-92E8-8F9F-0E35-7A3F11C27083">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>CARRITO_DETALLE</sourceObjSchema>
+<sourceObjName>ID_PRODUCTO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>19</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,19,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="051D34FD-D543-A248-51B1-FE05CD4C5094" referredColumn="E09B436D-748A-7A4F-DDBB-41CFC668CCB9"/>
+</associations>
+</Column>
+<Column name="ID_PERSONALIZACION" id="3A966362-CE65-51DD-A84C-88886F53BF72">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>CARRITO_DETALLE</sourceObjSchema>
+<sourceObjName>ID_PERSONALIZACION</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>19</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,19,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="DEEC6C1F-0F78-FD0E-89E8-30124FD7C8B2" referredColumn="93DDD51C-330F-487C-DF70-EFBF5BBBAD4C"/>
+</associations>
+</Column>
+<Column name="CANTIDAD" id="DC400BB3-682E-C9A0-36F5-D53F7FC54A9E">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>CARRITO_DETALLE</sourceObjSchema>
+<sourceObjName>CANTIDAD</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<constraintName>CK_CAR_DET_CANTIDAD</constraintName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>10</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<checkConstraint>
+<implementationDef dbType="Generic Constraint" definition="CANTIDAD &gt; 0"/>
+<implementationDef dbType="Oracle Database 21c" definition="CANTIDAD &gt; 0"/>
+</checkConstraint>
+<ownDataTypeParameters>,10,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="PRECIO_UNITARIO" id="51BC5A12-08B5-1AB9-703B-C7C814AC950D">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>CARRITO_DETALLE</sourceObjSchema>
+<sourceObjName>PRECIO_UNITARIO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>12</dataTypePrecision>
+<dataTypeScale>2</dataTypeScale>
+<ownDataTypeParameters>,12,2</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="PRECIO_PERSONALIZA" id="89902F5E-34BC-89FB-AE8F-F5512582B6A4">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>CARRITO_DETALLE</sourceObjSchema>
+<sourceObjName>PRECIO_PERSONALIZA</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>12</dataTypePrecision>
+<dataTypeScale>2</dataTypeScale>
+<defaultValue>0</defaultValue>
+<ownDataTypeParameters>,12,2</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="SUBTOTAL" id="5A88B687-B4EA-6899-FFE2-4377BE375A7E">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>CARRITO_DETALLE</sourceObjSchema>
+<sourceObjName>SUBTOTAL</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<formulaDesc>&quot;CANTIDAD&quot;*(&quot;PRECIO_UNITARIO&quot;+&quot;PRECIO_PERSONALIZA&quot;)</formulaDesc>
+<nullsAllowed>true</nullsAllowed>
+<sourceType>Derived</sourceType>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>14</dataTypePrecision>
+<dataTypeScale>2</dataTypeScale>
+<ownDataTypeParameters>,14,2</ownDataTypeParameters>
+<computed>true</computed>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="FECHA_AGREGADO" id="E1A5FCF0-0D31-29DB-4ED4-4ABE49C155BB">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>CARRITO_DETALLE</sourceObjSchema>
+<sourceObjName>FECHA_AGREGADO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT046</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<defaultValue>SYSTIMESTAMP</defaultValue>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="A21D3184-F73B-A14C-EDE0-F89AC7B8716C" name="PK_CARRITO_DETALLE">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>PK_CARRITO_DETALLE</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:53 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="3D48B9DC-49F2-B96C-9949-F838D146FD5A"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="442649A7-932F-4B6A-0EBF-69FD28A3F447" schemaObject="935ADA5A-58F4-77E9-E261-9E0928D0FEB3" name="IX_CAR_DET_CARRITO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>IX_CAR_DET_CARRITO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="9F5EB1CA-EE2E-2B09-A9A0-271049E5D745"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="76E60E1C-F340-415C-ABE6-09BFD228F621" schemaObject="935ADA5A-58F4-77E9-E261-9E0928D0FEB3" name="IX_CAR_DET_PERSONA">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>IX_CAR_DET_PERSONA</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="3A966362-CE65-51DD-A84C-88886F53BF72"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="81281DAA-CF33-7635-D961-8471AD23485A" schemaObject="935ADA5A-58F4-77E9-E261-9E0928D0FEB3" name="IX_CAR_DET_PRODUCTO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>IX_CAR_DET_PRODUCTO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="73B7B292-92E8-8F9F-0E35-7A3F11C27083"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="4B43F114-97BC-E72C-2C95-367A7998C75E" schemaObject="935ADA5A-58F4-77E9-E261-9E0928D0FEB3" name="PK_CARRITO_DETALLE">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>PK_CARRITO_DETALLE</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="3D48B9DC-49F2-B96C-9949-F838D146FD5A"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="F7AFEF09-8C0F-C520-BF92-20BAED21B763" name="FK_CAR_DET_CARRITO">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="9F5EB1CA-EE2E-2B09-A9A0-271049E5D745"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="98CF2E57-42D3-E5AD-7157-C071ED36E95D" name="FK_CAR_DET_PERSONA">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="3A966362-CE65-51DD-A84C-88886F53BF72"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="FB75BC28-651E-2B4B-1D0C-6C51518A3434" name="FK_CAR_DET_PRODUCTO">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="73B7B292-92E8-8F9F-0E35-7A3F11C27083"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+<tableCheckConstraints itemClass="oracle.dbtools.crest.model.design.constraint.TableLevelConstraint">
+<tableCheckConstraint name="CK_CAR_DET_PRECIOS" directorySegmentName="seg_0" id="BA61D527-DBFC-36ED-39BF-D79615DCF618">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>CK_CAR_DET_PRECIOS</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:56 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<rule><![CDATA[
+        PRECIO_UNITARIO >= 0 AND PRECIO_PERSONALIZA >= 0
+    ]]></rule>
+</tableCheckConstraint>
+</tableCheckConstraints>
+</Table>

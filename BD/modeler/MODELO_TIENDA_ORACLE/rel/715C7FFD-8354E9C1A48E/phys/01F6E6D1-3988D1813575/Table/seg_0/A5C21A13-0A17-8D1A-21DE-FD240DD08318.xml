@@ -1,0 +1,151 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableProxyOraclev20c class="oracle.dbtools.crest.model.design.storage.oracle.v20c.TableProxyOraclev20c" name="PERSONALIZACION" directorySegmentName="seg_0" id="A5C21A13-0A17-8D1A-21DE-FD240DD08318">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<logging>YES</logging>
+<partitionedRowMovement>DISABLE</partitionedRowMovement>
+<segment>58E774B6-609D-EFF9-E85C-5F91BC2A3313</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<temporaryChanged>false</temporaryChanged>
+<accessDriverType>oracle_loader</accessDriverType>
+<rejectLimit></rejectLimit>
+<inMemory>NO</inMemory>
+<columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
+<ColumnProxy name="FECHA_CREACION" id="249BB215-5967-CC23-3824-D8EBEE026CB4">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<defaultValue>SYSTIMESTAMP</defaultValue>
+</ColumnProxy>
+<ColumnProxy name="ID_ARCHIVO_LADO_A" id="7A9A0DEF-AC06-E71F-1F37-80C280974FDF">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="BLOQUEADA" id="80098FB5-9F98-C949-036F-87FB4E8A4F5B">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<defaultValue>&apos;N&apos;</defaultValue>
+</ColumnProxy>
+<ColumnProxy name="MENSAJE_LADO_A" id="820A7CA3-5763-B20F-21BE-028A4CA97162">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="CONFIG_LADO_B" id="871DD129-B07C-EB5B-684E-18541CC33177">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ID_PERSONALIZACION" id="93DDD51C-330F-487C-DF70-EFBF5BBBAD4C">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<autoIncrementDDL>IDENTITY_CLAUSE</autoIncrementDDL>
+</ColumnProxy>
+<ColumnProxy name="ID_ARCHIVO_LADO_B" id="BE6A2A5F-E887-1F42-BFE8-99CF6729B97B">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="MENSAJE_LADO_B" id="CAC0BE8D-0F76-313C-CD3E-B45BD9D15931">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="CONFIG_LADO_A" id="FD94E325-4280-73E6-0410-591F8EBCBC72">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+</columnProxies>
+<indexProxies>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="IX_PERSONA_ARCHIVO_B" id="40123456-9A28-1F13-3C20-3B46F044232E">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<segment>97153218-79D5-4BF4-45C4-FCEBF005C482</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+</IndexProxy>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="PK_PERSONALIZACION" id="9F184C16-55DD-2106-378A-357F32563184">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<segment>97153218-79D5-4BF4-45C4-FCEBF005C482</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+</IndexProxy>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="IX_PERSONA_ARCHIVO_A" id="AD16A4D3-C45B-4532-8147-24889A4D63DF">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<segment>97153218-79D5-4BF4-45C4-FCEBF005C482</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+</IndexProxy>
+</indexProxies>
+<foreignKeys>
+<ForeignKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.FKProxyOraclev10g" name="FK_PERSONA_ARCHIVO_A" id="3641485A-A9CF-3E48-E6CB-B734369291DC">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ForeignKey>
+<ForeignKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.FKProxyOraclev10g" name="FK_PERSONA_ARCHIVO_B" id="551F2E1A-1336-061E-6DBA-03B967252C89">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ForeignKey>
+</foreignKeys>
+<lobStorages>
+<LobStorage class="oracle.dbtools.crest.model.design.storage.oracle.v11g.LobStorageOraclev11g" name="SYS_LOB0000076274C00006$$" id="A36B02BA-269B-2477-2553-AE2350173AEE">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:58 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<cache>NOCACHE</cache>
+<chunk>8192</chunk>
+<column>CONFIG_LADO_A</column>
+<compression>NO</compression>
+<duplication>KEEP_DUPLICATES</duplication>
+<logging>YES</logging>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<lobStorageType>SECUREFILE</lobStorageType>
+</LobStorage>
+<LobStorage class="oracle.dbtools.crest.model.design.storage.oracle.v11g.LobStorageOraclev11g" name="SYS_LOB0000076274C00007$$" id="E2FEDB1F-33C0-30C7-B7B2-D470496D7443">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:58 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<cache>NOCACHE</cache>
+<chunk>8192</chunk>
+<column>CONFIG_LADO_B</column>
+<compression>NO</compression>
+<duplication>KEEP_DUPLICATES</duplication>
+<logging>YES</logging>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<lobStorageType>SECUREFILE</lobStorageType>
+</LobStorage>
+</lobStorages>
+<primaryKeys>
+<PrimaryKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.PKProxyOraclev10g" name="PK_PERSONALIZACION" id="32E34EE7-6473-87AC-0AB5-8F2598B7CAB3">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:53 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<segment>97153218-79D5-4BF4-45C4-FCEBF005C482</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<existingIndex>9F184C16-55DD-2106-378A-357F32563184</existingIndex>
+<indexSegment>97153218-79D5-4BF4-45C4-FCEBF005C482</indexSegment>
+<indexSort>SORTED</indexSort>
+<usingIndex>BY INDEX NAME</usingIndex>
+</PrimaryKey>
+</primaryKeys>
+<tableCheckConstraints itemClass="oracle.dbtools.crest.model.design.storage.oracle.TableCheckConstraintOracle">
+<TableCheckConstraint name="CK_PERSONA_CONTENIDO" id="96D6A74B-E210-137E-1FB9-FE37D764B9F7">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:56 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</TableCheckConstraint>
+</tableCheckConstraints>
+</TableProxyOraclev20c>

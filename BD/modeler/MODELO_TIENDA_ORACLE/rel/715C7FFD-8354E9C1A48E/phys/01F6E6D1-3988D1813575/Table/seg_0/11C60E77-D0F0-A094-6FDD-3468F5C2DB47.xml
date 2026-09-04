@@ -1,0 +1,118 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableProxyOraclev20c class="oracle.dbtools.crest.model.design.storage.oracle.v20c.TableProxyOraclev20c" name="ESTADO_PEDIDO" directorySegmentName="seg_0" id="11C60E77-D0F0-A094-6FDD-3468F5C2DB47">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<logging>YES</logging>
+<partitionedRowMovement>DISABLE</partitionedRowMovement>
+<segment>3CE50B1C-7529-B75B-24D5-EF33607B8670</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<temporaryChanged>false</temporaryChanged>
+<accessDriverType>oracle_loader</accessDriverType>
+<rejectLimit></rejectLimit>
+<inMemory>NO</inMemory>
+<columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
+<ColumnProxy name="ID_ESTADO_PEDIDO" id="5F532B6C-8EDA-F6B3-E1AE-6E20699EC8DA">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<autoIncrementDDL>IDENTITY_CLAUSE</autoIncrementDDL>
+</ColumnProxy>
+<ColumnProxy name="NOMBRE" id="77850919-F8E6-DA6A-FBA6-6BEAB0268181">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="CODIGO" id="8D1BA26E-F1B4-728B-846F-E23642851925">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="DESCRIPCION" id="A7AA7B29-B956-52A8-D9BE-6886FF72B45B">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ES_FINAL" id="A9CBEF46-0F5F-832E-DC14-F4B169EC1066">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<defaultValue>&apos;N&apos;</defaultValue>
+</ColumnProxy>
+<ColumnProxy name="ACTIVO" id="EA2C55FF-7E0A-A59A-199B-C595029B5336">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<defaultValue>&apos;S&apos;</defaultValue>
+</ColumnProxy>
+<ColumnProxy name="ORDEN_VISUAL" id="F09B90D6-1D64-B885-2857-3D788A0BB0AA">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</ColumnProxy>
+</columnProxies>
+<indexProxies>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="UK_EST_PEDIDO_CODIGO" id="298BDFCD-6465-CC61-47F2-28B95EE658A3">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<segment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+</IndexProxy>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="UK_EST_PEDIDO_ORDEN" id="56901AD0-877A-7BDD-9046-BB0C0FA6D24E">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<segment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+</IndexProxy>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="PK_ESTADO_PEDIDO" id="78E430C1-6124-95C6-826B-E61EBA146CCD">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+<segment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+</IndexProxy>
+</indexProxies>
+<primaryKeys>
+<PrimaryKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.PKProxyOraclev10g" name="PK_ESTADO_PEDIDO" id="05125DA1-830C-C2C5-6E56-AED76D27FBA6">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:53 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<segment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<existingIndex>78E430C1-6124-95C6-826B-E61EBA146CCD</existingIndex>
+<indexSegment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</indexSegment>
+<indexSort>SORTED</indexSort>
+<usingIndex>BY INDEX NAME</usingIndex>
+</PrimaryKey>
+</primaryKeys>
+<uniqueKeys>
+<UniqueKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.UniqueOraclev10g" name="UK_EST_PEDIDO_CODIGO" id="13FE2A07-5393-B125-088E-CD95CA948D53">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:53 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<segment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<existingIndex>298BDFCD-6465-CC61-47F2-28B95EE658A3</existingIndex>
+<indexSegment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</indexSegment>
+<indexSort>SORTED</indexSort>
+<usingIndex>BY INDEX NAME</usingIndex>
+</UniqueKey>
+<UniqueKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.UniqueOraclev10g" name="UK_EST_PEDIDO_ORDEN" id="FAA5024E-8201-2528-0507-B3B2E1B19EDD">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:53 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<segment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</segment>
+<tableSpace>3741C2A2-D6F5-EF28-C9C3-18760B51AC23</tableSpace>
+<existingIndex>56901AD0-877A-7BDD-9046-BB0C0FA6D24E</existingIndex>
+<indexSegment>3D0280C5-5317-5EAD-3620-8F399A73A4A9</indexSegment>
+<indexSort>SORTED</indexSort>
+<usingIndex>BY INDEX NAME</usingIndex>
+</UniqueKey>
+</uniqueKeys>
+</TableProxyOraclev20c>

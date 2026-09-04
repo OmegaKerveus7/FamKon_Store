@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="68E0B6B4-2C33-E230-D5C2-21A447E65484" containerWithKeyObject="030F7DAD-B29A-A902-0581-E96540795D63" localFKIndex="82196FDA-A5CF-0D3D-A973-EA6623B23832" name="FK_PAGO_PEDIDO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_PAGO_PEDIDO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.PEDIDO</referredTableLongName>
+<deleteRule>NO ACTION</deleteRule>
+<referredTableID>13E82C01-837D-0239-4C12-11AD7DA6F602</referredTableID>
+<keyObject>2ABA3FD8-D52C-3BFC-4D5E-2937F60B1DF0</keyObject>
+<referredKeyID>2ABA3FD8-D52C-3BFC-4D5E-2937F60B1DF0</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>ID_PEDIDO</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

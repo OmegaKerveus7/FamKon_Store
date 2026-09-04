@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="DB447B94-4684-0A21-AEDF-28B168CB38A9" containerWithKeyObject="D39CCCC2-4ED1-1A41-1AB7-1C652132F9F6" localFKIndex="008E5B46-32AA-0268-2129-7313998A243E" name="FK_ENTREGA_REPARTIDOR">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_ENTREGA_REPARTIDOR</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.USUARIO</referredTableLongName>
+<deleteRule>NO ACTION</deleteRule>
+<referredTableID>117335F7-C5F1-E007-7E30-9F75CDF94524</referredTableID>
+<keyObject>0AB55FF3-AC70-558C-81F3-93014A733B83</keyObject>
+<referredKeyID>0AB55FF3-AC70-558C-81F3-93014A733B83</referredKeyID>
+<mandatory>false</mandatory>
+<refColNames>ID_USUARIO</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

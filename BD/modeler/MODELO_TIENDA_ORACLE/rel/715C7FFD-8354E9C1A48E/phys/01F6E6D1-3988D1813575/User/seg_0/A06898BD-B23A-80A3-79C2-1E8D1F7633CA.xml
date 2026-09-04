@@ -1,0 +1,9 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<UserOraclev10g class="oracle.dbtools.crest.model.design.storage.oracle.v10g.UserOraclev10g" name="TIENDA_APP" directorySegmentName="seg_0" id="A06898BD-B23A-80A3-79C2-1E8D1F7633CA">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjName>TIENDA_APP</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:34 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+</UserOraclev10g>

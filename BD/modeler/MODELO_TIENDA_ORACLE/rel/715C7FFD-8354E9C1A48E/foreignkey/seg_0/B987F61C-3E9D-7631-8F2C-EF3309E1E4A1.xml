@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="B987F61C-3E9D-7631-8F2C-EF3309E1E4A1" containerWithKeyObject="FC577732-B9F5-609F-E6F3-78DD5A96D507" localFKIndex="06902CCC-EF03-8487-0FB1-5329885234DB" name="FK_ROL_PER_PERMISO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_ROL_PER_PERMISO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.PERMISO</referredTableLongName>
+<deleteRule>CASCADE</deleteRule>
+<referredTableID>B65854CA-2F65-286D-D96B-B427E03EA0D9</referredTableID>
+<keyObject>3FB29E04-4394-BB0A-E7BC-384A6B6BFD5E</keyObject>
+<referredKeyID>3FB29E04-4394-BB0A-E7BC-384A6B6BFD5E</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>ID_PERMISO</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

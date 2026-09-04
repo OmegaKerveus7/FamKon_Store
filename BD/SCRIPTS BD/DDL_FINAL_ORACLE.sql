@@ -172,7 +172,7 @@ CREATE TABLE BITACORA_ACCESO (
 );
 
 /*
-    -- PROMPT 2. CATALOGOS DE PRODUCTOS, PAGOS, ESTADOS Y ENTREGA
+    --  2. CATALOGOS DE PRODUCTOS, PAGOS, ESTADOS Y ENTREGA
 */
 
 CREATE TABLE CATEGORIA_PRODUCTO (
@@ -289,7 +289,7 @@ CREATE TABLE AREA_ENTREGA (
 );
 
 /*
-    -- PROMPT 3. CARRITO Y PERSONALIZACION
+    --  3. CARRITO Y PERSONALIZACION
 */
 
 CREATE TABLE CARRITO (
@@ -358,7 +358,7 @@ CREATE TABLE CARRITO_DETALLE (
 );
 
 /*
-    -- PROMPT 4. PEDIDOS, PAGOS, TRACKING Y ENTREGAS
+    --  4. PEDIDOS, PAGOS, TRACKING Y ENTREGAS
 */
 
 CREATE TABLE PEDIDO (
@@ -665,9 +665,9 @@ INNER JOIN CATEGORIA_PRODUCTO CP ON CP.ID_CATEGORIA = PR.ID_CATEGORIA
 INNER JOIN ESTADO_PEDIDO EP ON EP.ID_ESTADO_PEDIDO = P.ID_ESTADO_PEDIDO
 INNER JOIN SITIO S ON S.ID_SITIO = P.ID_SITIO;
 
-PROMPT ============================================================
-PROMPT 8. COMENTARIOS DEL MODELO
-PROMPT ============================================================
+ /*============================================================
+ 8. COMENTARIOS DEL MODELO
+ ============================================================*/
 
 COMMENT ON TABLE SITIO IS 'Tiendas o sitios adheridos al registro centralizado de compradores.';
 COMMENT ON TABLE ARCHIVO IS 'Archivos binarios: fotografias, imagenes, disenos y evidencias.';
@@ -709,9 +709,9 @@ COMMENT ON COLUMN PEDIDO_DETALLE.NOMBRE_PRODUCTO IS
 COMMENT ON COLUMN PAGO.ULTIMOS_4 IS
     'Ultimos cuatro digitos informativos. No almacenar PAN completo ni CVV.';
 
-PROMPT ============================================================
-PROMPT 9. DATOS INICIALES DE CATALOGOS
-PROMPT ============================================================
+ /*============================================================
+ 9. DATOS INICIALES DE CATALOGOS
+ ============================================================*/
 
 INSERT INTO SITIO (CODIGO, NOMBRE, ACTIVO)
 VALUES ('TIENDA01', 'Tienda Proyecto', 'S');
@@ -840,9 +840,9 @@ VALUES ('CANCELADA', 'Cancelada', 'S');
 
 COMMIT;
 
-PROMPT ============================================================
-PROMPT 10. VALIDACION FINAL
-PROMPT ============================================================
+/* ============================================================
+ 10. VALIDACION FINAL
+ ============================================================*/
 
 DECLARE
     V_TABLAS     NUMBER;
@@ -886,7 +886,3 @@ BEGIN
 END;
 /
 
-PROMPT ============================================================
-PROMPT INSTALACION FINALIZADA
-PROMPT Siguiente fase: especificaciones y cuerpos de packages PL/SQL.
-PROMPT ============================================================

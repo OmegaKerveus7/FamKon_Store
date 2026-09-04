@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="CD7086F8-39AE-9A72-8475-3BC61F0F7E06" containerWithKeyObject="375C498F-48C5-85F1-A605-8A94DF560844" localFKIndex="9EAC80CF-A32E-AF0E-62A6-C5D331E3F385" name="FK_USU_ROL_ROL">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_USU_ROL_ROL</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.ROL</referredTableLongName>
+<deleteRule>CASCADE</deleteRule>
+<referredTableID>9005DF63-373F-062B-2709-8F9B4A511B51</referredTableID>
+<keyObject>F2BFA04E-ADE2-76C9-70B3-0A2EAE327945</keyObject>
+<referredKeyID>F2BFA04E-ADE2-76C9-70B3-0A2EAE327945</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>ID_ROL</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

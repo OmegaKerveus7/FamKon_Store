@@ -34,12 +34,15 @@ export default function FacialLoginPage() {
     setCargando(true);
     setError("");
     try {
-      const usuario = await loginFacial({
+      const respuesta = await loginFacial({
         identificacion: identificacion.trim(),
         imagenCompararBase64: stripBase64Prefix(dataUrl),
       });
       camaraRef.current?.apagar();
-      iniciarSesion(usuario);
+      if (!respuesta.usuario || !respuesta.token) {
+        throw new Error(respuesta.mensaje || "No se pudo verificar el rostro.");
+      }
+      iniciarSesion(respuesta.usuario, respuesta.token);
       navigate("/inicio", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo verificar el rostro.");
@@ -66,14 +69,16 @@ export default function FacialLoginPage() {
     setErrorActualizar("");
     setExitoActualizar("");
     try {
-      const usuario = await actualizarFoto({
+      const respuesta = await actualizarFoto({
         correo: correoActualizar.trim(),
         contrasena: contrasenaActualizar,
         fotoOriginalBase64: stripBase64Prefix(dataUrl),
       });
       camaraActualizarRef.current?.apagar();
       setExitoActualizar("Foto actualizada correctamente. Ahora intenta el login facial de nuevo.");
-      iniciarSesion(usuario);
+      if (respuesta.usuario && respuesta.token) {
+        iniciarSesion(respuesta.usuario, respuesta.token);
+      }
       setCorreoActualizar("");
       setContrasenaActualizar("");
     } catch (err) {

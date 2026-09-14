@@ -28,7 +28,7 @@ export default function HomePage() {
 
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
         <Store className="h-12 w-12 text-amber-600" />
-        <h1 className="text-3xl font-bold text-slate-900">¡Bienvenido, {usuario?.nombre}!</h1>
+        <h1 className="text-3xl font-bold text-slate-900">¡Bienvenido, {usuario?.nickname}!</h1>
         <p className="text-sm text-slate-600">
           Has iniciado sesión correctamente en la tienda FamKon.
         </p>
@@ -40,7 +40,7 @@ export default function HomePage() {
             <span className="font-semibold">Nickname:</span> {usuario?.nickname ?? "—"}
           </p>
           <p>
-            <span className="font-semibold">Rol:</span> {usuario?.rol}
+            <span className="font-semibold">Roles:</span> {usuario?.roles || "—"}
           </p>
         </div>
         <p className="text-xs text-slate-400">

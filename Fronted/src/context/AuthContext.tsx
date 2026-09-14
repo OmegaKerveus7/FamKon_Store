@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Usuario } from "../api/famkon";
+import { guardarToken, eliminarToken, obtenerToken } from "../api/famkon";
 
 interface AuthContextValue {
   usuario: Usuario | null;
-  iniciarSesion: (usuario: Usuario) => void;
+  token: string | null;
+  iniciarSesion: (usuario: Usuario, token: string) => void;
   cerrarSesion: () => void;
 }
 
@@ -21,18 +23,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  function iniciarSesion(u: Usuario) {
+  const [token, setToken] = useState<string | null>(obtenerToken);
+
+  function iniciarSesion(u: Usuario, t: string) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+    guardarToken(t);
     setUsuario(u);
+    setToken(t);
   }
 
   function cerrarSesion() {
     localStorage.removeItem(STORAGE_KEY);
+    eliminarToken();
     setUsuario(null);
+    setToken(null);
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, iniciarSesion, cerrarSesion }}>
+    <AuthContext.Provider value={{ usuario, token, iniciarSesion, cerrarSesion }}>
       {children}
     </AuthContext.Provider>
   );

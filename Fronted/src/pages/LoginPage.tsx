@@ -24,8 +24,11 @@ export default function LoginPage() {
     setError("");
     try {
       const esCorreo = valor.includes("@");
-      const usuario = await login(esCorreo ? valor : undefined, esCorreo ? undefined : valor, contrasena);
-      iniciarSesion(usuario);
+      const respuesta = await login(esCorreo ? valor : undefined, esCorreo ? undefined : valor, contrasena);
+      if (!respuesta.usuario || !respuesta.token) {
+        throw new Error(respuesta.mensaje || "No se pudo iniciar sesión.");
+      }
+      iniciarSesion(respuesta.usuario, respuesta.token);
       navigate("/inicio", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesión.");

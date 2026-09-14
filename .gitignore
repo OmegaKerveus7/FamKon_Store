@@ -25,6 +25,11 @@ Properties/PublishProfiles/
 *.pubxml.user
 Properties/launchSettings.json
 
+# Configuración con secretos
+appsettings.json
+appsettings.Development.json
+.env
+
 # Sistema
 .DS_Store
 Thumbs.db

@@ -3,7 +3,7 @@
 <createdBy>Deivid Mejía</createdBy>
 <createdTime>2026-09-04 00:35:29 UTC</createdTime>
 <ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
-<shouldBeOpen>false</shouldBeOpen>
+<shouldBeOpen>true</shouldBeOpen>
 <selectedRDBMSSite>01F6E6D1-21D0-CFBD-ABDD-3988D1813575</selectedRDBMSSite>
 <importConnectionStamps>
 <importConnectionStamp class="oracle.dbtools.crest.imports.DBConnectionStamp">

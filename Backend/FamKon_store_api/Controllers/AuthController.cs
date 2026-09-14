@@ -206,5 +206,30 @@ namespace FamKon_store_api.Controllers
             });
         }
 
+        [HttpPost("test-token")]
+        public ActionResult GenerarTokenPrueba([FromBody] TestTokenRequest request)
+        {
+            var token = _jwtService.GenerateToken(
+                request.IdUsuario,
+                request.Nickname,
+                request.Correo,
+                request.Roles);
+
+            return Ok(new
+            {
+                codigoS = 200,
+                mensaje = "Token generado. Úsalo en Authorization: Bearer <token>",
+                token
+            });
+        }
+
+    }
+
+    public class TestTokenRequest
+    {
+        public long IdUsuario { get; set; } = 1;
+        public string Nickname { get; set; } = "test_user";
+        public string Correo { get; set; } = "test@famkon.com";
+        public string Roles { get; set; } = "COMPRADOR";
     }
 }

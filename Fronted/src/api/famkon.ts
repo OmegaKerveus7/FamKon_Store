@@ -24,6 +24,12 @@ export interface LoginApiResponse {
   usuario: Usuario | null;
 }
 
+export interface RefreshTokenResponse {
+  codigoS: number;
+  mensaje: string;
+  token: string | null;
+}
+
 export interface RegistroRequest {
   nombres: string;
   apellidos: string;
@@ -45,6 +51,19 @@ export interface RegistroResponse {
   codigoS: number;
   mensaje: string;
   data: RegistroData | null;
+}
+
+export interface Permiso {
+  codigoRol: string;
+  rol: string;
+  codigoPermiso: string;
+  permisoNombre: string;
+  modulo: string;
+}
+
+export interface PermisosResponse {
+  codigoS: number;
+  permisos: Permiso[];
 }
 
 const BASE_URL = "/api/famkon";
@@ -125,6 +144,10 @@ export async function registrarComprador(
   });
 }
 
+export async function obtenerPermisos(): Promise<PermisosResponse> {
+  return request<PermisosResponse>("/permisos");
+}
+
 export async function loginFacial(opts: {
   identificacion?: string;
   imagenOriginalBase64?: string;
@@ -184,4 +207,231 @@ export function eliminarToken() {
 
 export function obtenerToken(): string | null {
   return getToken();
+}
+
+export async function refreshToken(token: string): Promise<RefreshTokenResponse> {
+  return request<RefreshTokenResponse>("/refresh-token", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+// ─── Interfaces de la Tienda ────────────────────────────────────────────────
+
+export interface Producto {
+  idProducto: number;
+  idSitio: number;
+  idCategoria: number;
+  categoria: string;
+  sku: string;
+  nombre: string;
+  descripcion: string;
+  precioBase: number;
+  permiteLadoA: string;
+  permiteLadoB: string;
+  activo: string;
+  imagen?: string;
+}
+
+export interface Categoria {
+  idCategoria: number;
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+}
+
+export interface CarritoItem {
+  idDetalle: number;
+  idProducto: number;
+  producto: string;
+  sku: string;
+  idPersonalizacion: number | null;
+  cantidad: number;
+  precioUnitario: number;
+  precioPersonaliza: number;
+  subtotal: number;
+}
+
+export interface Carrito {
+  idCarrito: number;
+  idUsuario: number;
+  idSitio: number;
+  estado: string;
+  detalles: CarritoItem[];
+  total: number;
+}
+
+export interface PedidoResumen {
+  idPedido: number;
+  idUsuario: number;
+  idSitio: number;
+  numeroPedido: string;
+  estado: string;
+  subtotal: number;
+  cargoEntrega: number;
+  total: number;
+  moneda: string;
+  fechaPedido: string;
+}
+
+export interface TrackingPaso {
+  estado: string;
+  fechaEstado: string;
+  comentario: string | null;
+  actor: string | null;
+}
+
+export interface PedidoDetalle {
+  idDetalle: number;
+  idProducto: number;
+  numeroLinea: number;
+  skuProducto: string;
+  nombreProducto: string;
+  cantidad: number;
+  precioUnitario: number;
+  precioPersonaliza: number;
+  subtotal: number;
+}
+
+// ─── Funciones de la Tienda ─────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiResponse = Record<string, any>;
+
+export async function listarCategorias(): Promise<Categoria[]> {
+  const res = await request<ApiResponse>("/categorias");
+  return (res.categorias as Categoria[]) ?? [];
+}
+
+export async function listarProductos(
+  idCategoria?: number,
+): Promise<Producto[]> {
+  const params = new URLSearchParams();
+  if (idCategoria) params.set("idCategoria", String(idCategoria));
+  const qs = params.toString();
+  const res = await request<ApiResponse>(
+    `/productos${qs ? `?${qs}` : ""}`,
+  );
+  return (res.productos as Producto[]) ?? [];
+}
+
+export async function obtenerProducto(
+  id: number,
+): Promise<Producto | null> {
+  const res = await request<ApiResponse>(`/productos/${id}`);
+  return (res.producto as Producto) ?? null;
+}
+
+export async function obtenerCarrito(
+  idSitio = 1,
+): Promise<Carrito> {
+  const res = await request<ApiResponse>(`/carrito?idSitio=${idSitio}`);
+  return (res.carrito as Carrito) ?? {
+    idCarrito: 0,
+    idUsuario: 0,
+    idSitio,
+    estado: "ACTIVO",
+    detalles: [],
+    total: 0,
+  };
+}
+
+export async function agregarAlCarritoAPI(data: {
+  idProducto: number;
+  cantidad: number;
+  idSitio?: number;
+  idPersonalizacion?: number | null;
+  precioPersonaliza?: number;
+}): Promise<{ idDetalle: number }> {
+  const res = await request<ApiResponse>("/carrito/productos", {
+    method: "POST",
+    body: JSON.stringify({
+      idProducto: data.idProducto,
+      cantidad: data.cantidad,
+      idSitio: data.idSitio ?? 1,
+      idPersonalizacion: data.idPersonalizacion ?? null,
+      precioPersonaliza: data.precioPersonaliza ?? 0,
+    }),
+  });
+  return { idDetalle: res.idDetalle as number };
+}
+
+export async function actualizarCantidadCarritoAPI(
+  idDetalle: number,
+  cantidad: number,
+): Promise<void> {
+  await request(`/carrito/detalle/${idDetalle}`, {
+    method: "PUT",
+    body: JSON.stringify({ cantidad }),
+  });
+}
+
+export async function eliminarDelCarritoAPI(
+  idDetalle: number,
+): Promise<void> {
+  await request(`/carrito/detalle/${idDetalle}`, { method: "DELETE" });
+}
+
+export async function listarPedidos(): Promise<PedidoResumen[]> {
+  const res = await request<ApiResponse>("/pedidos");
+  return (res.pedidos as PedidoResumen[]) ?? [];
+}
+
+export async function obtenerPedido(
+  id: number,
+): Promise<{ resumen: PedidoResumen | null; detalles: PedidoDetalle[] }> {
+  const res = await request<ApiResponse>(`/pedidos/${id}`);
+  return {
+    resumen: (res.resumen as PedidoResumen) ?? null,
+    detalles: (res.detalles as PedidoDetalle[]) ?? [],
+  };
+}
+
+export async function crearPedido(data: {
+  idCarrito: number;
+  idAreaEntrega: number;
+  moneda?: string;
+  referencia?: string;
+  observaciones?: string;
+}): Promise<{ idPedido: number; numeroPedido: string; tokenQr: string }> {
+  const res = await request<ApiResponse>("/pedidos", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return {
+    idPedido: res.idPedido as number,
+    numeroPedido: res.numeroPedido as string,
+    tokenQr: res.tokenQr as string,
+  };
+}
+
+export async function consultarTracking(
+  tokenHash: string,
+): Promise<TrackingPaso[]> {
+  const res = await request<ApiResponse>(
+    `/tracking/${encodeURIComponent(tokenHash)}`,
+  );
+  return (res.pasos as TrackingPaso[]) ?? [];
+}
+
+// ─── Funciones compatibilidad (localStorage) ──────────────────────────────────
+
+const CARRITO_KEY = "famkon.carrito";
+
+export function obtenerCarritoLocal(): CarritoItem[] {
+  const raw = localStorage.getItem(CARRITO_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export function guardarCarritoLocal(items: CarritoItem[]) {
+  localStorage.setItem(CARRITO_KEY, JSON.stringify(items));
+}
+
+export function vaciarCarrito() {
+  localStorage.removeItem(CARRITO_KEY);
 }

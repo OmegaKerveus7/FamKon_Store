@@ -12,15 +12,18 @@ namespace FamKon_store_api.Controllers
     {
         private readonly LoginService _loginService;
         private readonly JwtService _jwtService;
+        private readonly PermisoService _permisoService;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             LoginService loginService,
             JwtService jwtService,
+            PermisoService permisoService,
             ILogger<AuthController> logger)
         {
             _loginService = loginService;
             _jwtService = jwtService;
+            _permisoService = permisoService;
             _logger = logger;
         }
 
@@ -203,6 +206,66 @@ namespace FamKon_store_api.Controllers
                 nickname,
                 correo,
                 roles
+            });
+        }
+
+        [Authorize]
+        [HttpGet("permisos")]
+        public async Task<ActionResult> ObtenerPermisos()
+        {
+            var userId = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userId) || !long.TryParse(userId, out var idUsuario))
+                return Ok(new { codigoS = 401, mensaje = "Token inválido." });
+
+            var permisos = await _permisoService.ListarPermisosAsync(idUsuario);
+            return Ok(new
+            {
+                codigoS = 200,
+                permisos
+            });
+        }
+
+        [HttpPost("refresh-token")]
+        public ActionResult RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Token))
+                return Ok(new RefreshTokenResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "El campo 'token' es obligatorio."
+                });
+
+            var principal = _jwtService.ValidateToken(request.Token);
+            if (principal is null)
+                return Ok(new RefreshTokenResponse
+                {
+                    CodigoS = 401,
+                    Mensaje = "Token inválido o expirado."
+                });
+
+            var userId = principal.FindFirst("sub")?.Value;
+            var nickname = principal.FindFirst("nickname")?.Value;
+            var correo = principal.FindFirst("email")?.Value;
+            var roles = principal.FindFirst("roles")?.Value;
+
+            if (string.IsNullOrEmpty(userId) || !long.TryParse(userId, out var idUsuario))
+                return Ok(new RefreshTokenResponse
+                {
+                    CodigoS = 401,
+                    Mensaje = "Token inválido."
+                });
+
+            var newToken = _jwtService.GenerateToken(
+                idUsuario,
+                nickname ?? "",
+                correo ?? "",
+                roles ?? "");
+
+            return Ok(new RefreshTokenResponse
+            {
+                CodigoS = 200,
+                Mensaje = "Token renovado exitosamente.",
+                Token = newToken
             });
         }
 

@@ -27,6 +27,11 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<DBContext>();
 builder.Services.AddSingleton<JwtService>();
 builder.Services.AddScoped<LoginService>();
+builder.Services.AddScoped<UsuarioService>();
+builder.Services.AddScoped<PermisoService>();
+builder.Services.AddScoped<CatalogoService>();
+builder.Services.AddScoped<CarritoService>();
+builder.Services.AddScoped<PedidoService>();
 
 builder.Services.AddHttpClient<FamKon_store_api.Services.BiometricService>(client =>
 {

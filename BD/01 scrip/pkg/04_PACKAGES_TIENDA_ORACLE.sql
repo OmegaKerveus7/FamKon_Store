@@ -17,10 +17,10 @@ CREATE OR REPLACE PACKAGE PKG_SEGURIDAD AS
         P_TELEFONO IN USUARIO.TELEFONO%TYPE,
         P_FECHA_NACIMIENTO IN USUARIO.FECHA_NACIMIENTO%TYPE,
         P_NICKNAME IN USUARIO.NICKNAME%TYPE,
-        P_PASSWORD_HASH IN USUARIO.PASSWORD_HASH%TYPE,
-        P_TOKEN_QR_HASH IN USUARIO.TOKEN_QR_HASH%TYPE,
+        P_PASSWORD IN VARCHAR2,
         P_NOTIFICA_EMAIL IN USUARIO.NOTIFICA_EMAIL%TYPE DEFAULT 'S',
         P_NOTIFICA_WHATSAPP IN USUARIO.NOTIFICA_WHATSAPP%TYPE DEFAULT 'N',
+        O_TOKEN_QR OUT VARCHAR2,
         O_ID_USUARIO OUT USUARIO.ID_USUARIO%TYPE
     );
 
@@ -265,6 +265,66 @@ END PKG_PAGO_ENTREGA;
 /
 SHOW ERRORS PACKAGE PKG_PAGO_ENTREGA;
 
+
+create or replace NONEDITIONABLE PACKAGE PKG_USUARIO AS
+
+    PROCEDURE MAGNAMETS_USER(
+        -- Identificación del usuario objetivo
+        p_id_usuario       IN  NUMBER,
+
+        -- Datos personales
+        p_id_sitio         IN  NUMBER,
+        p_correo           IN  VARCHAR2,
+        p_telefono         IN  VARCHAR2,
+        p_fecha_nacimiento IN  DATE,
+        p_nickname         IN  VARCHAR2,
+        p_password         IN  VARCHAR2,   -- en claro, se hashea internamente
+
+        -- Notificaciones
+        p_notifica_email    IN  CHAR,
+        p_notifica_whatsapp IN  CHAR,
+
+        -- Flags
+        p_activo           IN  CHAR,
+        p_bloqueado        IN  CHAR,
+
+        -- Imágenes (IDs de ARCHIVO)
+        p_id_foto_original   IN  NUMBER,
+        p_id_foto_modificada IN  NUMBER,
+
+        -- Roles
+        p_id_rol           IN  NUMBER,
+
+        -- Control
+        p_opcion           IN  VARCHAR2,
+
+        -- Salidas
+        p_codigo_s         OUT NUMBER,
+        p_mensaje          OUT NVARCHAR2,
+        p_data             OUT NVARCHAR2
+    );
+
+END PKG_USUARIO;
+/
+/
+SHOW ERRORS PACKAGE PKG_USUARIO;
+
+create or replace NONEDITIONABLE PACKAGE PKG_LOGIN AS
+    PROCEDURE CRUD(
+        p_usuario_o_correo IN  VARCHAR2,
+        p_nickname         IN  VARCHAR2,
+        p_password         IN  VARCHAR2,
+        p_token_qr         IN  VARCHAR2,
+        p_id_archivo_foto  IN  NUMBER,
+        p_opcion           IN  VARCHAR2,
+        p_codigo_s         OUT NUMBER,
+        p_mensaje          OUT NVARCHAR2,
+        p_data             OUT NVARCHAR2
+    );
+END PKG_LOGIN;
+/
+SHOW ERRORS PACKAGE PKG_LOGIN;
+
 -- ============================================================
 -- 2. CUERPOS DE PACKAGES
 -- ============================================================
@@ -276,40 +336,101 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD AS
         P_TELEFONO IN USUARIO.TELEFONO%TYPE,
         P_FECHA_NACIMIENTO IN USUARIO.FECHA_NACIMIENTO%TYPE,
         P_NICKNAME IN USUARIO.NICKNAME%TYPE,
-        P_PASSWORD_HASH IN USUARIO.PASSWORD_HASH%TYPE,
-        P_TOKEN_QR_HASH IN USUARIO.TOKEN_QR_HASH%TYPE,
+        P_PASSWORD IN VARCHAR2,
         P_NOTIFICA_EMAIL IN USUARIO.NOTIFICA_EMAIL%TYPE,
         P_NOTIFICA_WHATSAPP IN USUARIO.NOTIFICA_WHATSAPP%TYPE,
+        O_TOKEN_QR OUT VARCHAR2,
         O_ID_USUARIO OUT USUARIO.ID_USUARIO%TYPE
     ) AS
         V_ID_ROL ROL.ID_ROL%TYPE;
         V_EXISTE NUMBER;
+        V_ID_SITIO USUARIO.ID_SITIO%TYPE;
+        V_SITIO_ACTIVO CHAR(1);
+        V_PASSWORD_HASH VARCHAR2(64);
+        V_TOKEN_QR VARCHAR2(64);
+        V_TOKEN_QR_HASH VARCHAR2(64);
     BEGIN
-        IF P_NOTIFICA_EMAIL NOT IN ('S','N') OR P_NOTIFICA_WHATSAPP NOT IN ('S','N')
-           OR (P_NOTIFICA_EMAIL = 'N' AND P_NOTIFICA_WHATSAPP = 'N') THEN
+        IF P_CORREO IS NULL OR P_TELEFONO IS NULL
+           OR P_NICKNAME IS NULL OR P_PASSWORD IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20101, 'Correo, telefono, nickname y contrasena son obligatorios.');
+        END IF;
+
+        IF NVL(P_NOTIFICA_EMAIL,'N') = 'N' AND NVL(P_NOTIFICA_WHATSAPP,'N') = 'N' THEN
             RAISE_APPLICATION_ERROR(-20101, 'Debe habilitar al menos un medio de notificacion.');
         END IF;
 
-        SELECT COUNT(*) INTO V_EXISTE FROM SITIO
-         WHERE ID_SITIO = P_ID_SITIO AND ACTIVO = 'S';
-        IF V_EXISTE = 0 THEN
-            RAISE_APPLICATION_ERROR(-20102, 'El sitio no existe o esta inactivo.');
+        -- Resolver sitio
+        V_ID_SITIO := P_ID_SITIO;
+        IF V_ID_SITIO IS NULL THEN
+            BEGIN
+                SELECT ID_SITIO INTO V_ID_SITIO
+                  FROM SITIO WHERE ACTIVO = 'S' AND ROWNUM = 1;
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN
+                    RAISE_APPLICATION_ERROR(-20102, 'No hay sitios activos disponibles.');
+            END;
+        ELSE
+            BEGIN
+                SELECT ACTIVO INTO V_SITIO_ACTIVO
+                  FROM SITIO WHERE ID_SITIO = V_ID_SITIO;
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN
+                    RAISE_APPLICATION_ERROR(-20102, 'El sitio especificado no existe.');
+            END;
+            IF V_SITIO_ACTIVO <> 'S' THEN
+                RAISE_APPLICATION_ERROR(-20102, 'El sitio especificado esta inactivo.');
+            END IF;
         END IF;
 
+        -- Nickname unico
+        SELECT COUNT(*) INTO V_EXISTE FROM USUARIO
+         WHERE UPPER(NICKNAME) = UPPER(P_NICKNAME);
+        IF V_EXISTE > 0 THEN
+            RAISE_APPLICATION_ERROR(-20103, 'El nickname ya esta en uso.');
+        END IF;
+
+        -- Correo unico
+        SELECT COUNT(*) INTO V_EXISTE FROM USUARIO
+         WHERE UPPER(CORREO) = UPPER(P_CORREO);
+        IF V_EXISTE > 0 THEN
+            RAISE_APPLICATION_ERROR(-20103, 'El correo ya esta registrado.');
+        END IF;
+
+        -- Hashes y token
+        SELECT LOWER(STANDARD_HASH(P_PASSWORD, 'SHA256')) INTO V_PASSWORD_HASH FROM DUAL;
+        SELECT LOWER(RAWTOHEX(DBMS_RANDOM.STRING('X', 32))) INTO V_TOKEN_QR FROM DUAL;
+        SELECT LOWER(STANDARD_HASH(V_TOKEN_QR, 'SHA256')) INTO V_TOKEN_QR_HASH FROM DUAL;
+
+        -- Obtener rol COMPRADOR
         SELECT ID_ROL INTO V_ID_ROL FROM ROL
          WHERE CODIGO = 'COMPRADOR' AND ACTIVO = 'S';
 
+        -- Insertar usuario
         INSERT INTO USUARIO (
             ID_SITIO, CORREO, TELEFONO, FECHA_NACIMIENTO, NICKNAME,
             PASSWORD_HASH, TOKEN_QR_HASH, NOTIFICA_EMAIL, NOTIFICA_WHATSAPP
         ) VALUES (
-            P_ID_SITIO, TRIM(P_CORREO), TRIM(P_TELEFONO), P_FECHA_NACIMIENTO,
-            TRIM(P_NICKNAME), P_PASSWORD_HASH, P_TOKEN_QR_HASH,
-            P_NOTIFICA_EMAIL, P_NOTIFICA_WHATSAPP
+            V_ID_SITIO, TRIM(P_CORREO), TRIM(P_TELEFONO), P_FECHA_NACIMIENTO,
+            TRIM(P_NICKNAME), V_PASSWORD_HASH, V_TOKEN_QR_HASH,
+            NVL(P_NOTIFICA_EMAIL,'S'), NVL(P_NOTIFICA_WHATSAPP,'N')
         ) RETURNING ID_USUARIO INTO O_ID_USUARIO;
 
+        -- Asignar rol COMPRADOR
         INSERT INTO USUARIO_ROL (ID_USUARIO, ID_ROL)
         VALUES (O_ID_USUARIO, V_ID_ROL);
+
+        -- Auditar
+        BEGIN
+            INSERT INTO BITACORA_ACCESO (
+                ID_USUARIO, IDENTIFICADOR, METODO_ACCESO, RESULTADO, MOTIVO
+            ) VALUES (
+                O_ID_USUARIO, SUBSTR(P_CORREO, 1, 150), 'CONTRASENA', 'S', 'Usuario creado'
+            );
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
+
+        O_TOKEN_QR := V_TOKEN_QR;
+
     EXCEPTION
         WHEN DUP_VAL_ON_INDEX THEN
             RAISE_APPLICATION_ERROR(-20103, 'El correo, nickname o token QR ya esta registrado.');
@@ -1006,6 +1127,814 @@ CREATE OR REPLACE PACKAGE BODY PKG_PAGO_ENTREGA AS
 END PKG_PAGO_ENTREGA;
 /
 SHOW ERRORS PACKAGE BODY PKG_PAGO_ENTREGA;
+
+
+create or replace NONEDITIONABLE PACKAGE BODY PKG_USUARIO AS
+
+    V_NOMBRE_PAQUETE CONSTANT NVARCHAR2(100) := 'PKG_USUARIO';
+    V_NOMBRE_PROC    CONSTANT NVARCHAR2(100) := 'MAGNAMETS_USER';
+
+    -- =============================================================
+    -- HASH_PASSWORD
+    -- =============================================================
+    FUNCTION HASH_PASSWORD(
+        p_password IN VARCHAR2
+    ) RETURN VARCHAR2 IS
+        v_hash VARCHAR2(64);
+    BEGIN
+        SELECT LOWER(STANDARD_HASH(p_password, 'SHA256'))
+          INTO v_hash
+          FROM dual;
+        RETURN v_hash;
+    END HASH_PASSWORD;
+
+    -- =============================================================
+    -- GENERAR_TOKEN_QR
+    -- =============================================================
+    FUNCTION GENERAR_TOKEN_QR RETURN VARCHAR2 IS
+        v_token VARCHAR2(64);
+    BEGIN
+        SELECT LOWER(RAWTOHEX(DBMS_RANDOM.STRING('X', 32)))
+          INTO v_token
+          FROM dual;
+        RETURN v_token;
+    END GENERAR_TOKEN_QR;
+
+    -- =============================================================
+    -- HASH_TOKEN
+    -- =============================================================
+    FUNCTION HASH_TOKEN(
+        p_token IN VARCHAR2
+    ) RETURN VARCHAR2 IS
+        v_hash VARCHAR2(64);
+    BEGIN
+        SELECT LOWER(STANDARD_HASH(p_token, 'SHA256'))
+          INTO v_hash
+          FROM dual;
+        RETURN v_hash;
+    END HASH_TOKEN;
+
+    -- =============================================================
+    -- GET_USUARIO_JSON
+    -- =============================================================
+    FUNCTION GET_USUARIO_JSON(
+        p_id_usuario IN NUMBER
+    ) RETURN CLOB IS
+        v_json      CLOB;
+        v_nickname  VARCHAR2(100);
+        v_correo    VARCHAR2(200);
+        v_telefono  VARCHAR2(50);
+        v_fecha_nac DATE;
+        v_activo    CHAR(1);
+        v_bloqueado CHAR(1);
+        v_not_email CHAR(1);
+        v_not_what  CHAR(1);
+        v_foto_ori  NUMBER;
+        v_foto_mod  NUMBER;
+        v_roles     VARCHAR2(1000);
+    BEGIN
+        SELECT NICKNAME, CORREO, TELEFONO, FECHA_NACIMIENTO,
+               ACTIVO, BLOQUEADO, NOTIFICA_EMAIL, NOTIFICA_WHATSAPP,
+               ID_FOTO_ORIGINAL, ID_FOTO_MODIFICADA,
+               (SELECT LISTAGG(R.CODIGO, ',') WITHIN GROUP (ORDER BY R.CODIGO)
+                  FROM USUARIO_ROL UR
+                  JOIN ROL R ON R.ID_ROL = UR.ID_ROL
+                 WHERE UR.ID_USUARIO = U.ID_USUARIO
+                   AND R.ACTIVO = 'S') AS ROLES
+          INTO v_nickname, v_correo, v_telefono, v_fecha_nac,
+               v_activo, v_bloqueado, v_not_email, v_not_what,
+               v_foto_ori, v_foto_mod, v_roles
+          FROM USUARIO U
+         WHERE ID_USUARIO = p_id_usuario;
+
+        v_json := '{'
+            || '"id_usuario":'          || p_id_usuario
+            || ',"nickname":"'          || v_nickname || '"'
+            || ',"correo":"'            || v_correo   || '"'
+            || ',"telefono":"'          || v_telefono || '"'
+            || ',"fecha_nacimiento":"'  || NVL(TO_CHAR(v_fecha_nac,'YYYY-MM-DD'),'') || '"'
+            || ',"notifica_email":"'    || v_not_email || '"'
+            || ',"notifica_whatsapp":"' || v_not_what  || '"'
+            || ',"activo":"'            || v_activo    || '"'
+            || ',"bloqueado":"'         || v_bloqueado || '"'
+            || ',"id_foto_original":'   || NVL(TO_CHAR(v_foto_ori),'null')
+            || ',"id_foto_modificada":' || NVL(TO_CHAR(v_foto_mod),'null')
+            || ',"roles":"'             || NVL(v_roles,'') || '"'
+            || '}';
+
+        RETURN v_json;
+
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN '{"error":"Usuario no encontrado"}';
+        WHEN OTHERS THEN
+            RETURN '{"error":"' || REPLACE(SQLERRM,'"','''') || '"}';
+    END GET_USUARIO_JSON;
+
+    -- =============================================================
+    -- Auditoría autónoma
+    -- =============================================================
+    PROCEDURE REG_AUDITORIA(
+        p_id_usuario    IN NUMBER,
+        p_identificador IN VARCHAR2,
+        p_metodo        IN VARCHAR2,
+        p_resultado     IN CHAR,
+        p_motivo        IN VARCHAR2
+    ) IS
+        PRAGMA AUTONOMOUS_TRANSACTION;
+    BEGIN
+        INSERT INTO BITACORA_ACCESO (
+            ID_USUARIO, IDENTIFICADOR, METODO_ACCESO,
+            RESULTADO, MOTIVO
+        ) VALUES (
+            p_id_usuario,
+            SUBSTR(p_identificador, 1, 150),
+            p_metodo,
+            p_resultado,
+            SUBSTR(p_motivo, 1, 300)
+        );
+        COMMIT;
+    EXCEPTION
+        WHEN OTHERS THEN ROLLBACK;
+    END REG_AUDITORIA;
+
+    -- =============================================================
+    -- MAGNAMETS_USER
+    -- =============================================================
+    PROCEDURE MAGNAMETS_USER(
+        p_id_usuario       IN  NUMBER,
+        p_id_sitio         IN  NUMBER,
+        p_correo           IN  VARCHAR2,
+        p_telefono         IN  VARCHAR2,
+        p_fecha_nacimiento IN  DATE,
+        p_nickname         IN  VARCHAR2,
+        p_password         IN  VARCHAR2,
+        p_notifica_email    IN  CHAR,
+        p_notifica_whatsapp IN  CHAR,
+        p_activo           IN  CHAR,
+        p_bloqueado        IN  CHAR,
+        p_id_foto_original   IN  NUMBER,
+        p_id_foto_modificada IN  NUMBER,
+        p_id_rol           IN  NUMBER,
+        p_opcion           IN  VARCHAR2,
+        p_codigo_s         OUT NUMBER,
+        p_mensaje          OUT NVARCHAR2,
+        p_data             OUT NVARCHAR2
+    ) AS
+        V_ID          NUMBER;
+        V_TOKEN       VARCHAR2(64);
+        V_TOKEN_HASH  VARCHAR2(64);
+        V_PWD_HASH    VARCHAR2(64);
+        V_ROWS        NUMBER;
+    BEGIN
+        CASE UPPER(p_opcion)
+
+            ---------------------------------------------------------
+            -- R = LEER USUARIO
+            ---------------------------------------------------------
+            WHEN 'R' THEN
+                IF p_id_usuario IS NULL THEN
+                    p_codigo_s := 400;
+                    p_mensaje  := 'ID de usuario es obligatorio.';
+                    p_data     := NULL;
+                    RETURN;
+                END IF;
+
+                p_data := GET_USUARIO_JSON(p_id_usuario);
+
+                IF p_data LIKE '%"error"%' THEN
+                    p_codigo_s := 404;
+                    p_mensaje  := 'Usuario no encontrado.';
+                ELSE
+                    p_codigo_s := 200;
+                    p_mensaje  := 'Consulta exitosa.';
+                END IF;
+
+            ---------------------------------------------------------
+            -- U = ACTUALIZAR DATOS
+            ---------------------------------------------------------
+            WHEN 'U' THEN
+                IF p_id_usuario IS NULL THEN
+                    p_codigo_s := 400;
+                    p_mensaje  := 'ID de usuario es obligatorio.';
+                    p_data     := NULL;
+                    RETURN;
+                END IF;
+
+                UPDATE USUARIO
+                   SET ID_SITIO           = NVL(p_id_sitio, ID_SITIO),
+                       CORREO             = NVL(p_correo, CORREO),
+                       TELEFONO           = NVL(p_telefono, TELEFONO),
+                       FECHA_NACIMIENTO   = NVL(p_fecha_nacimiento, FECHA_NACIMIENTO),
+                       NICKNAME           = NVL(p_nickname, NICKNAME),
+                       NOTIFICA_EMAIL     = NVL(p_notifica_email, NOTIFICA_EMAIL),
+                       NOTIFICA_WHATSAPP  = NVL(p_notifica_whatsapp, NOTIFICA_WHATSAPP)
+                 WHERE ID_USUARIO = p_id_usuario;
+
+                IF SQL%ROWCOUNT = 0 THEN
+                    p_codigo_s := 404;
+                    p_mensaje  := 'Usuario no encontrado.';
+                    p_data     := NULL;
+                ELSE
+                    REG_AUDITORIA(p_id_usuario, TO_CHAR(p_id_usuario), 'CONTRASENA', 'S', 'Usuario actualizado');
+                    p_codigo_s := 200;
+                    p_mensaje  := 'Usuario actualizado correctamente.';
+                    p_data     := TO_CHAR(p_id_usuario);
+                END IF;
+
+            ---------------------------------------------------------
+            -- P = ACTUALIZAR PASSWORD
+            ---------------------------------------------------------
+            WHEN 'P' THEN
+                IF p_id_usuario IS NULL OR p_password IS NULL THEN
+                    p_codigo_s := 400;
+                    p_mensaje  := 'ID de usuario y nueva contraseña son obligatorios.';
+                    p_data     := NULL;
+                    RETURN;
+                END IF;
+
+                V_PWD_HASH := HASH_PASSWORD(p_password);
+
+                UPDATE USUARIO
+                   SET PASSWORD_HASH = V_PWD_HASH
+                 WHERE ID_USUARIO = p_id_usuario;
+
+                IF SQL%ROWCOUNT = 0 THEN
+                    p_codigo_s := 404;
+                    p_mensaje  := 'Usuario no encontrado.';
+                    p_data     := NULL;
+                ELSE
+                    REG_AUDITORIA(p_id_usuario, TO_CHAR(p_id_usuario), 'CONTRASENA', 'S', 'Password actualizado');
+                    p_codigo_s := 200;
+                    p_mensaje  := 'Contraseña actualizada correctamente.';
+                    p_data     := TO_CHAR(p_id_usuario);
+                END IF;
+
+            ---------------------------------------------------------
+            -- I = ASIGNAR IMAGEN
+            ---------------------------------------------------------
+            WHEN 'I' THEN
+                IF p_id_usuario IS NULL THEN
+                    p_codigo_s := 400;
+                    p_mensaje  := 'ID de usuario es obligatorio.';
+                    p_data     := NULL;
+                    RETURN;
+                END IF;
+
+                IF p_id_foto_original IS NULL AND p_id_foto_modificada IS NULL THEN
+                    p_codigo_s := 400;
+                    p_mensaje  := 'Debe indicar al menos una imagen (original o modificada).';
+                    p_data     := NULL;
+                    RETURN;
+                END IF;
+
+                UPDATE USUARIO
+                   SET ID_FOTO_ORIGINAL   = NVL(p_id_foto_original, ID_FOTO_ORIGINAL),
+                       ID_FOTO_MODIFICADA = NVL(p_id_foto_modificada, ID_FOTO_MODIFICADA)
+                 WHERE ID_USUARIO = p_id_usuario;
+
+                IF SQL%ROWCOUNT = 0 THEN
+                    p_codigo_s := 404;
+                    p_mensaje  := 'Usuario no encontrado.';
+                    p_data     := NULL;
+                ELSE
+                    p_codigo_s := 200;
+                    p_mensaje  := 'Imagen asignada correctamente.';
+                    p_data     := TO_CHAR(p_id_usuario);
+                END IF;
+
+            ---------------------------------------------------------
+            -- Q = REGENERAR TOKEN QR
+            ---------------------------------------------------------
+            WHEN 'Q' THEN
+                IF p_id_usuario IS NULL THEN
+                    p_codigo_s := 400;
+                    p_mensaje  := 'ID de usuario es obligatorio.';
+                    p_data     := NULL;
+                    RETURN;
+                END IF;
+
+                V_TOKEN      := GENERAR_TOKEN_QR;
+                V_TOKEN_HASH := HASH_TOKEN(V_TOKEN);
+
+                UPDATE USUARIO
+                   SET TOKEN_QR_HASH = V_TOKEN_HASH
+                 WHERE ID_USUARIO = p_id_usuario;
+
+                IF SQL%ROWCOUNT = 0 THEN
+                    p_codigo_s := 404;
+                    p_mensaje  := 'Usuario no encontrado.';
+                    p_data     := NULL;
+                ELSE
+                    p_codigo_s := 200;
+                    p_mensaje  := 'Token QR regenerado. Guarde el token, no se volverá a mostrar.';
+                    p_data     := '{"id_usuario":' || p_id_usuario
+                               || ',"token_qr":"' || V_TOKEN || '"}';
+                END IF;
+
+            ---------------------------------------------------------
+            -- A = ACTIVAR
+            ---------------------------------------------------------
+            WHEN 'A' THEN
+                UPDATE USUARIO SET ACTIVO = 'S' WHERE ID_USUARIO = p_id_usuario;
+                IF SQL%ROWCOUNT = 0 THEN
+                    p_codigo_s := 404; p_mensaje := 'Usuario no encontrado.'; p_data := NULL;
+                ELSE
+                    p_codigo_s := 200; p_mensaje := 'Usuario activado.'; p_data := TO_CHAR(p_id_usuario);
+                END IF;
+
+            ---------------------------------------------------------
+            -- D = DESACTIVAR
+            ---------------------------------------------------------
+            WHEN 'D' THEN
+                UPDATE USUARIO SET ACTIVO = 'N' WHERE ID_USUARIO = p_id_usuario;
+                IF SQL%ROWCOUNT = 0 THEN
+                    p_codigo_s := 404; p_mensaje := 'Usuario no encontrado.'; p_data := NULL;
+                ELSE
+                    p_codigo_s := 200; p_mensaje := 'Usuario desactivado.'; p_data := TO_CHAR(p_id_usuario);
+                END IF;
+
+            ---------------------------------------------------------
+            -- B = BLOQUEAR
+            ---------------------------------------------------------
+            WHEN 'B' THEN
+                UPDATE USUARIO SET BLOQUEADO = 'S' WHERE ID_USUARIO = p_id_usuario;
+                IF SQL%ROWCOUNT = 0 THEN
+                    p_codigo_s := 404; p_mensaje := 'Usuario no encontrado.'; p_data := NULL;
+                ELSE
+                    p_codigo_s := 200; p_mensaje := 'Usuario bloqueado.'; p_data := TO_CHAR(p_id_usuario);
+                END IF;
+
+            ---------------------------------------------------------
+            -- L = DESBLOQUEAR
+            ---------------------------------------------------------
+            WHEN 'L' THEN
+                UPDATE USUARIO
+                   SET BLOQUEADO = 'N', INTENTOS_FALLIDOS = 0
+                 WHERE ID_USUARIO = p_id_usuario;
+                IF SQL%ROWCOUNT = 0 THEN
+                    p_codigo_s := 404; p_mensaje := 'Usuario no encontrado.'; p_data := NULL;
+                ELSE
+                    p_codigo_s := 200; p_mensaje := 'Usuario desbloqueado.'; p_data := TO_CHAR(p_id_usuario);
+                END IF;
+
+            ---------------------------------------------------------
+            -- X = ELIMINAR (lógico) + quitar roles
+            ---------------------------------------------------------
+            WHEN 'X' THEN
+                DELETE FROM USUARIO_ROL WHERE ID_USUARIO = p_id_usuario;
+                UPDATE USUARIO SET ACTIVO = 'N' WHERE ID_USUARIO = p_id_usuario;
+                IF SQL%ROWCOUNT = 0 THEN
+                    p_codigo_s := 404; p_mensaje := 'Usuario no encontrado.'; p_data := NULL;
+                ELSE
+                    p_codigo_s := 200; p_mensaje := 'Usuario eliminado (lógico).'; p_data := TO_CHAR(p_id_usuario);
+                END IF;
+
+            ---------------------------------------------------------
+            -- G = ASIGNAR ROL
+            ---------------------------------------------------------
+            WHEN 'G' THEN
+                IF p_id_usuario IS NULL OR p_id_rol IS NULL THEN
+                    p_codigo_s := 400; p_mensaje := 'ID usuario y rol son obligatorios.'; p_data := NULL;
+                    RETURN;
+                END IF;
+                INSERT INTO USUARIO_ROL (ID_USUARIO, ID_ROL)
+                VALUES (p_id_usuario, p_id_rol);
+                p_codigo_s := 200;
+                p_mensaje  := 'Rol asignado.';
+                p_data     := TO_CHAR(p_id_usuario);
+
+            ---------------------------------------------------------
+            -- H = QUITAR ROL
+            ---------------------------------------------------------
+            WHEN 'H' THEN
+                IF p_id_usuario IS NULL OR p_id_rol IS NULL THEN
+                    p_codigo_s := 400; p_mensaje := 'ID usuario y rol son obligatorios.'; p_data := NULL;
+                    RETURN;
+                END IF;
+                DELETE FROM USUARIO_ROL
+                 WHERE ID_USUARIO = p_id_usuario AND ID_ROL = p_id_rol;
+                p_codigo_s := 200;
+                p_mensaje  := 'Rol removido.';
+                p_data     := TO_CHAR(p_id_usuario);
+
+            ELSE
+                p_codigo_s := 400;
+                p_mensaje  := 'Opción no válida: ' || p_opcion
+                           || ' (use R,U,P,I,Q,A,D,B,L,X,G,H).';
+                p_data     := NULL;
+        END CASE;
+
+        ---------------------------------------------------------
+        -- COMMIT único para opciones que escriben
+        ---------------------------------------------------------
+        IF UPPER(p_opcion) IN ('U','P','I','Q','A','D','B','L','X','G','H') THEN
+            COMMIT;
+        END IF;
+
+    EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+            ROLLBACK;
+            p_codigo_s := 409;
+            p_mensaje  := 'Conflicto: correo, nickname o token QR ya existen.';
+            p_data     := NULL;
+        WHEN OTHERS THEN
+            ROLLBACK;
+            p_codigo_s := 500;
+            p_mensaje  := V_NOMBRE_PAQUETE || '.' || V_NOMBRE_PROC
+                       || ' SQLCODE=' || SQLCODE || ' ' || SQLERRM;
+            p_data     := NULL;
+    END MAGNAMETS_USER;
+
+END PKG_USUARIO;
+
+/
+SHOW ERRORS PACKAGE BODY PKG_USUARIO;
+
+create or replace NONEDITIONABLE PACKAGE BODY PKG_LOGIN AS
+
+    V_NOMBRE_PAQUETE CONSTANT NVARCHAR2(100) := 'PKG_LOGIN';
+    V_NOMBRE_PROC    CONSTANT NVARCHAR2(100) := 'CRUD';
+    C_MAX_INTENTOS   CONSTANT NUMBER          := 5;
+
+    -- =============================================================
+    -- HASH_PASSWORD
+    --   SHA-256 vía STANDARD_HASH (contexto SQL con SELECT INTO,
+    --   porque STANDARD_HASH no es visible directamente en PL/SQL).
+    --   >>> Si más adelante quieres salt + DBMS_CRYPTO, reemplaza
+    --       solo esta función.
+    -- =============================================================
+    FUNCTION HASH_PASSWORD(
+        p_password IN VARCHAR2
+    ) RETURN VARCHAR2 IS
+        v_hash VARCHAR2(64);
+    BEGIN
+        SELECT LOWER(STANDARD_HASH(p_password, 'SHA256'))
+          INTO v_hash
+          FROM dual;
+        RETURN v_hash;
+    END HASH_PASSWORD;
+
+    -- =============================================================
+    -- GET_USUARIO_JSON  (datos públicos + roles del usuario)
+    -- =============================================================
+    FUNCTION GET_USUARIO_JSON(
+        p_id_usuario IN NUMBER
+    ) RETURN CLOB IS
+        v_json      CLOB;
+        v_nickname  VARCHAR2(100);
+        v_correo    VARCHAR2(200);
+        v_telefono  VARCHAR2(50);
+        v_fecha_nac DATE;
+        v_activo    CHAR(1);
+        v_bloqueado CHAR(1);
+        v_roles     VARCHAR2(1000);
+    BEGIN
+        SELECT NICKNAME,
+               CORREO,
+               TELEFONO,
+               FECHA_NACIMIENTO,
+               ACTIVO,
+               BLOQUEADO,
+               (SELECT LISTAGG(R.CODIGO, ',') WITHIN GROUP (ORDER BY R.CODIGO)
+                  FROM USUARIO_ROL UR
+                  JOIN ROL R ON R.ID_ROL = UR.ID_ROL
+                 WHERE UR.ID_USUARIO = U.ID_USUARIO
+                   AND R.ACTIVO = 'S') AS ROLES
+          INTO v_nickname,
+               v_correo,
+               v_telefono,
+               v_fecha_nac,
+               v_activo,
+               v_bloqueado,
+               v_roles
+          FROM USUARIO U
+         WHERE ID_USUARIO = p_id_usuario;
+
+        v_json := '{'
+            || '"id_usuario":'         || p_id_usuario
+            || ',"nickname":"'         || v_nickname || '"'
+            || ',"correo":"'           || v_correo   || '"'
+            || ',"telefono":"'         || v_telefono || '"'
+            || ',"fecha_nacimiento":"' || NVL(TO_CHAR(v_fecha_nac,'YYYY-MM-DD'),'') || '"'
+            || ',"activo":"'           || v_activo    || '"'
+            || ',"bloqueado":"'        || v_bloqueado || '"'
+            || ',"roles":"'            || NVL(v_roles,'') || '"'
+            || '}';
+
+        RETURN v_json;
+
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN '{"error":"Usuario no encontrado"}';
+        WHEN OTHERS THEN
+            RETURN '{"error":"' || REPLACE(SQLERRM,'"','''') || '"}';
+    END GET_USUARIO_JSON;
+
+    -- =============================================================
+    -- Auditoría autónoma (no tumba el login si falla)
+    -- =============================================================
+    PROCEDURE REG_AUDITORIA(
+        p_id_usuario    IN NUMBER,
+        p_identificador IN VARCHAR2,
+        p_metodo        IN VARCHAR2,
+        p_resultado     IN CHAR,
+        p_motivo        IN VARCHAR2
+    ) IS
+        PRAGMA AUTONOMOUS_TRANSACTION;
+    BEGIN
+        INSERT INTO BITACORA_ACCESO (
+            ID_USUARIO, IDENTIFICADOR, METODO_ACCESO,
+            RESULTADO, MOTIVO
+        ) VALUES (
+            p_id_usuario,
+            SUBSTR(p_identificador, 1, 150),
+            p_metodo,
+            p_resultado,
+            SUBSTR(p_motivo, 1, 300)
+        );
+        COMMIT;
+    EXCEPTION
+        WHEN OTHERS THEN ROLLBACK;
+    END REG_AUDITORIA;
+
+    -- =============================================================
+    -- Login interno común (evita duplicar lógica en cada WHEN)
+    -- =============================================================
+    PROCEDURE LOGIN_INTERNO(
+        p_id_usuario    IN  NUMBER,
+        p_password      IN  VARCHAR2,   -- NULL si el método no lo requiere
+        p_metodo        IN  VARCHAR2,   -- CONTRASENA | QR | FACIAL
+        p_identificador IN  VARCHAR2,
+        p_codigo_s      OUT NUMBER,
+        p_mensaje       OUT NVARCHAR2,
+        p_data          OUT NVARCHAR2
+    ) IS
+        v_password_hash VARCHAR2(255);
+        v_bloqueado     CHAR(1);
+        v_activo        CHAR(1);
+        v_nickname      VARCHAR2(100);
+    BEGIN
+        SELECT PASSWORD_HASH, BLOQUEADO, ACTIVO, NICKNAME
+          INTO v_password_hash, v_bloqueado, v_activo, v_nickname
+          FROM USUARIO
+         WHERE ID_USUARIO = p_id_usuario;
+
+        -- Usuario inactivo
+        IF v_activo = 'N' THEN
+            p_codigo_s := 403;
+            p_mensaje  := 'Usuario inactivo.';
+            p_data     := NULL;
+            REG_AUDITORIA(p_id_usuario, p_identificador, p_metodo, 'N', 'Usuario inactivo');
+            RETURN;
+        END IF;
+
+        -- Usuario bloqueado
+        IF v_bloqueado = 'S' THEN
+            p_codigo_s := 403;
+            p_mensaje  := 'Usuario bloqueado por intentos fallidos.';
+            p_data     := NULL;
+            REG_AUDITORIA(p_id_usuario, p_identificador, p_metodo, 'N', 'Usuario bloqueado');
+            RETURN;
+        END IF;
+
+        -- Validación de contraseña solo cuando el método la requiere
+        IF p_metodo = 'CONTRASENA' THEN
+            IF HASH_PASSWORD(p_password) <> v_password_hash THEN
+                UPDATE USUARIO
+                   SET INTENTOS_FALLIDOS = INTENTOS_FALLIDOS + 1,
+                       BLOQUEADO = CASE
+                                     WHEN INTENTOS_FALLIDOS + 1 >= C_MAX_INTENTOS THEN 'S'
+                                     ELSE BLOQUEADO
+                                   END
+                 WHERE ID_USUARIO = p_id_usuario;
+
+                p_codigo_s := 401;
+                p_mensaje  := 'Credenciales inválidas.';
+                p_data     := NULL;
+                REG_AUDITORIA(p_id_usuario, p_identificador, p_metodo, 'N', 'Password incorrecto');
+                RETURN;
+            END IF;
+        END IF;
+
+        -- Login OK
+        UPDATE USUARIO
+           SET INTENTOS_FALLIDOS = 0,
+               ULTIMO_ACCESO     = SYSTIMESTAMP
+         WHERE ID_USUARIO = p_id_usuario;
+
+        p_codigo_s := 200;
+        p_mensaje  := 'Login exitoso. Bienvenido ' || v_nickname;
+        p_data     := GET_USUARIO_JSON(p_id_usuario);
+        REG_AUDITORIA(p_id_usuario, p_identificador, p_metodo, 'S', 'Login OK');
+    END LOGIN_INTERNO;
+
+    -- =============================================================
+    -- CRUD multifunción del login
+    --   p_opcion = 'C'  ->  credenciales (correo/nickname/tel + password)
+    --   p_opcion = 'N'  ->  nickname + password
+    --   p_opcion = 'Q'  ->  token QR escaneado
+    --   p_opcion = 'F'  ->  facial (correo/nickname + id selfie)
+    -- =============================================================
+    PROCEDURE CRUD(
+        p_usuario_o_correo IN  VARCHAR2,
+        p_nickname         IN  VARCHAR2,
+        p_password         IN  VARCHAR2,
+        p_token_qr         IN  VARCHAR2,
+        p_id_archivo_foto  IN  NUMBER,
+        p_opcion           IN  VARCHAR2,
+        p_codigo_s         OUT NUMBER,
+        p_mensaje          OUT NVARCHAR2,
+        p_data             OUT NVARCHAR2
+    ) AS
+        V_ID NUMBER;
+    BEGIN
+        CASE UPPER(p_opcion)
+
+            ---------------------------------------------------------
+            -- C = Credenciales (correo / nickname / teléfono + password)
+            ---------------------------------------------------------
+            WHEN 'C' THEN
+                IF p_usuario_o_correo IS NULL OR p_password IS NULL THEN
+                    p_codigo_s := 400;
+                    p_mensaje  := 'Usuario/correo y contraseña son obligatorios.';
+                    p_data     := NULL;
+                    RETURN;
+                END IF;
+
+                BEGIN
+                    SELECT ID_USUARIO INTO V_ID
+                      FROM USUARIO
+                     WHERE UPPER(NICKNAME) = UPPER(p_usuario_o_correo)
+                        OR UPPER(CORREO)   = UPPER(p_usuario_o_correo)
+                        OR TELEFONO        = p_usuario_o_correo;
+                EXCEPTION
+                    WHEN NO_DATA_FOUND THEN
+                        p_codigo_s := 404;
+                        p_mensaje  := 'Usuario no encontrado.';
+                        p_data     := NULL;
+                        REG_AUDITORIA(NULL, p_usuario_o_correo, 'CONTRASENA', 'N', 'Usuario no encontrado');
+                        RETURN;
+                END;
+
+                LOGIN_INTERNO(
+                    V_ID, p_password, 'CONTRASENA',
+                    p_usuario_o_correo,
+                    p_codigo_s, p_mensaje, p_data
+                );
+
+            ---------------------------------------------------------
+            -- N = Nickname + password
+            ---------------------------------------------------------
+            WHEN 'N' THEN
+                IF p_nickname IS NULL OR p_password IS NULL THEN
+                    p_codigo_s := 400;
+                    p_mensaje  := 'Nickname y contraseña son obligatorios.';
+                    p_data     := NULL;
+                    RETURN;
+                END IF;
+
+                BEGIN
+                    SELECT ID_USUARIO INTO V_ID
+                      FROM USUARIO
+                     WHERE UPPER(NICKNAME) = UPPER(p_nickname);
+                EXCEPTION
+                    WHEN NO_DATA_FOUND THEN
+                        p_codigo_s := 404;
+                        p_mensaje  := 'Nickname no encontrado.';
+                        p_data     := NULL;
+                        REG_AUDITORIA(NULL, p_nickname, 'CONTRASENA', 'N', 'Nickname no encontrado');
+                        RETURN;
+                END;
+
+                LOGIN_INTERNO(
+                    V_ID, p_password, 'CONTRASENA',
+                    p_nickname,
+                    p_codigo_s, p_mensaje, p_data
+                );
+
+            ---------------------------------------------------------
+            -- Q = QR  (hashea el token escaneado y compara)
+            ---------------------------------------------------------
+            WHEN 'Q' THEN
+                IF p_token_qr IS NULL THEN
+                    p_codigo_s := 400;
+                    p_mensaje  := 'Token QR es obligatorio.';
+                    p_data     := NULL;
+                    RETURN;
+                END IF;
+
+                BEGIN
+                    SELECT ID_USUARIO INTO V_ID
+                      FROM USUARIO
+                     WHERE TOKEN_QR_HASH = LOWER(STANDARD_HASH(p_token_qr, 'SHA256'));
+                EXCEPTION
+                    WHEN NO_DATA_FOUND THEN
+                        p_codigo_s := 404;
+                        p_mensaje  := 'Token QR no válido.';
+                        p_data     := NULL;
+                        REG_AUDITORIA(NULL, p_token_qr, 'QR', 'N', 'QR no encontrado');
+                        RETURN;
+                END;
+
+                LOGIN_INTERNO(
+                    V_ID, NULL, 'QR',
+                    p_token_qr,
+                    p_codigo_s, p_mensaje, p_data
+                );
+
+            ---------------------------------------------------------
+            -- F = Facial
+            --   1) Ubica al usuario por correo/nickname.
+            --   2) Compara el hash de la selfie entrante (ya subida
+            --      a ARCHIVO) contra ID_FOTO_ORIGINAL / ID_FOTO_MODIFICADA.
+            ---------------------------------------------------------
+            WHEN 'F' THEN
+                IF (p_usuario_o_correo IS NULL AND p_nickname IS NULL)
+                   OR p_id_archivo_foto IS NULL THEN
+                    p_codigo_s := 400;
+                    p_mensaje  := 'Correo/nickname y selfie son obligatorios.';
+                    p_data     := NULL;
+                    RETURN;
+                END IF;
+
+                -- 1) Ubicar al usuario
+                BEGIN
+                    SELECT ID_USUARIO INTO V_ID
+                      FROM USUARIO
+                     WHERE (p_usuario_o_correo IS NOT NULL AND (
+                               UPPER(CORREO)   = UPPER(p_usuario_o_correo)
+                            OR UPPER(NICKNAME) = UPPER(p_usuario_o_correo)))
+                        OR (p_nickname IS NOT NULL
+                            AND UPPER(NICKNAME) = UPPER(p_nickname));
+                EXCEPTION
+                    WHEN NO_DATA_FOUND THEN
+                        p_codigo_s := 404;
+                        p_mensaje  := 'Usuario no encontrado para validación facial.';
+                        p_data     := NULL;
+                        REG_AUDITORIA(NULL, NVL(p_usuario_o_correo, p_nickname),
+                                      'FACIAL', 'N', 'Usuario no encontrado');
+                        RETURN;
+                END;
+
+                -- 2) Comparar hashes contra foto original o modificada
+                DECLARE
+                    v_hash_entrante VARCHAR2(64);
+                    v_match         NUMBER := 0;
+                BEGIN
+                    SELECT HASH_SHA256 INTO v_hash_entrante
+                      FROM ARCHIVO
+                     WHERE ID_ARCHIVO = p_id_archivo_foto;
+
+                    SELECT COUNT(*) INTO v_match
+                      FROM USUARIO U
+                     WHERE U.ID_USUARIO = V_ID
+                       AND EXISTS (
+                             SELECT 1
+                               FROM ARCHIVO A
+                              WHERE A.HASH_SHA256 = v_hash_entrante
+                                AND A.ID_ARCHIVO IN (U.ID_FOTO_ORIGINAL,
+                                                     U.ID_FOTO_MODIFICADA)
+                           );
+
+                    IF v_match = 0 THEN
+                        p_codigo_s := 401;
+                        p_mensaje  := 'La imagen no coincide con el rostro registrado.';
+                        p_data     := NULL;
+                        REG_AUDITORIA(V_ID, TO_CHAR(p_id_archivo_foto),
+                                      'FACIAL', 'N', 'Rostro no coincide');
+                        RETURN;
+                    END IF;
+                END;
+
+                LOGIN_INTERNO(
+                    V_ID, NULL, 'FACIAL',
+                    TO_CHAR(p_id_archivo_foto),
+                    p_codigo_s, p_mensaje, p_data
+                );
+
+            ELSE
+                p_codigo_s := 400;
+                p_mensaje  := 'Opción no válida: ' || p_opcion
+                           || ' (use C, N, Q, F).';
+                p_data     := NULL;
+        END CASE;
+
+    EXCEPTION
+        WHEN TOO_MANY_ROWS THEN
+            p_codigo_s := 400;
+            p_mensaje  := 'Existen múltiples usuarios con ese identificador.';
+            p_data     := NULL;
+        WHEN OTHERS THEN
+            p_codigo_s := 500;
+            p_mensaje  := V_NOMBRE_PAQUETE || '.' || V_NOMBRE_PROC
+                       || ' SQLCODE=' || SQLCODE || ' ' || SQLERRM;
+            p_data     := NULL;
+    END CRUD;
+
+END PKG_LOGIN;
+/
+SHOW ERRORS PACKAGE BODY PKG_LOGIN;
 
 -- ============================================================
 -- 3. VALIDACION FINAL

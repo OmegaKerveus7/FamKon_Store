@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { iniciarSesion } = useAuth();
+  const { iniciarSesion, cargarPermisos } = useAuth();
   const [identificador, setIdentificador] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [mostrar, setMostrar] = useState(false);
@@ -29,6 +29,7 @@ export default function LoginPage() {
         throw new Error(respuesta.mensaje || "No se pudo iniciar sesión.");
       }
       iniciarSesion(respuesta.usuario, respuesta.token);
+      await cargarPermisos();
       navigate("/inicio", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesión.");

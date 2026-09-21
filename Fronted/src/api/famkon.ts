@@ -53,6 +53,23 @@ export interface RegistroResponse {
   data: RegistroData | null;
 }
 
+export type CanalVerificacion = "EMAIL" | "WHATSAPP" | "AMBOS";
+
+export interface EnviarCodigoRequest {
+  codigo: string;
+  correo: string;
+  telefono?: string;
+  canal: CanalVerificacion;
+}
+
+export interface EnviarCodigoResponse {
+  codigoS: number;
+  mensaje: string;
+  emailEnviado: boolean;
+  whatsAppEnviado: boolean;
+  minutosExpiracion: number;
+}
+
 export interface Permiso {
   codigoRol: string;
   rol: string;
@@ -139,6 +156,15 @@ export async function registrarComprador(
   datos: RegistroRequest,
 ): Promise<RegistroResponse> {
   return request<RegistroResponse>("/registro", {
+    method: "POST",
+    body: JSON.stringify(datos),
+  });
+}
+
+export async function enviarCodigoVerificacion(
+  datos: EnviarCodigoRequest,
+): Promise<EnviarCodigoResponse> {
+  return request<EnviarCodigoResponse>("/verificacion/enviar-codigo", {
     method: "POST",
     body: JSON.stringify(datos),
   });

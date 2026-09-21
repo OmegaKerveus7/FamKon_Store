@@ -45,8 +45,8 @@ El archivo `appsettings.json` contiene la configuración de conexión a la base 
     "Oracle": "User Id=system;Password=...;Data Source=www.server.daossystem.pro:5626/XEPDB1;"
   },
   "Biometric": {
-    "SegmentarUrl": "http://www.server.daossystem.pro:3405/Rostro/Segmentar",
-    "VerificarUrl": "http://www.server.daossystem.pro:3405/Rostro/Verificar"
+    "SegmentarUrl": "https://biosys.daossystem.pro/Rostro/Segmentar",
+    "VerificarUrl": "https://biosys.daossystem.pro/Rostro/Verificar"
   }
 }
 ```
@@ -91,6 +91,12 @@ Todas las rutas usan el prefijo base `/api/famkon`.
 | POST | `/api/famkon/login` | Login normal (correo o nombre de usuario + contraseña) |
 | POST | `/api/famkon/login/facial` | Login por reconocimiento facial (imagen original vs imagen a comparar) |
 | POST | `/api/famkon/login/carnet` | Login por reconocimiento de carnet (imagen, código QR o identificación) |
+
+### Verificación de registro (`VerificacionController`)
+
+| Método | Ruta | Descripción |
+| ------ | ---- | ----------- |
+| POST | `/api/famkon/verificacion/enviar-codigo` | Envía código OTP de 6 dígitos por Email, WhatsApp o ambos (código generado en frontend, sin almacenamiento en BD) |
 
 ### Swagger
 
@@ -140,6 +146,8 @@ Al ejecutar la API en entorno de desarrollo, Swagger queda disponible en:
 | Servicio | Descripción |
 | -------- | ----------- |
 | `Services/BiometricService.cs` | Consume las APIs de segmentación y verificación facial |
+| `Services/EmailService.cs` | Envío de códigos OTP por Gmail SMTP |
+| `Services/WhatsAppService.cs` | Envío de códigos OTP por WAWP (`api.wawp.net`) |
 | `UsuarioRepositoryMock` | Repositorio de usuarios en memoria (temporal, sin BD) |
 
 ## Cómo ejecutar

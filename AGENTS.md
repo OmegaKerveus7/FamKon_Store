@@ -116,6 +116,14 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - **UI**: Tailwind CSS 4
 - **API Base URL**: `/api/famkon` (proxy configurado en vite.config.ts)
 
+### Verificación de Registro (2 pasos)
+- **Frontend genera** código OTP de 6 dígitos localmente (sin BD)
+- **Backend lo envía** por Email (Gmail SMTP), WhatsApp (WAWP) o ambos
+- **Usuario ingresa** el código recibido → validación **local** en el frontend
+- Si el código coincide → recién entonces se llama a `/api/famkon/registro`
+- Endpoint: `POST /api/famkon/verificacion/enviar-codigo` (`VerificacionController.cs`)
+- Expiración del código: **5 minutos** (validado por timestamp en frontend)
+
 ### Auth Flow
 1. Login → POST `/api/famkon/login_basic` → `{ token, usuario }`
 2. Guardar token y usuario en `localStorage` (keys: `famkon.token`, `famkon.usuario`)
@@ -167,10 +175,11 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - ⏳ Imágenes de productos reales
 - ⏳ Formulario de pago
 
-### Servicios Externos (Inactivos)
-- **Reconocimiento facial**: `http://www.server.daossystem.pro:3405/Rostro/Segmentar`
-- **Verificación facial**: `http://www.server.daossystem.pro:3405/Rostro/Verificar`
-- Estos servicios NO están activos. Solo login por **correo/nickname + password** está funcional.
+### Servicios Externos (Funcionales ✅)
+- **Reconocimiento facial**: `https://biosys.daossystem.pro/Rostro/Segmentar`
+- **Verificación facial**: `https://biosys.daossystem.pro/Rostro/Verificar`
+- El servicio de segmentación recibe el rostro A (base64) y devuelve la imagen ya segmentada.
+- El servicio de verificación compara la imagen segmentada almacenada en la BD con la nueva imagen segmentada del escaneo, e indica si fue un éxito.
 
 ## Archivos Importantes
 

@@ -38,6 +38,13 @@ builder.Services.AddHttpClient<FamKon_store_api.Services.BiometricService>(clien
     client.Timeout = TimeSpan.FromSeconds(15);
 });
 
+builder.Services.AddHttpClient<FamKon_store_api.Services.WhatsAppService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
+builder.Services.AddScoped<FamKon_store_api.Services.EmailService>();
+
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]!;
 builder.Services.AddAuthentication(options =>
 {

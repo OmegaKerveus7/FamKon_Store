@@ -28,7 +28,9 @@ builder.Services.AddSingleton<DBContext>();
 builder.Services.AddSingleton<JwtService>();
 builder.Services.AddScoped<LoginService>();
 builder.Services.AddScoped<UsuarioService>();
+builder.Services.AddScoped<UsuarioAdminService>();
 builder.Services.AddScoped<PermisoService>();
+builder.Services.AddScoped<BitacoraService>();
 builder.Services.AddScoped<CatalogoService>();
 builder.Services.AddScoped<CarritoService>();
 builder.Services.AddScoped<PedidoService>();
@@ -53,6 +55,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    options.MapInboundClaims = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
@@ -62,7 +65,8 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidAudience = builder.Configuration["Jwt:Audience"],
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero,
+        NameClaimType = "sub"
     };
 });
 

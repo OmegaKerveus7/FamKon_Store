@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Check } from "lucide-react";
 import {
   type Producto,
@@ -9,7 +9,6 @@ import {
 
 export default function ProductoDetallePage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
 
   const [producto, setProducto] = useState<Producto | null>(null);
   const [cantidad, setCantidad] = useState(1);
@@ -49,7 +48,7 @@ export default function ProductoDetallePage() {
 
   if (cargando) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100">
+      <div className="flex items-center justify-center py-20">
         <Package className="h-8 w-8 animate-spin text-amber-500" />
       </div>
     );
@@ -57,34 +56,37 @@ export default function ProductoDetallePage() {
 
   if (!producto) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 gap-4">
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
         <Package className="h-12 w-12 text-slate-300" />
         <p className="text-sm text-slate-500">Producto no encontrado.</p>
-        <Link to="/comprador/catalogo" className="text-sm font-semibold text-amber-600 hover:underline">
-          Volver al catálogo
+        <Link
+          to="/comprador/catalogo"
+          className="text-sm font-semibold text-amber-600 hover:underline"
+        >
+          Volver al catalogo
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-amber-50 via-orange-100 to-slate-100">
-      {/* Header */}
-      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/60 bg-white/70 px-4 py-3 backdrop-blur sm:px-6">
-        <button onClick={() => navigate(-1)} className="rounded-xl border border-slate-300 p-2 text-slate-700 transition hover:bg-white">
+    <div className="mx-auto max-w-3xl space-y-5">
+      <header className="flex items-center gap-3">
+        <Link
+          to="/comprador/catalogo"
+          className="rounded-lg border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-50"
+        >
           <ArrowLeft className="h-5 w-5" />
-        </button>
+        </Link>
         <span className="text-sm font-semibold text-slate-900">Detalle del producto</span>
       </header>
 
-      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-        {/* Imagen */}
-        <div className="mb-6 flex aspect-[16/9] items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex aspect-[16/9] items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
           <Package className="h-24 w-24 text-amber-300" />
         </div>
 
-        {/* Info */}
-        <div className="space-y-4">
+        <div className="space-y-4 p-6">
           <div>
             <p className="text-xs font-medium text-amber-600">{producto.categoria}</p>
             <h1 className="mt-1 text-2xl font-bold text-slate-900">{producto.nombre}</h1>
@@ -96,23 +98,23 @@ export default function ProductoDetallePage() {
           <p className="text-sm leading-relaxed text-slate-600">{producto.descripcion}</p>
 
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-amber-600">Q{producto.precioBase.toFixed(2)}</span>
+            <span className="text-3xl font-bold text-amber-600">
+              Q{producto.precioBase.toFixed(2)}
+            </span>
             <span className="text-xs text-slate-400">precio base</span>
           </div>
 
-          {/* Personalización */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-            <p className="font-semibold text-slate-800">Personalización</p>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            <p className="font-semibold text-slate-800">Personalizacion</p>
             <p className="mt-1">
               {producto.permiteLadoA === "S" && producto.permiteLadoB === "S"
                 ? "Este producto permite personalizar ambos lados (A y B)."
                 : producto.permiteLadoA === "S"
                   ? "Este producto permite personalizar el lado A."
-                  : "Este producto no admite personalización."}
+                  : "Este producto no admite personalizacion."}
             </p>
           </div>
 
-          {/* Cantidad */}
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold text-slate-700">Cantidad:</span>
             <div className="flex items-center gap-2">
@@ -122,7 +124,9 @@ export default function ProductoDetallePage() {
               >
                 <Minus className="h-4 w-4" />
               </button>
-              <span className="w-10 text-center text-lg font-bold text-slate-900">{cantidad}</span>
+              <span className="w-10 text-center text-lg font-bold text-slate-900">
+                {cantidad}
+              </span>
               <button
                 onClick={() => setCantidad(cantidad + 1)}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50"
@@ -132,21 +136,21 @@ export default function ProductoDetallePage() {
             </div>
           </div>
 
-          {/* Subtotal */}
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">Subtotal ({cantidad} {cantidad === 1 ? "unidad" : "unidades"})</span>
+              <span className="text-sm text-slate-600">
+                Subtotal ({cantidad} {cantidad === 1 ? "unidad" : "unidades"})
+              </span>
               <span className="text-xl font-bold text-amber-700">
                 Q{(producto.precioBase * cantidad).toFixed(2)}
               </span>
             </div>
           </div>
 
-          {/* Botones */}
           <div className="flex gap-3">
             <Link
               to="/comprador/catalogo"
-              className="flex-1 rounded-xl border border-slate-300 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-white"
+              className="flex-1 rounded-xl border border-slate-200 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Seguir comprando
             </Link>

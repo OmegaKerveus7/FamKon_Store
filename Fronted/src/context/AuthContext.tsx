@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import type { Usuario, Permiso } from "../api/famkon";
 import { guardarToken, eliminarToken, obtenerToken, refreshToken, obtenerPermisos } from "../api/famkon";
 
@@ -10,14 +10,20 @@ interface AuthContextValue {
   cerrarSesion: () => void;
   renovarToken: () => Promise<boolean>;
   cargarPermisos: () => Promise<void>;
+  refrescarPermisos: () => Promise<void>;
   tienePermiso: (codigoPermiso: string) => boolean;
   tieneRol: (codigoRol: string) => boolean;
+  registrarActividad: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const STORAGE_KEY = "famkon.usuario";
 const PERMISOS_KEY = "famkon.permisos";
-const REFRESH_INTERVAL_MS = 8 * 60 * 1000;
+export const ACTIVIDAD_KEY = "famkon.ultima_actividad";
+
+// 10 minutos totales. Aviso al minuto 9 (60s antes del logout).
+export const TIMEOUT_INACTIVIDAD_MS = 10 * 60 * 1000;
+export const AVISO_INACTIVIDAD_MS = 60 * 1000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(() => {
@@ -40,11 +46,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return [];
     }
   });
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const actividadRef = useRef<number>(Date.now());
+  const avisoActivoRef = useRef<boolean>(false);
 
   const cerrarSesion = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(PERMISOS_KEY);
+    localStorage.removeItem(ACTIVIDAD_KEY);
     eliminarToken();
     setUsuario(null);
     setToken(null);
@@ -64,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (respuesta.codigoS === 200 && respuesta.token) {
         guardarToken(respuesta.token);
         setToken(respuesta.token);
+        actividadRef.current = Date.now();
+        localStorage.setItem(ACTIVIDAD_KEY, String(actividadRef.current));
         return true;
       }
       cerrarSesion();
@@ -82,52 +94,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPermisos(respuesta.permisos);
       }
     } catch {
-      // Silenciar errores de permisos (puede que el endpoint no exista aún)
+      // Silenciar errores de permisos
     }
   }, []);
 
-  const tienePermiso = useCallback((codigoPermiso: string): boolean => {
-    return permisos.some(p => p.codigoPermiso === codigoPermiso);
-  }, [permisos]);
+  const refrescarPermisos = useCallback(async () => {
+    await cargarPermisos();
+  }, [cargarPermisos]);
 
-  const tieneRol = useCallback((codigoRol: string): boolean => {
-    return permisos.some(p => p.codigoRol === codigoRol);
-  }, [permisos]);
+  const registrarActividad = useCallback(() => {
+    actividadRef.current = Date.now();
+    localStorage.setItem(ACTIVIDAD_KEY, String(actividadRef.current));
+  }, []);
 
-  useEffect(() => {
-    if (!token) return;
+  const tienePermiso = useCallback(
+    (codigoPermiso: string): boolean => {
+      return permisos.some((p) => p.codigoPermiso === codigoPermiso);
+    },
+    [permisos],
+  );
 
-    intervalRef.current = setInterval(async () => {
-      await renovarToken();
-    }, REFRESH_INTERVAL_MS);
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [token, renovarToken]);
-
-  // Cargar permisos cuando hay token pero no hay permisos guardados
-  useEffect(() => {
-    if (token && permisos.length === 0) {
-      cargarPermisos();
-    }
-  }, [token, permisos.length, cargarPermisos]);
+  const tieneRol = useCallback(
+    (codigoRol: string): boolean => {
+      return permisos.some((p) => p.codigoRol === codigoRol);
+    },
+    [permisos],
+  );
 
   function iniciarSesion(u: Usuario, t: string) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
     guardarToken(t);
     setUsuario(u);
     setToken(t);
+    actividadRef.current = Date.now();
+    localStorage.setItem(ACTIVIDAD_KEY, String(actividadRef.current));
+    avisoActivoRef.current = false;
   }
 
+  // ─── Timers: auto-refresh cada 8 min + inactividad cada 10 min ─────────────
+  useEffect(() => {
+    if (!token) return;
+
+    // Auto-refresh cada 8 minutos mientras el usuario este activo.
+    // Solo refrescamos si la ultima actividad fue hace menos de 1 min
+    // (asi no gastamos tokens en sesiones abandonadas).
+    intervalRef.current = setInterval(async () => {
+      const inactivoPor = Date.now() - actividadRef.current;
+      if (inactivoPor < 60 * 1000) {
+        await renovarToken();
+      }
+    }, 8 * 60 * 1000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [token, renovarToken]);
+
+  // Cargar permisos automaticamente tras login
+  useEffect(() => {
+    if (token && permisos.length === 0) {
+      cargarPermisos();
+    }
+  }, [token, permisos.length, cargarPermisos]);
+
   return (
-    <AuthContext.Provider value={{ usuario, token, permisos, iniciarSesion, cerrarSesion, renovarToken, cargarPermisos, tienePermiso, tieneRol }}>
+    <AuthContext.Provider
+      value={{
+        usuario,
+        token,
+        permisos,
+        iniciarSesion,
+        cerrarSesion,
+        renovarToken,
+        cargarPermisos,
+        refrescarPermisos,
+        tienePermiso,
+        tieneRol,
+        registrarActividad,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
+
+import { createContext, useContext } from "react";
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);

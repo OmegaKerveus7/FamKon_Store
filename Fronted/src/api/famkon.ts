@@ -461,3 +461,160 @@ export function guardarCarritoLocal(items: CarritoItem[]) {
 export function vaciarCarrito() {
   localStorage.removeItem(CARRITO_KEY);
 }
+
+// ─── Gestor de Usuarios (Admin) ──────────────────────────────────────────────
+
+export interface UsuarioAdmin {
+  idUsuario: number;
+  idSitio: number | null;
+  correo: string;
+  telefono: string;
+  fechaNacimiento: string;
+  nickname: string;
+  activo: string;
+  bloqueado: string;
+  notificaEmail: string;
+  notificaWhatsapp: string;
+  intentosFallidos: number;
+  ultimoAcceso: string | null;
+  fechaCreacion: string | null;
+  roles: string;
+}
+
+// Modelo enriquecido que devuelve la vista VW_GESTOR_USUARIOS
+// a traves de PKG_SEGURIDAD.SP_LISTAR_USUARIOS_GESTOR.
+export interface UsuarioGestor {
+  idUsuario: number;
+  nickname: string;
+  correo: string;
+  telefono: string;
+  fechaNacimiento: string;
+  edad: number | null;
+  idSitio: number | null;
+  activo: string;
+  bloqueado: string;
+  intentosFallidos: number;
+  ultimoAcceso: string | null;
+  notificaEmail: string;
+  notificaWhatsapp: string;
+  roles: string;
+  cantRoles: number;
+  cantPermisos: number;
+  ultimaConexionOk: string | null;
+  ultimaConexionFallida: string | null;
+  totalAccesos: number;
+}
+
+export interface RolDisponible {
+  idRol: number;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  activo: string;
+}
+
+export interface CrearUsuarioAdminBody {
+  correo: string;
+  nickname: string;
+  password: string;
+  telefono?: string;
+  fechaNacimiento?: string;
+  notificaEmail?: string;
+  notificaWhatsapp?: string;
+  codigoRol: string;
+}
+
+export interface ActualizarUsuarioAdminBody {
+  correo?: string;
+  nickname?: string;
+  telefono?: string;
+  fechaNacimiento?: string;
+  notificaEmail?: string;
+  notificaWhatsapp?: string;
+}
+
+export async function listarUsuariosAdmin(soloActivos = "N"): Promise<UsuarioGestor[]> {
+  const res = await request<ApiResponse>(`/admin/usuarios?soloActivos=${soloActivos}`);
+  return (res.usuarios as UsuarioGestor[]) ?? [];
+}
+
+export async function obtenerUsuarioAdmin(id: number): Promise<UsuarioGestor | null> {
+  const res = await request<ApiResponse>(`/admin/usuarios/${id}`);
+  return (res.usuario as UsuarioGestor) ?? null;
+}
+
+export async function crearUsuarioAdmin(
+  body: CrearUsuarioAdminBody
+): Promise<{ codigoS: number; mensaje: string; idUsuario?: number; codigoQr?: string }> {
+  const res = await request<ApiResponse>("/admin/usuarios", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  let idUsuario: number | undefined;
+  let codigoQr: string | undefined;
+  try {
+    const data = typeof res.data === "string" ? JSON.parse(res.data) : res.data;
+    if (data && typeof data === "object") {
+      idUsuario = data.id_usuario;
+      codigoQr = data.token_qr;
+    }
+  } catch {
+  }
+  return {
+    codigoS: res.codigoS as number,
+    mensaje: (res.mensaje as string) ?? "",
+    idUsuario,
+    codigoQr,
+  };
+}
+
+export async function actualizarUsuarioAdmin(
+  id: number,
+  body: ActualizarUsuarioAdminBody
+): Promise<{ codigoS: number; mensaje: string }> {
+  const res = await request<ApiResponse>(`/admin/usuarios/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+  return {
+    codigoS: res.codigoS as number,
+    mensaje: (res.mensaje as string) ?? "",
+  };
+}
+
+export async function cambiarEstadoUsuarioAdmin(
+  id: number,
+  opcion: "A" | "D" | "B" | "L" | boolean,
+): Promise<{ codigoS: number; mensaje: string }> {
+  const body =
+    typeof opcion === "boolean"
+      ? { activo: opcion }
+      : { opcion };
+  const res = await request<ApiResponse>(`/admin/usuarios/${id}/estado`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+  return {
+    codigoS: res.codigoS as number,
+    mensaje: (res.mensaje as string) ?? "",
+  };
+}
+
+export async function asignarRolUsuarioAdmin(
+  id: number,
+  codigoRol: string
+): Promise<{ codigoS: number; mensaje: string }> {
+  const res = await request<ApiResponse>(`/admin/usuarios/${id}/roles`, {
+    method: "POST",
+    body: JSON.stringify({ codigoRol }),
+  });
+  return {
+    codigoS: res.codigoS as number,
+    mensaje: (res.mensaje as string) ?? "",
+  };
+}
+
+export async function listarRolesAdmin(): Promise<RolDisponible[]> {
+  const res = await request<ApiResponse>("/admin/roles");
+  return (res.roles as RolDisponible[]) ?? [];
+}

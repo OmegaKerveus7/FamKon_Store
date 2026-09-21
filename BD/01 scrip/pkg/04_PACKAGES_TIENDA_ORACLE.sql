@@ -10,23 +10,36 @@ WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK;
 -- 1. ESPECIFICACIONES DE PACKAGES
 -- ============================================================
 
-CREATE OR REPLACE PACKAGE PKG_SEGURIDAD AS
+CREATE OR REPLACE PACKAGE TIENDA_APP.PKG_SEGURIDAD AS
+    ------------------------------------------------------------------
+    -- USUARIOS
+    ------------------------------------------------------------------
     PROCEDURE SP_CREAR_USUARIO (
         P_ID_SITIO IN USUARIO.ID_SITIO%TYPE,
         P_CORREO IN USUARIO.CORREO%TYPE,
         P_TELEFONO IN USUARIO.TELEFONO%TYPE,
         P_FECHA_NACIMIENTO IN USUARIO.FECHA_NACIMIENTO%TYPE,
         P_NICKNAME IN USUARIO.NICKNAME%TYPE,
-        P_PASSWORD IN VARCHAR2,
+        P_PASSWORD_HASH IN USUARIO.PASSWORD_HASH%TYPE,
+        P_TOKEN_QR_HASH IN USUARIO.TOKEN_QR_HASH%TYPE,
         P_NOTIFICA_EMAIL IN USUARIO.NOTIFICA_EMAIL%TYPE DEFAULT 'S',
         P_NOTIFICA_WHATSAPP IN USUARIO.NOTIFICA_WHATSAPP%TYPE DEFAULT 'N',
-        O_TOKEN_QR OUT VARCHAR2,
         O_ID_USUARIO OUT USUARIO.ID_USUARIO%TYPE
     );
 
-    PROCEDURE SP_ASIGNAR_ROL (
-        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE,
-        P_CODIGO_ROL IN ROL.CODIGO%TYPE
+    PROCEDURE SP_ACTUALIZAR_USUARIO (
+        P_ID_USUARIO        IN USUARIO.ID_USUARIO%TYPE,
+        P_CORREO            IN USUARIO.CORREO%TYPE,
+        P_TELEFONO          IN USUARIO.TELEFONO%TYPE,
+        P_FECHA_NACIMIENTO  IN USUARIO.FECHA_NACIMIENTO%TYPE,
+        P_NICKNAME          IN USUARIO.NICKNAME%TYPE,
+        P_NOTIFICA_EMAIL    IN USUARIO.NOTIFICA_EMAIL%TYPE,
+        P_NOTIFICA_WHATSAPP IN USUARIO.NOTIFICA_WHATSAPP%TYPE
+    );
+
+    PROCEDURE SP_CAMBIAR_PASSWORD (
+        P_ID_USUARIO      IN USUARIO.ID_USUARIO%TYPE,
+        P_PASSWORD_HASH   IN USUARIO.PASSWORD_HASH%TYPE
     );
 
     PROCEDURE SP_CAMBIAR_ESTADO_USUARIO (
@@ -35,6 +48,50 @@ CREATE OR REPLACE PACKAGE PKG_SEGURIDAD AS
         P_BLOQUEADO IN USUARIO.BLOQUEADO%TYPE
     );
 
+    PROCEDURE SP_ACTIVAR_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE
+    );
+
+    PROCEDURE SP_DESACTIVAR_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE
+    );
+
+    PROCEDURE SP_BLOQUEAR_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE
+    );
+
+    PROCEDURE SP_DESBLOQUEAR_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE
+    );
+
+    PROCEDURE SP_ELIMINAR_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE
+    );
+
+    ------------------------------------------------------------------
+    -- GESTOR DE USUARIOS (vista enriquecida)
+    ------------------------------------------------------------------
+    PROCEDURE SP_LISTAR_USUARIOS_GESTOR (
+        P_SOLO_ACTIVOS IN CHAR DEFAULT 'N',
+        O_DATOS        OUT SYS_REFCURSOR
+    );
+
+    PROCEDURE SP_OBTENER_USUARIO_GESTOR (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE,
+        O_DATOS      OUT SYS_REFCURSOR
+    );
+
+    ------------------------------------------------------------------
+    -- ROLES
+    ------------------------------------------------------------------
+    PROCEDURE SP_ASIGNAR_ROL (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE,
+        P_CODIGO_ROL IN ROL.CODIGO%TYPE
+    );
+
+    ------------------------------------------------------------------
+    -- BITACORA / AUTENTICACION
+    ------------------------------------------------------------------
     PROCEDURE SP_REGISTRAR_ACCESO (
         P_ID_USUARIO IN BITACORA_ACCESO.ID_USUARIO%TYPE,
         P_IDENTIFICADOR IN BITACORA_ACCESO.IDENTIFICADOR%TYPE,
@@ -304,6 +361,15 @@ create or replace NONEDITIONABLE PACKAGE PKG_USUARIO AS
         p_data             OUT NVARCHAR2
     );
 
+    -- Listado de usuarios para el gestor (admin / supervisor)
+    PROCEDURE SP_LISTAR_USUARIOS (
+        P_SOLO_ACTIVOS IN CHAR DEFAULT 'N',
+        O_DATOS        OUT SYS_REFCURSOR
+    );
+
+    -- Listado de roles disponibles (ADMIN, SUPERVISOR, REPARTIDOR, COMPRADOR)
+    PROCEDURE SP_LISTAR_ROLES (O_DATOS OUT SYS_REFCURSOR);
+
 END PKG_USUARIO;
 /
 /
@@ -329,108 +395,51 @@ SHOW ERRORS PACKAGE PKG_LOGIN;
 -- 2. CUERPOS DE PACKAGES
 -- ============================================================
 
-CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD AS
+CREATE OR REPLACE PACKAGE BODY TIENDA_APP.PKG_SEGURIDAD AS
+
+    ------------------------------------------------------------------
+    -- SP_CREAR_USUARIO
+    ------------------------------------------------------------------
     PROCEDURE SP_CREAR_USUARIO (
         P_ID_SITIO IN USUARIO.ID_SITIO%TYPE,
         P_CORREO IN USUARIO.CORREO%TYPE,
         P_TELEFONO IN USUARIO.TELEFONO%TYPE,
         P_FECHA_NACIMIENTO IN USUARIO.FECHA_NACIMIENTO%TYPE,
         P_NICKNAME IN USUARIO.NICKNAME%TYPE,
-        P_PASSWORD IN VARCHAR2,
+        P_PASSWORD_HASH IN USUARIO.PASSWORD_HASH%TYPE,
+        P_TOKEN_QR_HASH IN USUARIO.TOKEN_QR_HASH%TYPE,
         P_NOTIFICA_EMAIL IN USUARIO.NOTIFICA_EMAIL%TYPE,
         P_NOTIFICA_WHATSAPP IN USUARIO.NOTIFICA_WHATSAPP%TYPE,
-        O_TOKEN_QR OUT VARCHAR2,
         O_ID_USUARIO OUT USUARIO.ID_USUARIO%TYPE
     ) AS
         V_ID_ROL ROL.ID_ROL%TYPE;
         V_EXISTE NUMBER;
-        V_ID_SITIO USUARIO.ID_SITIO%TYPE;
-        V_SITIO_ACTIVO CHAR(1);
-        V_PASSWORD_HASH VARCHAR2(64);
-        V_TOKEN_QR VARCHAR2(64);
-        V_TOKEN_QR_HASH VARCHAR2(64);
     BEGIN
-        IF P_CORREO IS NULL OR P_TELEFONO IS NULL
-           OR P_NICKNAME IS NULL OR P_PASSWORD IS NULL THEN
-            RAISE_APPLICATION_ERROR(-20101, 'Correo, telefono, nickname y contrasena son obligatorios.');
-        END IF;
-
-        IF NVL(P_NOTIFICA_EMAIL,'N') = 'N' AND NVL(P_NOTIFICA_WHATSAPP,'N') = 'N' THEN
+        IF P_NOTIFICA_EMAIL NOT IN ('S','N') OR P_NOTIFICA_WHATSAPP NOT IN ('S','N')
+           OR (P_NOTIFICA_EMAIL = 'N' AND P_NOTIFICA_WHATSAPP = 'N') THEN
             RAISE_APPLICATION_ERROR(-20101, 'Debe habilitar al menos un medio de notificacion.');
         END IF;
 
-        -- Resolver sitio
-        V_ID_SITIO := P_ID_SITIO;
-        IF V_ID_SITIO IS NULL THEN
-            BEGIN
-                SELECT ID_SITIO INTO V_ID_SITIO
-                  FROM SITIO WHERE ACTIVO = 'S' AND ROWNUM = 1;
-            EXCEPTION
-                WHEN NO_DATA_FOUND THEN
-                    RAISE_APPLICATION_ERROR(-20102, 'No hay sitios activos disponibles.');
-            END;
-        ELSE
-            BEGIN
-                SELECT ACTIVO INTO V_SITIO_ACTIVO
-                  FROM SITIO WHERE ID_SITIO = V_ID_SITIO;
-            EXCEPTION
-                WHEN NO_DATA_FOUND THEN
-                    RAISE_APPLICATION_ERROR(-20102, 'El sitio especificado no existe.');
-            END;
-            IF V_SITIO_ACTIVO <> 'S' THEN
-                RAISE_APPLICATION_ERROR(-20102, 'El sitio especificado esta inactivo.');
-            END IF;
+        SELECT COUNT(*) INTO V_EXISTE FROM SITIO
+         WHERE ID_SITIO = P_ID_SITIO AND ACTIVO = 'S';
+        IF V_EXISTE = 0 THEN
+            RAISE_APPLICATION_ERROR(-20102, 'El sitio no existe o esta inactivo.');
         END IF;
 
-        -- Nickname unico
-        SELECT COUNT(*) INTO V_EXISTE FROM USUARIO
-         WHERE UPPER(NICKNAME) = UPPER(P_NICKNAME);
-        IF V_EXISTE > 0 THEN
-            RAISE_APPLICATION_ERROR(-20103, 'El nickname ya esta en uso.');
-        END IF;
-
-        -- Correo unico
-        SELECT COUNT(*) INTO V_EXISTE FROM USUARIO
-         WHERE UPPER(CORREO) = UPPER(P_CORREO);
-        IF V_EXISTE > 0 THEN
-            RAISE_APPLICATION_ERROR(-20103, 'El correo ya esta registrado.');
-        END IF;
-
-        -- Hashes y token
-        SELECT LOWER(STANDARD_HASH(P_PASSWORD, 'SHA256')) INTO V_PASSWORD_HASH FROM DUAL;
-        SELECT LOWER(RAWTOHEX(DBMS_RANDOM.STRING('X', 32))) INTO V_TOKEN_QR FROM DUAL;
-        SELECT LOWER(STANDARD_HASH(V_TOKEN_QR, 'SHA256')) INTO V_TOKEN_QR_HASH FROM DUAL;
-
-        -- Obtener rol COMPRADOR
         SELECT ID_ROL INTO V_ID_ROL FROM ROL
          WHERE CODIGO = 'COMPRADOR' AND ACTIVO = 'S';
 
-        -- Insertar usuario
         INSERT INTO USUARIO (
             ID_SITIO, CORREO, TELEFONO, FECHA_NACIMIENTO, NICKNAME,
             PASSWORD_HASH, TOKEN_QR_HASH, NOTIFICA_EMAIL, NOTIFICA_WHATSAPP
         ) VALUES (
-            V_ID_SITIO, TRIM(P_CORREO), TRIM(P_TELEFONO), P_FECHA_NACIMIENTO,
-            TRIM(P_NICKNAME), V_PASSWORD_HASH, V_TOKEN_QR_HASH,
-            NVL(P_NOTIFICA_EMAIL,'S'), NVL(P_NOTIFICA_WHATSAPP,'N')
+            P_ID_SITIO, TRIM(P_CORREO), TRIM(P_TELEFONO), P_FECHA_NACIMIENTO,
+            TRIM(P_NICKNAME), P_PASSWORD_HASH, P_TOKEN_QR_HASH,
+            P_NOTIFICA_EMAIL, P_NOTIFICA_WHATSAPP
         ) RETURNING ID_USUARIO INTO O_ID_USUARIO;
 
-        -- Asignar rol COMPRADOR
         INSERT INTO USUARIO_ROL (ID_USUARIO, ID_ROL)
         VALUES (O_ID_USUARIO, V_ID_ROL);
-
-        -- Auditar
-        BEGIN
-            INSERT INTO BITACORA_ACCESO (
-                ID_USUARIO, IDENTIFICADOR, METODO_ACCESO, RESULTADO, MOTIVO
-            ) VALUES (
-                O_ID_USUARIO, SUBSTR(P_CORREO, 1, 150), 'CONTRASENA', 'S', 'Usuario creado'
-            );
-        EXCEPTION WHEN OTHERS THEN NULL;
-        END;
-
-        O_TOKEN_QR := V_TOKEN_QR;
-
     EXCEPTION
         WHEN DUP_VAL_ON_INDEX THEN
             RAISE_APPLICATION_ERROR(-20103, 'El correo, nickname o token QR ya esta registrado.');
@@ -438,6 +447,179 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD AS
             RAISE_APPLICATION_ERROR(-20104, 'No existe el rol activo COMPRADOR.');
     END SP_CREAR_USUARIO;
 
+    ------------------------------------------------------------------
+    -- SP_ACTUALIZAR_USUARIO
+    ------------------------------------------------------------------
+    PROCEDURE SP_ACTUALIZAR_USUARIO (
+        P_ID_USUARIO        IN USUARIO.ID_USUARIO%TYPE,
+        P_CORREO            IN USUARIO.CORREO%TYPE,
+        P_TELEFONO          IN USUARIO.TELEFONO%TYPE,
+        P_FECHA_NACIMIENTO  IN USUARIO.FECHA_NACIMIENTO%TYPE,
+        P_NICKNAME          IN USUARIO.NICKNAME%TYPE,
+        P_NOTIFICA_EMAIL    IN USUARIO.NOTIFICA_EMAIL%TYPE,
+        P_NOTIFICA_WHATSAPP IN USUARIO.NOTIFICA_WHATSAPP%TYPE
+    ) AS
+    BEGIN
+        IF P_NOTIFICA_EMAIL NOT IN ('S','N')
+           OR P_NOTIFICA_WHATSAPP NOT IN ('S','N')
+           OR (P_NOTIFICA_EMAIL = 'N' AND P_NOTIFICA_WHATSAPP = 'N') THEN
+            RAISE_APPLICATION_ERROR(-20110, 'Debe habilitar al menos un medio de notificacion.');
+        END IF;
+
+        UPDATE USUARIO
+           SET CORREO            = TRIM(P_CORREO),
+               TELEFONO          = TRIM(P_TELEFONO),
+               FECHA_NACIMIENTO  = P_FECHA_NACIMIENTO,
+               NICKNAME          = TRIM(P_NICKNAME),
+               NOTIFICA_EMAIL    = P_NOTIFICA_EMAIL,
+               NOTIFICA_WHATSAPP = P_NOTIFICA_WHATSAPP
+         WHERE ID_USUARIO = P_ID_USUARIO;
+
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20111, 'El usuario no existe.');
+        END IF;
+    EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+            RAISE_APPLICATION_ERROR(-20112, 'El correo o nickname ya esta registrado por otro usuario.');
+    END SP_ACTUALIZAR_USUARIO;
+
+    ------------------------------------------------------------------
+    -- SP_CAMBIAR_PASSWORD
+    ------------------------------------------------------------------
+    PROCEDURE SP_CAMBIAR_PASSWORD (
+        P_ID_USUARIO      IN USUARIO.ID_USUARIO%TYPE,
+        P_PASSWORD_HASH   IN USUARIO.PASSWORD_HASH%TYPE
+    ) AS
+    BEGIN
+        UPDATE USUARIO
+           SET PASSWORD_HASH = P_PASSWORD_HASH
+         WHERE ID_USUARIO = P_ID_USUARIO;
+
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20113, 'El usuario no existe.');
+        END IF;
+    END SP_CAMBIAR_PASSWORD;
+
+    ------------------------------------------------------------------
+    -- SP_CAMBIAR_ESTADO_USUARIO
+    ------------------------------------------------------------------
+    PROCEDURE SP_CAMBIAR_ESTADO_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE,
+        P_ACTIVO IN USUARIO.ACTIVO%TYPE,
+        P_BLOQUEADO IN USUARIO.BLOQUEADO%TYPE
+    ) AS
+    BEGIN
+        IF P_ACTIVO NOT IN ('S','N') OR P_BLOQUEADO NOT IN ('S','N') THEN
+            RAISE_APPLICATION_ERROR(-20107, 'Los estados deben ser S o N.');
+        END IF;
+        UPDATE USUARIO SET ACTIVO = P_ACTIVO, BLOQUEADO = P_BLOQUEADO
+         WHERE ID_USUARIO = P_ID_USUARIO;
+        IF SQL%ROWCOUNT = 0 THEN RAISE_APPLICATION_ERROR(-20108, 'El usuario no existe.'); END IF;
+    END SP_CAMBIAR_ESTADO_USUARIO;
+
+    ------------------------------------------------------------------
+    -- SP_ACTIVAR_USUARIO
+    ------------------------------------------------------------------
+    PROCEDURE SP_ACTIVAR_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE
+    ) AS
+    BEGIN
+        UPDATE USUARIO SET ACTIVO = 'S'
+         WHERE ID_USUARIO = P_ID_USUARIO;
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20114, 'El usuario no existe.');
+        END IF;
+    END SP_ACTIVAR_USUARIO;
+
+    ------------------------------------------------------------------
+    -- SP_DESACTIVAR_USUARIO
+    ------------------------------------------------------------------
+    PROCEDURE SP_DESACTIVAR_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE
+    ) AS
+    BEGIN
+        UPDATE USUARIO SET ACTIVO = 'N'
+         WHERE ID_USUARIO = P_ID_USUARIO;
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20115, 'El usuario no existe.');
+        END IF;
+    END SP_DESACTIVAR_USUARIO;
+
+    ------------------------------------------------------------------
+    -- SP_BLOQUEAR_USUARIO
+    ------------------------------------------------------------------
+    PROCEDURE SP_BLOQUEAR_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE
+    ) AS
+    BEGIN
+        UPDATE USUARIO SET BLOQUEADO = 'S'
+         WHERE ID_USUARIO = P_ID_USUARIO;
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20116, 'El usuario no existe.');
+        END IF;
+    END SP_BLOQUEAR_USUARIO;
+
+    ------------------------------------------------------------------
+    -- SP_DESBLOQUEAR_USUARIO
+    ------------------------------------------------------------------
+    PROCEDURE SP_DESBLOQUEAR_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE
+    ) AS
+    BEGIN
+        UPDATE USUARIO SET BLOQUEADO = 'N', INTENTOS_FALLIDOS = 0
+         WHERE ID_USUARIO = P_ID_USUARIO;
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20117, 'El usuario no existe.');
+        END IF;
+    END SP_DESBLOQUEAR_USUARIO;
+
+    ------------------------------------------------------------------
+    -- SP_ELIMINAR_USUARIO (borrado fisico - usar con cuidado)
+    ------------------------------------------------------------------
+    PROCEDURE SP_ELIMINAR_USUARIO (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE
+    ) AS
+    BEGIN
+        DELETE FROM USUARIO_ROL WHERE ID_USUARIO = P_ID_USUARIO;
+        DELETE FROM USUARIO     WHERE ID_USUARIO = P_ID_USUARIO;
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20118, 'El usuario no existe.');
+        END IF;
+    END SP_ELIMINAR_USUARIO;
+
+    ------------------------------------------------------------------
+    -- SP_LISTAR_USUARIOS_GESTOR
+    -- Lista usuarios usando la vista VW_GESTOR_USUARIOS (datos enriquecidos).
+    ------------------------------------------------------------------
+    PROCEDURE SP_LISTAR_USUARIOS_GESTOR (
+        P_SOLO_ACTIVOS IN CHAR DEFAULT 'N',
+        O_DATOS        OUT SYS_REFCURSOR
+    ) AS
+    BEGIN
+        OPEN O_DATOS FOR
+            SELECT *
+              FROM VW_GESTOR_USUARIOS
+             WHERE (P_SOLO_ACTIVOS = 'N') OR (ACTIVO = 'S')
+             ORDER BY ID_USUARIO DESC;
+    END SP_LISTAR_USUARIOS_GESTOR;
+
+    ------------------------------------------------------------------
+    -- SP_OBTENER_USUARIO_GESTOR
+    ------------------------------------------------------------------
+    PROCEDURE SP_OBTENER_USUARIO_GESTOR (
+        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE,
+        O_DATOS      OUT SYS_REFCURSOR
+    ) AS
+    BEGIN
+        OPEN O_DATOS FOR
+            SELECT *
+              FROM VW_GESTOR_USUARIOS
+             WHERE ID_USUARIO = P_ID_USUARIO;
+    END SP_OBTENER_USUARIO_GESTOR;
+
+    ------------------------------------------------------------------
+    -- SP_ASIGNAR_ROL
+    ------------------------------------------------------------------
     PROCEDURE SP_ASIGNAR_ROL (
         P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE,
         P_CODIGO_ROL IN ROL.CODIGO%TYPE
@@ -461,20 +643,9 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD AS
             RAISE_APPLICATION_ERROR(-20106, 'El rol no existe o esta inactivo.');
     END SP_ASIGNAR_ROL;
 
-    PROCEDURE SP_CAMBIAR_ESTADO_USUARIO (
-        P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE,
-        P_ACTIVO IN USUARIO.ACTIVO%TYPE,
-        P_BLOQUEADO IN USUARIO.BLOQUEADO%TYPE
-    ) AS
-    BEGIN
-        IF P_ACTIVO NOT IN ('S','N') OR P_BLOQUEADO NOT IN ('S','N') THEN
-            RAISE_APPLICATION_ERROR(-20107, 'Los estados deben ser S o N.');
-        END IF;
-        UPDATE USUARIO SET ACTIVO = P_ACTIVO, BLOQUEADO = P_BLOQUEADO
-         WHERE ID_USUARIO = P_ID_USUARIO;
-        IF SQL%ROWCOUNT = 0 THEN RAISE_APPLICATION_ERROR(-20108, 'El usuario no existe.'); END IF;
-    END SP_CAMBIAR_ESTADO_USUARIO;
-
+    ------------------------------------------------------------------
+    -- SP_REGISTRAR_ACCESO
+    ------------------------------------------------------------------
     PROCEDURE SP_REGISTRAR_ACCESO (
         P_ID_USUARIO IN BITACORA_ACCESO.ID_USUARIO%TYPE,
         P_IDENTIFICADOR IN BITACORA_ACCESO.IDENTIFICADOR%TYPE,
@@ -496,6 +667,9 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD AS
         ) RETURNING ID_BITACORA INTO O_ID_BITACORA;
     END SP_REGISTRAR_ACCESO;
 
+    ------------------------------------------------------------------
+    -- SP_OBTENER_AUTENTICACION
+    ------------------------------------------------------------------
     PROCEDURE SP_OBTENER_AUTENTICACION (P_IDENTIFICADOR IN VARCHAR2, O_DATOS OUT SYS_REFCURSOR) AS
     BEGIN
         OPEN O_DATOS FOR
@@ -506,6 +680,9 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD AS
                 OR LOWER(NICKNAME) = LOWER(TRIM(P_IDENTIFICADOR));
     END SP_OBTENER_AUTENTICACION;
 
+    ------------------------------------------------------------------
+    -- SP_LISTAR_PERMISOS
+    ------------------------------------------------------------------
     PROCEDURE SP_LISTAR_PERMISOS (P_ID_USUARIO IN USUARIO.ID_USUARIO%TYPE, O_DATOS OUT SYS_REFCURSOR) AS
     BEGIN
         OPEN O_DATOS FOR
@@ -518,6 +695,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD AS
              WHERE UR.ID_USUARIO = P_ID_USUARIO
              ORDER BY P.MODULO, P.CODIGO;
     END SP_LISTAR_PERMISOS;
+
 END PKG_SEGURIDAD;
 /
 SHOW ERRORS PACKAGE BODY PKG_SEGURIDAD;
@@ -1546,6 +1724,51 @@ create or replace NONEDITIONABLE PACKAGE BODY PKG_USUARIO AS
             p_data     := NULL;
     END MAGNAMETS_USER;
 
+    -- =============================================================
+    -- SP_LISTAR_USUARIOS
+    -- Lista usuarios con su(s) rol(es) agregado(s) como CSV.
+    -- =============================================================
+    PROCEDURE SP_LISTAR_USUARIOS (
+        P_SOLO_ACTIVOS IN CHAR DEFAULT 'N',
+        O_DATOS        OUT SYS_REFCURSOR
+    ) AS
+    BEGIN
+        OPEN O_DATOS FOR
+            SELECT U.ID_USUARIO,
+                   U.ID_SITIO,
+                   U.CORREO,
+                   U.TELEFONO,
+                   U.FECHA_NACIMIENTO,
+                   U.NICKNAME,
+                   U.ACTIVO,
+                   U.BLOQUEADO,
+                   U.NOTIFICA_EMAIL,
+                   U.NOTIFICA_WHATSAPP,
+                   U.INTENTOS_FALLIDOS,
+                   U.ULTIMO_ACCESO,
+                   U.FECHA_CREACION,
+                   (SELECT LISTAGG(R.CODIGO, ',') WITHIN GROUP (ORDER BY R.CODIGO)
+                      FROM USUARIO_ROL UR
+                      JOIN ROL R ON R.ID_ROL = UR.ID_ROL
+                     WHERE UR.ID_USUARIO = U.ID_USUARIO
+                       AND R.ACTIVO = 'S') AS ROLES
+              FROM USUARIO U
+             WHERE (P_SOLO_ACTIVOS = 'N') OR (U.ACTIVO = 'S')
+             ORDER BY U.ID_USUARIO DESC;
+    END SP_LISTAR_USUARIOS;
+
+    -- =============================================================
+    -- SP_LISTAR_ROLES
+    -- =============================================================
+    PROCEDURE SP_LISTAR_ROLES (O_DATOS OUT SYS_REFCURSOR) AS
+    BEGIN
+        OPEN O_DATOS FOR
+            SELECT ID_ROL, CODIGO, NOMBRE, DESCRIPCION, ACTIVO
+              FROM ROL
+             WHERE ACTIVO = 'S'
+             ORDER BY ID_ROL;
+    END SP_LISTAR_ROLES;
+
 END PKG_USUARIO;
 
 /
@@ -1972,6 +2195,64 @@ SELECT NAME, TYPE, LINE, POSITION, TEXT
     'PKG_CARRITO','PKG_PEDIDO','PKG_PAGO_ENTREGA'
  )
  ORDER BY NAME, SEQUENCE;
+
+-- ============================================================
+-- 6. VISTAS ADICIONALES
+-- ============================================================
+
+-- ----------------------------------------------------------------------------
+-- VW_GESTOR_USUARIOS
+-- Vista enriquecida para el modulo "Gestor de Usuario" del admin.
+-- Combina datos de USUARIO + USUARIO_ROL + ROL + ROL_PERMISO + PERMISO + BITACORA_ACCESO.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW VW_GESTOR_USUARIOS AS
+SELECT
+    U.ID_USUARIO,
+    U.NICKNAME,
+    U.CORREO,
+    U.TELEFONO,
+    U.FECHA_NACIMIENTO,
+    CASE
+        WHEN U.FECHA_NACIMIENTO IS NULL THEN NULL
+        ELSE TRUNC(MONTHS_BETWEEN(SYSDATE, U.FECHA_NACIMIENTO) / 12)
+    END AS EDAD,
+    U.ID_SITIO,
+    U.ACTIVO,
+    U.BLOQUEADO,
+    U.INTENTOS_FALLIDOS,
+    U.ULTIMO_ACCESO,
+    U.NOTIFICA_EMAIL,
+    U.NOTIFICA_WHATSAPP,
+    (SELECT LISTAGG(R.CODIGO, ',') WITHIN GROUP (ORDER BY R.CODIGO)
+       FROM USUARIO_ROL UR
+       JOIN ROL R ON R.ID_ROL = UR.ID_ROL
+      WHERE UR.ID_USUARIO = U.ID_USUARIO
+        AND R.ACTIVO = 'S') AS ROLES,
+    (SELECT COUNT(*)
+       FROM USUARIO_ROL UR
+       JOIN ROL R ON R.ID_ROL = UR.ID_ROL
+      WHERE UR.ID_USUARIO = U.ID_USUARIO
+        AND R.ACTIVO = 'S') AS CANT_ROLES,
+    (SELECT COUNT(DISTINCT P.ID_PERMISO)
+       FROM USUARIO_ROL UR
+       JOIN ROL_PERMISO RP ON RP.ID_ROL = UR.ID_ROL
+       JOIN PERMISO P    ON P.ID_PERMISO = RP.ID_PERMISO
+      WHERE UR.ID_USUARIO = U.ID_USUARIO
+        AND P.ACTIVO = 'S') AS CANT_PERMISOS,
+    (SELECT MAX(BA.FECHA_EVENTO)
+       FROM BITACORA_ACCESO BA
+      WHERE BA.ID_USUARIO = U.ID_USUARIO
+        AND BA.RESULTADO = 'S') AS ULTIMA_CONEXION_OK,
+    (SELECT MAX(BA.FECHA_EVENTO)
+       FROM BITACORA_ACCESO BA
+      WHERE BA.ID_USUARIO = U.ID_USUARIO
+        AND BA.RESULTADO = 'N') AS ULTIMA_CONEXION_FALLIDA,
+    (SELECT COUNT(*)
+       FROM BITACORA_ACCESO BA
+      WHERE BA.ID_USUARIO = U.ID_USUARIO) AS TOTAL_ACCESOS
+FROM USUARIO U;
+
+PROMPT Vista VW_GESTOR_USUARIOS creada.
 
 -- ============================================================
 -- INSTALACION DE PACKAGES FINALIZADA

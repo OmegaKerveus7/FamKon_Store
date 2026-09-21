@@ -2,6 +2,8 @@ using FamKon_store_api.BD;
 using Oracle.ManagedDataAccess.Client;
 using Oracle.ManagedDataAccess.Types;
 using System.Data;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace FamKon_store_api.Services
 {
@@ -10,6 +12,20 @@ namespace FamKon_store_api.Services
         public int CodigoS { get; set; }
         public string Mensaje { get; set; } = string.Empty;
         public string? Data { get; set; }
+    }
+
+    public class AuthUserRow
+    {
+        public long IdUsuario { get; set; }
+        public long IdSitio { get; set; }
+        public string Correo { get; set; } = string.Empty;
+        public string Nickname { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string TokenQrHash { get; set; } = string.Empty;
+        public string Activo { get; set; } = "S";
+        public string Bloqueado { get; set; } = "N";
+        public int IntentosFallidos { get; set; }
+        public DateTime? UltimoAcceso { get; set; }
     }
 
     public class LoginService
@@ -94,6 +110,71 @@ namespace FamKon_store_api.Services
                     Data = null
                 };
             }
+        }
+
+        public async Task<AuthUserRow?> ObtenerAutenticacionAsync(string identificador)
+        {
+            try
+            {
+                using var connection = _dbContext.CreateConnection();
+                await _dbContext.OpenConnectionAsync(connection);
+
+                using var command = new OracleCommand("PKG_SEGURIDAD.SP_OBTENER_AUTENTICACION", connection);
+                command.CommandType = CommandType.StoredProcedure;
+
+                command.Parameters.Add("P_IDENTIFICADOR", OracleDbType.Varchar2).Value = identificador;
+
+                var oDatos = new OracleParameter("O_DATOS", OracleDbType.RefCursor)
+                {
+                    Direction = ParameterDirection.Output
+                };
+                command.Parameters.Add(oDatos);
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (!await reader.ReadAsync())
+                {
+                    _logger.LogInformation("SP_OBTENER_AUTENTICACION identificador={Id} sin resultados", identificador);
+                    return null;
+                }
+
+                var row = new AuthUserRow
+                {
+                    IdUsuario = reader.GetInt64(reader.GetOrdinal("ID_USUARIO")),
+                    IdSitio = reader.GetInt64(reader.GetOrdinal("ID_SITIO")),
+                    Correo = reader.GetString(reader.GetOrdinal("CORREO")),
+                    Nickname = reader.GetString(reader.GetOrdinal("NICKNAME")),
+                    PasswordHash = reader.GetString(reader.GetOrdinal("PASSWORD_HASH")),
+                    TokenQrHash = reader.GetString(reader.GetOrdinal("TOKEN_QR_HASH")),
+                    Activo = reader.GetString(reader.GetOrdinal("ACTIVO")),
+                    Bloqueado = reader.GetString(reader.GetOrdinal("BLOQUEADO")),
+                    IntentosFallidos = reader.GetInt32(reader.GetOrdinal("INTENTOS_FALLIDOS")),
+                };
+
+                var ordUltimo = reader.GetOrdinal("ULTIMO_ACCESO");
+                if (!reader.IsDBNull(ordUltimo))
+                    row.UltimoAcceso = reader.GetDateTime(ordUltimo);
+
+                return row;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error ejecutando PKG_SEGURIDAD.SP_OBTENER_AUTENTICACION id={Id}", identificador);
+                return null;
+            }
+        }
+
+        public static string Sha256LowerHex(string plain)
+        {
+            if (string.IsNullOrEmpty(plain)) return string.Empty;
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(plain));
+            return Convert.ToHexString(bytes).ToLowerInvariant();
+        }
+
+        public static bool ValidarPassword(string plain, string hashEsperado)
+        {
+            if (string.IsNullOrEmpty(plain) || string.IsNullOrEmpty(hashEsperado)) return false;
+            var calculado = Sha256LowerHex(plain);
+            return string.Equals(calculado, hashEsperado, StringComparison.Ordinal);
         }
     }
 }

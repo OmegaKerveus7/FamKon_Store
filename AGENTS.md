@@ -67,9 +67,20 @@ builder.Services.AddSingleton<BD.DBContext>();
 - Token expira en **10 minutos**
 - Key JWT en `appsettings.json` → `Jwt:SecretKey`
 - Frontend almacena token en `localStorage` key `famkon.token`
-- Frontend auto-renueva token cada 8 minutos via AuthContext
+- Frontend auto-renueva token cada 8 minutos via AuthContext (solo si el usuario esta activo)
 - Requests incluyen header `Authorization: Bearer <token>`
 - 401 → limpiar storage → redirect `/login`
+
+### Politica de inactividad de sesion
+- **10 minutos de inactividad** → `cerrarSesion()` automatico (limpia storage y redirige a `/login`).
+- **Aviso a los 9 minutos** → aparece el modal `SessionWarning` con countdown de 60s y dos botones:
+  - **Continuar sesion** → llama a `/api/famkon/refresh-token`, reinicia el contador y cierra el modal.
+  - **Cerrar sesion** → logout manual inmediato.
+- La actividad se rastrea en `DashboardLayout` con listeners de `mousedown / keydown / scroll / touchstart / click / mousemove`. Cada evento actualiza `actividadRef` en `AuthContext`.
+- Mientras el usuario esta activo, el JWT se refresca automaticamente cada 8 minutos (siempre que la ultima actividad sea de hace menos de 1 minuto, para no gastar tokens en sesiones abandonadas).
+- Constantes en `Fronted/src/context/AuthContext.tsx`:
+  - `TIMEOUT_INACTIVIDAD_MS = 10 * 60 * 1000`
+  - `AVISO_INACTIVIDAD_MS = 60 * 1000`
 
 ### PKG_LOGIN (Oracle Package)
 Todos los logins se ejecutan vía `PKG_LOGIN.CRUD`:
@@ -80,11 +91,25 @@ Todos los logins se ejecutan vía `PKG_LOGIN.CRUD`:
 
 El package retorna JSON con: `id_usuario`, `nickname`, `correo`, `telefono`, `fecha_nacimiento`, `activo`, `bloqueado`, `roles`
 
+### PKG_SEGURIDAD — procedimientos usados desde el backend
+- `SP_OBTENER_AUTENTICACION(p_identificador, o_datos)` → `LoginService.ObtenerAutenticacionAsync`:
+  obtiene `ID_USUARIO, ID_SITIO, CORREO, NICKNAME, PASSWORD_HASH, TOKEN_QR_HASH, ACTIVO,
+  BLOQUEADO, INTENTOS_FALLIDOS, ULTIMO_ACCESO`. Lo usa `AuthController.LoginBasico`
+  para resolver el hash y validar la contraseña localmente con SHA-256
+  (formato `LOWER(STANDARD_HASH(P_PASSWORD,'SHA256'))`, mismo que `SP_CREAR_USUARIO`).
+- `SP_REGISTRAR_ACCESO(...)` → `BitacoraService.RegistrarAccesoAsync`: lo invoca
+  `AuthController` después de cada intento de login (éxito o fallo) grabando
+  en `BITACORA_ACCESO` el método (`CONTRASENA | QR | FACIAL`), resultado (`S | N`),
+  IP y User-Agent capturados.
+- `SP_LISTAR_PERMISOS(p_id_usuario, o_datos)` → `PermisoService.ListarPermisosAsync`:
+  expone los permisos del usuario en `GET /api/famkon/permisos` (autorizado con JWT).
+  El frontend lo consume al iniciar sesión para enrutar las vistas según el rol.
+
 ### Paquetes Oracle para la Tienda
 La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - **PKG_LOGIN**: Manejo de autenticación y sesiones
-- **PKG_SEGURIDAD**: Crear usuario (SP_CREAR_USUARIO) + auditoría + permisos
-- **PKG_USUARIO**: CRUD de usuarios (leer, actualizar, password, imágenes, roles)
+- **PKG_SEGURIDAD**: Crear usuario (SP_CREAR_USUARIO) + actualizar (SP_ACTUALIZAR_USUARIO) + cambiar estado (SP_ACTIVAR_USUARIO / SP_DESACTIVAR_USUARIO / SP_BLOQUEAR_USUARIO / SP_DESBLOQUEAR_USUARIO) + auditoría (SP_REGISTRAR_ACCESO) + permisos (SP_LISTAR_PERMISOS) + gestor (SP_LISTAR_USUARIOS_GESTOR / SP_OBTENER_USUARIO_GESTOR)
+- **PKG_USUARIO**: CRUD de usuarios (leer, actualizar, password, imágenes, roles) + `SP_LISTAR_USUARIOS` + `SP_LISTAR_ROLES`
 - **PKG_CATALOGO**: Productos, categorías, áreas de entrega, métodos de pago
 - **PKG_CARRITO**: Carrito de compras, personalización, detalles
 - **PKG_PEDIDO**: Crear pedidos desde carrito, cambio de estado, tracking
@@ -115,6 +140,17 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - **Routing**: react-router-dom v7
 - **UI**: Tailwind CSS 4
 - **API Base URL**: `/api/famkon` (proxy configurado en vite.config.ts)
+
+### Dashboard Layout (post-login)
+
+Todas las rutas autenticadas se montan dentro de `<DashboardLayout>` (en `App.tsx`):
+
+- **Sidebar** (`components/Sidebar.tsx`) → menu lateral colapsable con grupos por rol/permiso (Compras, Entregas, Supervision, Administracion, Cuenta). Cada item se muestra solo si el usuario tiene el `codigoPermiso` o `codigoRol` correspondiente (definido en `components/dashboardMenu.ts`).
+- **Topbar** (`components/Topbar.tsx`) → breadcrumb + boton hamburguesa + avatar con iniciales del nickname, badge con el rol principal y boton de notificaciones.
+- **DashboardLayout** (`components/DashboardLayout.tsx`) → arma el shell (`flex h-screen`) + `<Outlet />` para que cada ruta protegida renderice solo su contenido (no su propio header).
+- **DashboardPage** (`pages/DashboardPage.tsx`) → welcome del usuario con tarjetas agrupadas por modulo y permisos; los grupos solo aparecen si el usuario tiene los permisos para verlos.
+
+Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `App.tsx` y NO debe incluir su propio `<header>` (el sidebar + topbar ya proveen la navegacion).
 
 ### Verificación de Registro (2 pasos)
 - **Frontend genera** código OTP de 6 dígitos localmente (sin BD)
@@ -187,8 +223,10 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - `Backend/FamKon_store_api/Program.cs` — Configuración de servicios y middleware
 - `Backend/FamKon_store_api/BD/DBContext.cs` — Conexión singleton a Oracle
 - `Backend/FamKon_store_api/Services/LoginService.cs` — Lógica de login vía PKG_LOGIN
+- `Backend/FamKon_store_api/Services/BitacoraService.cs` — Bitácora de accesos vía PKG_SEGURIDAD.SP_REGISTRAR_ACCESO
 - `Backend/FamKon_store_api/Services/JwtService.cs` — Generación y validación JWT
 - `Backend/FamKon_store_api/Services/UsuarioService.cs` — CRUD usuarios vía PKG_SEGURIDAD
+- `Backend/FamKon_store_api/Services/UsuarioAdminService.cs` — Gestor de usuarios (PKG_USUARIO.MAGNAMETS_USER + PKG_SEGURIDAD.SP_ASIGNAR_ROL + SP_LISTAR_USUARIOS + SP_ACTUALIZAR_USUARIO + SP_ACTIVAR_USUARIO / SP_DESACTIVAR_USUARIO / SP_BLOQUEAR_USUARIO + vista VW_GESTOR_USUARIOS)
 - `Backend/FamKon_store_api/Services/PermisoService.cs` — Permisos vía PKG_SEGURIDAD
 - `Backend/FamKon_store_api/Services/CatalogoService.cs` — Productos, categorías, áreas de entrega, métodos de pago
 - `Backend/FamKon_store_api/Services/CarritoService.cs` — Carrito de compras vía PKG_CARRITO
@@ -196,6 +234,7 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - `Backend/FamKon_store_api/Controllers/AuthController.cs` — Endpoints de autenticación
 - `Backend/FamKon_store_api/Controllers/RegistroController.cs` — Endpoint de registro
 - `Backend/FamKon_store_api/Controllers/TiendaController.cs` — Endpoints de la tienda
+- `Backend/FamKon_store_api/Controllers/UsuariosAdminController.cs` — Gestor de usuarios (`/api/famkon/admin/usuarios`)
 
 ### Frontend
 - `Fronted/src/api/famkon.ts` — Cliente API + interfaces de tienda
@@ -208,4 +247,44 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - `Fronted/src/pages/TrackingPage.tsx` — Tracking de envío
 
 ### Base de Datos
-- `BD/01 scrip/pkg/04_PACKAGES_TIENDA_ORACLE.sql` — Todos los packages PL/SQL
+- `BD/01 scrip/pkg/04_PACKAGES_TIENDA_ORACLE.sql` — Todos los packages PL/SQL + vista VW_GESTOR_USUARIOS (gestor de usuarios)
+- `BD/01 scrip/inserts_rol_permiso.sql` — Enrolamiento de permisos por rol (ADMIN, SUPERVISOR, REPARTIDOR, COMPRADOR)
+
+### Vista VW_GESTOR_USUARIOS
+
+Vista enriquecida usada por el modulo "Gestor de Usuario" del admin.
+Columnas: `ID_USUARIO, NICKNAME, CORREO, TELEFONO, FECHA_NACIMIENTO, EDAD, ID_SITIO,
+ACTIVO, BLOQUEADO, INTENTOS_FALLIDOS, ULTIMO_ACCESO, NOTIFICA_EMAIL, NOTIFICA_WHATSAPP,
+ROLES, CANT_ROLES, CANT_PERMISOS, ULTIMA_CONEXION_OK, ULTIMA_CONEXION_FALLIDA, TOTAL_ACCESOS`.
+
+`EDAD` se calcula con `TRUNC(MONTHS_BETWEEN(SYSDATE, FECHA_NACIMIENTO)/12)`.
+`CANT_PERMISOS` cuenta los permisos DISTINTOS a traves de `USUARIO_ROL → ROL_PERMISO → PERMISO`.
+`ULTIMA_CONEXION_OK/FALLIDA` derivan de `BITACORA_ACCESO.RESULTADO = 'S' / 'N'`.
+`TOTAL_ACCESOS` cuenta todas las filas de `BITACORA_ACCESO` para el usuario.
+
+PKG_SEGURIDAD expone `SP_LISTAR_USUARIOS_GESTOR(p_solo_activos, o_datos)` y
+`SP_OBTENER_USUARIO_GESTOR(p_id_usuario, o_datos)` para consumirla desde el backend
+(`UsuarioAdminService.ListarUsuariosGestorAsync` / `ObtenerUsuarioGestorAsync`).
+
+### Enrolamiento de permisos por rol (matriz vigente)
+
+| Permiso | COMPRADOR | REPARTIDOR | SUPERVISOR | ADMIN |
+|---------|:--:|:--:|:--:|:--:|
+| VER_CATALOGO | ✓ |   |   | ✓ |
+| VER_CARRITO  | ✓ |   |   | ✓ |
+| CREAR_PEDIDO | ✓ |   |   | ✓ |
+| REALIZAR_PAGO | ✓ |   |   | ✓ |
+| VER_TRACKING  | ✓ |   |   | ✓ |
+| VER_HISTORICO | ✓ |   |   | ✓ |
+| VER_PEDIDOS_ASIGNADOS |   | ✓ |   | ✓ |
+| GESTIONAR_ENTREGAS    |   | ✓ | ✓ | ✓ |
+| GESTIONAR_ESTADO_PEDIDO |   | ✓ |   | ✓ |
+| GESTIONAR_PRODUCTOS   |   |   | ✓ | ✓ |
+| GESTIONAR_USUARIOS    |   |   | ✓ | ✓ |
+| GESTIONAR_CATALOGOS   |   |   |   | ✓ |
+| GESTIONAR_ROLES       |   |   |   | ✓ |
+| VER_DASHBOARD         |   |   | ✓ | ✓ |
+| GESTIONAR_PERFIL      | ✓ | ✓ | ✓ | ✓ |
+
+El frontend llama `obtenerPermisos()` justo después del login, cachea la lista en
+`famkon.permisos` (AuthContext) y HomePage / RequirePermiso enruta según rol.

@@ -133,28 +133,47 @@ export default function RegistroPage() {
     setCodigoIngresado("");
 
     const nuevoCodigo = generarCodigoOTP();
+    const payload = {
+      codigo: nuevoCodigo,
+      correo: correo.trim(),
+      telefono: telefono.trim() || undefined,
+      canal,
+    };
+    console.log("[RegistroPage] enviarCodigo() → payload:", payload);
+
     setCodigoEsperado(nuevoCodigo);
     setCodigoEnviadoEn(Date.now());
     setCodigoVerificado(false);
 
     setEnviandoCodigo(true);
     try {
-      const respuesta = await enviarCodigoVerificacion({
-        codigo: nuevoCodigo,
-        correo: correo.trim(),
-        telefono: telefono.trim() || undefined,
-        canal,
-      });
+      const respuesta = await enviarCodigoVerificacion(payload);
+      console.log("[RegistroPage] enviarCodigo() ← respuesta:", respuesta);
 
       if (respuesta.codigoS !== 200) {
-        throw new Error(respuesta.mensaje || "No se pudo enviar el código.");
+        throw new Error(respuesta.mensaje || `Error ${respuesta.codigoS}`);
       }
 
       const canalesEnviados: string[] = [];
       if (respuesta.emailEnviado) canalesEnviados.push("correo");
       if (respuesta.whatsAppEnviado) canalesEnviados.push("WhatsApp");
-      setMensaje(`Código enviado por ${canalesEnviados.join(" y ")}.`);
+
+      const canalesFallidos: string[] = [];
+      if ((canal === "EMAIL" || canal === "AMBOS") && !respuesta.emailEnviado) {
+        canalesFallidos.push("correo");
+      }
+      if ((canal === "WHATSAPP" || canal === "AMBOS") && !respuesta.whatsAppEnviado) {
+        canalesFallidos.push("WhatsApp");
+      }
+
+      if (canalesEnviados.length > 0) {
+        setMensaje(`Código enviado por ${canalesEnviados.join(" y ")}.`);
+      }
+      if (canalesFallidos.length > 0) {
+        setError(`Falló el envío por: ${canalesFallidos.join(", ")}.`);
+      }
     } catch (err) {
+      console.error("[RegistroPage] enviarCodigo() error:", err);
       setCodigoEsperado("");
       setCodigoEnviadoEn(null);
       setError(err instanceof Error ? err.message : "No se pudo enviar el código.");

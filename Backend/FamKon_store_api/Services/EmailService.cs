@@ -88,6 +88,56 @@ namespace FamKon_store_api.Services
             }
         }
 
+        public async Task<(bool ok, string detalle)> EnviarCorreoTextoAsync(string destino, string asunto, string cuerpo)
+        {
+            if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
+                return (false, "Email o password no configurados.");
+            if (string.IsNullOrWhiteSpace(destino))
+                return (false, "Destinatario vacío.");
+
+            var mensaje = new MimeMessage();
+            mensaje.From.Add(new MailboxAddress(_remitente, _email));
+            mensaje.To.Add(MailboxAddress.Parse(destino));
+            mensaje.Subject = asunto;
+            mensaje.Body = new TextPart("plain") { Text = cuerpo };
+
+            try
+            {
+                using var client = new SmtpClient();
+                var opciones = _smtpPuerto == 465
+                    ? SecureSocketOptions.SslOnConnect
+                    : SecureSocketOptions.StartTlsWhenAvailable;
+
+                await client.ConnectAsync(_smtpHost, _smtpPuerto, opciones);
+                await client.AuthenticateAsync(_email, _password);
+                await client.SendAsync(mensaje);
+                await client.DisconnectAsync(true);
+
+                _logger.LogInformation("Correo de prueba enviado a {Destino}", destino);
+                return (true, $"Correo enviado a {destino}");
+            }
+            catch (MailKit.Security.AuthenticationException authEx)
+            {
+                return (false, $"AuthenticationException: {authEx.Message}");
+            }
+            catch (MailKit.Net.Smtp.SmtpCommandException smtpEx)
+            {
+                return (false, $"SmtpCommandException: Status={smtpEx.StatusCode} Code={smtpEx.ErrorCode} {smtpEx.Message}");
+            }
+            catch (MailKit.Net.Smtp.SmtpProtocolException protoEx)
+            {
+                return (false, $"SmtpProtocolException: {protoEx.Message}");
+            }
+            catch (System.Net.Sockets.SocketException sockEx)
+            {
+                return (false, $"SocketException: {sockEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"{ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
         public async Task<(bool ok, string detalle)> ProbarConexionAsync()
         {
             if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
@@ -116,7 +166,14 @@ namespace FamKon_store_api.Services
             var mensaje = new MimeMessage();
             mensaje.From.Add(new MailboxAddress(_remitente, _email));
             mensaje.To.Add(MailboxAddress.Parse(destino));
-            mensaje.Subject = "Código de verificación - FamKon";
+            mensaje.Subject = "Tu codigo de verificacion FamKon";
+
+            mensaje.Headers.Add("List-Unsubscribe", $"<mailto:{_email}?subject=unsubscribe>");
+            mensaje.Headers.Add("List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
+            mensaje.Headers.Add("Auto-Submitted", "auto-generated");
+            mensaje.Headers.Add("X-Mailer", "FamKon");
+            mensaje.Headers.Add("X-Priority", "1");
+            mensaje.Headers.Add("Importance", "High");
 
             var builder = new BodyBuilder
             {
@@ -124,47 +181,40 @@ namespace FamKon_store_api.Services
 <!DOCTYPE html>
 <html lang='es'>
 <head><meta charset='UTF-8'></head>
-<body style='margin:0;padding:0;background:#fff7ed;font-family:Arial,sans-serif;'>
-  <table width='100%' cellpadding='0' cellspacing='0' style='background:#fff7ed;padding:32px 16px;'>
-    <tr>
-      <td align='center'>
-        <table width='100%' style='max-width:560px;background:#ffffff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.05);overflow:hidden;'>
-          <tr>
-            <td style='background:linear-gradient(135deg,#f59e0b,#ea580c);padding:24px;text-align:center;'>
-              <h1 style='margin:0;color:#ffffff;font-size:28px;'>FamKon</h1>
-              <p style='margin:4px 0 0;color:#fef3c7;font-size:14px;'>Tienda en línea</p>
-            </td>
-          </tr>
-          <tr>
-            <td style='padding:32px;'>
-              <h2 style='margin:0 0 16px;color:#1e293b;font-size:22px;'>Verifica tu correo electrónico</h2>
-              <p style='margin:0 0 24px;color:#475569;font-size:15px;line-height:1.5;'>
-                Usa el siguiente código para completar tu registro en FamKon. No lo compartas con nadie.
-              </p>
-              <div style='background:#fef3c7;border:2px dashed #f59e0b;border-radius:12px;padding:24px;text-align:center;margin:16px 0;'>
-                <div style='color:#92400e;font-size:14px;letter-spacing:2px;margin-bottom:8px;'>CÓDIGO DE VERIFICACIÓN</div>
-                <div style='color:#7c2d12;font-size:42px;font-weight:bold;letter-spacing:10px;font-family:Consolas,monospace;'>{codigo}</div>
-              </div>
-              <p style='margin:24px 0 8px;color:#475569;font-size:14px;'>
-                ⏱ Este código expira en <strong>{minutosExpiracion} minutos</strong>.
-              </p>
-              <p style='margin:8px 0 0;color:#94a3b8;font-size:13px;'>
-                Si no solicitaste este código, puedes ignorar este mensaje.
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style='background:#f8fafc;padding:16px;text-align:center;color:#94a3b8;font-size:12px;'>
-              © {DateTime.UtcNow.Year} FamKon. Todos los derechos reservados.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+<body style='margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#222222;font-size:14px;line-height:1.5;'>
+  <div style='max-width:520px;margin:0 auto;padding:24px 20px;'>
+    <p style='margin:0 0 4px 0;color:#666;font-size:12px;'>FamKon</p>
+    <hr style='border:none;border-top:1px solid #dddddd;margin:8px 0 20px 0;'>
+
+    <p style='margin:0 0 14px 0;'>Hola,</p>
+    <p style='margin:0 0 14px 0;'>Tu codigo de verificacion para completar el registro en FamKon es:</p>
+
+    <p style='margin:20px 0;padding:14px 18px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;font-family:Consolas,Courier New,monospace;font-size:24px;font-weight:bold;letter-spacing:6px;text-align:center;color:#111;'>{codigo}</p>
+
+    <p style='margin:14px 0;color:#444;'>Este codigo expira en {minutosExpiracion} minutos. Si no lo usas antes de ese tiempo, deberas solicitar uno nuevo.</p>
+    <p style='margin:14px 0;color:#444;'>Si no solicitaste este codigo, puedes ignorar este mensaje.</p>
+
+    <hr style='border:none;border-top:1px solid #dddddd;margin:24px 0 12px 0;'>
+    <p style='margin:0;color:#999;font-size:11px;'>Este es un mensaje automatico, por favor no respondas a este correo.</p>
+    <p style='margin:4px 0 0 0;color:#999;font-size:11px;'>&copy; FamKon</p>
+  </div>
 </body>
 </html>",
-                TextBody = $"FamKon - Tu código de verificación es: {codigo}. Expira en {minutosExpiracion} minutos."
+                TextBody = $@"FamKon - Verificacion de cuenta
+
+Hola,
+
+Tu codigo de verificacion para completar el registro en FamKon es:
+
+    {codigo}
+
+Este codigo expira en {minutosExpiracion} minutos. Si no lo usas antes de ese tiempo, deberas solicitar uno nuevo.
+
+Si no solicitaste este codigo, puedes ignorar este mensaje.
+
+--
+Este es un mensaje automatico, por favor no respondas a este correo.
+(c) FamKon"
             };
             mensaje.Body = builder.ToMessageBody();
             return mensaje;

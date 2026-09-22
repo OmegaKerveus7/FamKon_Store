@@ -150,7 +150,7 @@ export default function RegistroPage() {
       const respuesta = await enviarCodigoVerificacion(payload);
       console.log("[RegistroPage] enviarCodigo() ← respuesta:", respuesta);
 
-      if (respuesta.codigoS !== 200) {
+      if (respuesta.codigoS !== 200 && !respuesta.emailEnviado && !respuesta.whatsAppEnviado) {
         throw new Error(respuesta.mensaje || `Error ${respuesta.codigoS}`);
       }
 

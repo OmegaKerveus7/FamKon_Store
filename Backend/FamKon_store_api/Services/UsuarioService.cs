@@ -2,6 +2,7 @@ using FamKon_store_api.BD;
 using Oracle.ManagedDataAccess.Client;
 using Oracle.ManagedDataAccess.Types;
 using System.Data;
+using System.Security.Cryptography;
 
 namespace FamKon_store_api.Services
 {
@@ -40,6 +41,7 @@ namespace FamKon_store_api.Services
 
                 using var command = new OracleCommand("PKG_SEGURIDAD.SP_CREAR_USUARIO", connection);
                 command.CommandType = CommandType.StoredProcedure;
+                command.BindByName = true;
 
                 command.Parameters.Add("P_ID_SITIO", OracleDbType.Int64).Value = idSitio;
                 command.Parameters.Add("P_CORREO", OracleDbType.Varchar2).Value = correo;
@@ -47,28 +49,25 @@ namespace FamKon_store_api.Services
                 command.Parameters.Add("P_FECHA_NACIMIENTO", OracleDbType.Date).Value =
                     (object?)fechaNacimiento ?? DBNull.Value;
                 command.Parameters.Add("P_NICKNAME", OracleDbType.Varchar2).Value = nickname;
-                command.Parameters.Add("P_PASSWORD", OracleDbType.Varchar2).Value = password;
+                // El procedimiento recibe hashes de entrada; no devuelve el token QR.
+                var tokenQr = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+                command.Parameters.Add("P_PASSWORD_HASH", OracleDbType.Varchar2).Value = LoginService.Sha256LowerHex(password);
+                command.Parameters.Add("P_TOKEN_QR_HASH", OracleDbType.Varchar2).Value = LoginService.Sha256LowerHex(tokenQr);
                 command.Parameters.Add("P_NOTIFICA_EMAIL", OracleDbType.Char).Value =
-                    string.IsNullOrEmpty(notificaEmail) ? "S" : notificaEmail;
+                    string.IsNullOrWhiteSpace(notificaEmail) ? "S" : notificaEmail.Trim().ToUpperInvariant();
                 command.Parameters.Add("P_NOTIFICA_WHATSAPP", OracleDbType.Char).Value =
-                    string.IsNullOrEmpty(notificaWhatsapp) ? "N" : notificaWhatsapp;
+                    string.IsNullOrWhiteSpace(notificaWhatsapp) ? "N" : notificaWhatsapp.Trim().ToUpperInvariant();
 
-                var oTokenQr = new OracleParameter("O_TOKEN_QR", OracleDbType.Varchar2, 64)
-                {
-                    Direction = ParameterDirection.Output
-                };
                 var oIdUsuario = new OracleParameter("O_ID_USUARIO", OracleDbType.Int64)
                 {
                     Direction = ParameterDirection.Output
                 };
 
-                command.Parameters.Add(oTokenQr);
                 command.Parameters.Add(oIdUsuario);
 
                 await command.ExecuteNonQueryAsync();
 
                 var idUsuario = ((OracleDecimal)oIdUsuario.Value).ToInt64();
-                var tokenQr = oTokenQr.Value?.ToString() ?? "";
 
                 _logger.LogInformation("PKG_SEGURIDAD.SP_CREAR_USUARIO id={Id} mensaje=Usuario creado",
                     idUsuario);
@@ -82,13 +81,13 @@ namespace FamKon_store_api.Services
             }
             catch (OracleException ex)
             {
-                var codigo = ex.Number;
+                var codigo = Math.Abs(ex.Number);
                 var codigoS = codigo switch
                 {
-                    -20101 => 400,
-                    -20102 => 400,
-                    -20103 => 409,
-                    -20104 => 500,
+                    20101 => 400,
+                    20102 => 400,
+                    20103 => 409,
+                    20104 => 500,
                     1 => 409,
                     _ => 500
                 };

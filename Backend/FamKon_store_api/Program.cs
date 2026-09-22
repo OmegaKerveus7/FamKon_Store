@@ -36,6 +36,9 @@ builder.Services.AddScoped<CarritoService>();
 builder.Services.AddScoped<PedidoService>();
 builder.Services.AddScoped<RepartidorService>();
 builder.Services.AddScoped<ArchivoService>();
+builder.Services.AddScoped<CompraService>();
+builder.Services.AddScoped<FamKon_store_api.Controllers.CompraExceptionFilter>();
+builder.Services.AddHttpClient<RecurrenteService>(client => client.Timeout = TimeSpan.FromSeconds(25));
 
 builder.Services.AddHttpClient<FamKon_store_api.Services.BiometricService>(client =>
 {

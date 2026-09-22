@@ -48,6 +48,7 @@ namespace FamKon_store_api.Services
 
                 using var command = new OracleCommand("PKG_ARCHIVO.SP_GUARDAR_ARCHIVO", connection);
                 command.CommandType = CommandType.StoredProcedure;
+                command.BindByName = true;
 
                 command.Parameters.Add("P_ID_USUARIO_CARGA", OracleDbType.Int64).Value = idUsuarioCarga;
                 command.Parameters.Add("P_TIPO_ARCHIVO", OracleDbType.Varchar2).Value = tipoArchivo;
@@ -108,6 +109,7 @@ namespace FamKon_store_api.Services
 
                 using var command = new OracleCommand("PKG_ARCHIVO.SP_OBTENER_ARCHIVO", connection);
                 command.CommandType = CommandType.StoredProcedure;
+                command.BindByName = true;
 
                 command.Parameters.Add("P_ID_ARCHIVO", OracleDbType.Int64).Value = idArchivo;
 

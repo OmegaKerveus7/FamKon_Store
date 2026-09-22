@@ -31,6 +31,7 @@ export interface RefreshTokenResponse {
 }
 
 export interface RegistroRequest {
+  telefono: string;
   nombres: string;
   apellidos: string;
   correo: string;

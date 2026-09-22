@@ -51,7 +51,10 @@ namespace FamKon_store_api.Controllers
                     Mensaje = "Los campos 'nombres' y 'apellidos' son obligatorios."
                 });
 
-            var telefono = $"{request.Nombres.Trim().Substring(0, 1).ToUpper()}{request.Apellidos.Trim().Substring(0, 1).ToUpper()}{new Random().Next(100000, 999999)}";
+            var telefono = request.Telefono.Trim();
+            if (!System.Text.RegularExpressions.Regex.IsMatch(telefono, @"^\+?[0-9 ()-]{8,25}$") ||
+                telefono.Count(char.IsDigit) < 8 || telefono.Count(char.IsDigit) > 15)
+                return Ok(new RegistroResponse { CodigoS = 400, Mensaje = "Ingresa un teléfono válido; se guardará el mismo número utilizado para WhatsApp." });
 
             var resultado = await _usuarioService.CrearUsuarioAsync(
                 idSitio: 1,

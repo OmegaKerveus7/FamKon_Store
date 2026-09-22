@@ -78,3 +78,7 @@ La prueba SQL crea sus propios registros, comprueba compra en tienda/domicilio, 
 ## Duración de sesión
 
 JWT: `Jwt:ExpirationMinutes = 120` (2 horas). El temporizador del frontend también usa 2 horas, con aviso un minuto antes; la renovación para usuarios activos conserva su intervalo de 8 minutos. Reiniciar la API y volver a iniciar sesión para emitir un token con la nueva duración. Los tokens existentes conservan su expiración original.
+
+## Corrección de pagos pendientes
+
+Después de 07 y 08, aplicar `BD/01 scrip/pkg/09_PAGO_REFERENCIA_PENDIENTE.sql`. Reemplaza la unicidad antigua de proveedor/referencia por un índice que omite referencias nulas y distingue TEST/LIVE. Permite varias compras pendientes, manteniendo el rechazo de referencias confirmadas duplicadas. No elimina pagos.

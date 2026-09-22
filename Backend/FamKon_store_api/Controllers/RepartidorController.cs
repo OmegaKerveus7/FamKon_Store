@@ -6,6 +6,7 @@ namespace FamKon_store_api.Controllers
 {
     [ApiController]
     [Route("api/famkon/repartidor")]
+    [NonController]
     [Authorize]
     public class RepartidorController : ControllerBase
     {
@@ -205,15 +206,18 @@ namespace FamKon_store_api.Controllers
     public class ArchivosController : ControllerBase
     {
         private readonly ArchivoService _archivo;
+        private readonly CompraService _compras;
 
-        public ArchivosController(ArchivoService archivo)
+        public ArchivosController(ArchivoService archivo, CompraService compras)
         {
             _archivo = archivo;
+            _compras = compras;
         }
 
         [HttpGet("{id:long}")]
         public async Task<IActionResult> Descargar(long id)
         {
+            if (!long.TryParse(User.FindFirst("sub")?.Value, out var actor) || !await _compras.PuedeArchivo(id, actor)) return NotFound();
             var (contenido, mime, nombre) = await _archivo.ObtenerArchivoAsync(id);
             if (contenido == null || contenido.Length == 0)
                 return NotFound();

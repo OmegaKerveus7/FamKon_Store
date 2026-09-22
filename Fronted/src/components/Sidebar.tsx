@@ -184,7 +184,7 @@ export default function Sidebar({
                       <li key={`${g.id}-${it.path}-${it.label}`}>
                         <NavLink
                           to={it.path}
-                          end={it.path === "/inicio"}
+                          end={["/inicio", "/admin", "/supervisor"].includes(it.path)}
                           className={({ isActive }) =>
                             `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
                               isActive

@@ -17,7 +17,7 @@ namespace FamKon_store_api.Services
             _secretKey = configuration["Jwt:SecretKey"]!;
             _issuer = configuration["Jwt:Issuer"]!;
             _audience = configuration["Jwt:Audience"]!;
-            _expirationMinutes = int.Parse(configuration["Jwt:ExpirationMinutes"]!);
+            _expirationMinutes = configuration.GetValue<int>("Jwt:ExpirationMinutes", 120);
         }
 
         public string GenerateToken(long idUsuario, string nickname, string correo, string roles)

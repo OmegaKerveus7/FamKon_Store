@@ -68,6 +68,7 @@ namespace FamKon_store_api.Services
 
                 using var command = new OracleCommand("PKG_CATALOGO.SP_LISTAR_PRODUCTOS", connection);
                 command.CommandType = CommandType.StoredProcedure;
+                command.BindByName = true;
 
                 command.Parameters.Add("P_ID_SITIO", OracleDbType.Int64).Value = idSitio;
                 command.Parameters.Add("P_ID_CATEGORIA", OracleDbType.Int64).Value =
@@ -88,7 +89,7 @@ namespace FamKon_store_api.Services
                         IdArchivoImagen = reader.IsDBNull(reader.GetOrdinal("ID_ARCHIVO_IMAGEN")) ? null : reader.GetInt64(reader.GetOrdinal("ID_ARCHIVO_IMAGEN")),
                         Sku = reader.GetString(reader.GetOrdinal("SKU")),
                         Nombre = reader.GetString(reader.GetOrdinal("NOMBRE")),
-                        Descripcion = reader.GetString(reader.GetOrdinal("DESCRIPCION")),
+                        Descripcion = reader.IsDBNull(reader.GetOrdinal("DESCRIPCION")) ? "" : reader.GetString(reader.GetOrdinal("DESCRIPCION")),
                         PrecioBase = reader.GetDecimal(reader.GetOrdinal("PRECIO_BASE")),
                         PermiteLadoA = reader.GetString(reader.GetOrdinal("PERMITE_LADO_A")),
                         PermiteLadoB = reader.GetString(reader.GetOrdinal("PERMITE_LADO_B")),
@@ -100,7 +101,7 @@ namespace FamKon_store_api.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error listando productos");
-                return new List<ProductoDto>();
+                throw;
             }
         }
 
@@ -113,6 +114,7 @@ namespace FamKon_store_api.Services
 
                 using var command = new OracleCommand("PKG_CATALOGO.SP_OBTENER_PRODUCTO", connection);
                 command.CommandType = CommandType.StoredProcedure;
+                command.BindByName = true;
 
                 command.Parameters.Add("P_ID_PRODUCTO", OracleDbType.Int64).Value = idProducto;
                 command.Parameters.Add("O_DATOS", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
@@ -129,7 +131,7 @@ namespace FamKon_store_api.Services
                         IdArchivoImagen = reader.IsDBNull(reader.GetOrdinal("ID_ARCHIVO_IMAGEN")) ? null : reader.GetInt64(reader.GetOrdinal("ID_ARCHIVO_IMAGEN")),
                         Sku = reader.GetString(reader.GetOrdinal("SKU")),
                         Nombre = reader.GetString(reader.GetOrdinal("NOMBRE")),
-                        Descripcion = reader.GetString(reader.GetOrdinal("DESCRIPCION")),
+                        Descripcion = reader.IsDBNull(reader.GetOrdinal("DESCRIPCION")) ? "" : reader.GetString(reader.GetOrdinal("DESCRIPCION")),
                         PrecioBase = reader.GetDecimal(reader.GetOrdinal("PRECIO_BASE")),
                         PermiteLadoA = reader.GetString(reader.GetOrdinal("PERMITE_LADO_A")),
                         PermiteLadoB = reader.GetString(reader.GetOrdinal("PERMITE_LADO_B")),
@@ -152,6 +154,7 @@ namespace FamKon_store_api.Services
 
             using var command = new OracleCommand("PKG_CATALOGO.SP_CREAR_PRODUCTO", connection);
             command.CommandType = CommandType.StoredProcedure;
+            command.BindByName = true;
 
             command.Parameters.Add("P_ID_SITIO", OracleDbType.Int64).Value = idSitio;
             command.Parameters.Add("P_ID_CATEGORIA", OracleDbType.Int64).Value = idCategoria;
@@ -178,6 +181,7 @@ namespace FamKon_store_api.Services
 
             using var command = new OracleCommand("PKG_CATALOGO.SP_ACTUALIZAR_PRODUCTO", connection);
             command.CommandType = CommandType.StoredProcedure;
+            command.BindByName = true;
 
             command.Parameters.Add("P_ID_PRODUCTO", OracleDbType.Int64).Value = idProducto;
             command.Parameters.Add("P_ID_CATEGORIA", OracleDbType.Int64).Value = idCategoria;
@@ -199,11 +203,29 @@ namespace FamKon_store_api.Services
 
             using var command = new OracleCommand("PKG_CATALOGO.SP_CAMBIAR_ESTADO_PRODUCTO", connection);
             command.CommandType = CommandType.StoredProcedure;
+            command.BindByName = true;
 
             command.Parameters.Add("P_ID_PRODUCTO", OracleDbType.Int64).Value = idProducto;
             command.Parameters.Add("P_ACTIVO", OracleDbType.Char).Value = activo;
 
             await command.ExecuteNonQueryAsync();
+        }
+
+        public async Task<long> CrearCategoriaAsync(string codigo, string nombre, string descripcion)
+        {
+            using var connection = _dbContext.CreateConnection();
+            await _dbContext.OpenConnectionAsync(connection);
+            using var command = new OracleCommand("SP_CREAR_CATEGORIA_PRODUCTO", connection);
+            command.CommandType = CommandType.StoredProcedure;
+            command.BindByName = true;
+            command.Parameters.Add("P_CODIGO", OracleDbType.Varchar2).Value = codigo;
+            command.Parameters.Add("P_NOMBRE", OracleDbType.Varchar2).Value = nombre;
+            command.Parameters.Add("P_DESCRIPCION", OracleDbType.Varchar2).Value =
+                string.IsNullOrEmpty(descripcion) ? DBNull.Value : descripcion;
+            var id = command.Parameters.Add("O_ID_CATEGORIA", OracleDbType.Int64);
+            id.Direction = ParameterDirection.Output;
+            await command.ExecuteNonQueryAsync();
+            return ((OracleDecimal)id.Value).ToInt64();
         }
 
         public async Task<List<CategoriaDto>> ListarCategoriasAsync(string soloActivas = "S")
@@ -215,6 +237,7 @@ namespace FamKon_store_api.Services
 
                 using var command = new OracleCommand("PKG_CATALOGO.SP_LISTAR_CATEGORIAS", connection);
                 command.CommandType = CommandType.StoredProcedure;
+                command.BindByName = true;
 
                 command.Parameters.Add("P_SOLO_ACTIVAS", OracleDbType.Char).Value = soloActivas;
                 command.Parameters.Add("O_DATOS", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
@@ -228,7 +251,7 @@ namespace FamKon_store_api.Services
                         IdCategoria = reader.GetInt64(reader.GetOrdinal("ID_CATEGORIA")),
                         Codigo = reader.GetString(reader.GetOrdinal("CODIGO")),
                         Nombre = reader.GetString(reader.GetOrdinal("NOMBRE")),
-                        Descripcion = reader.GetString(reader.GetOrdinal("DESCRIPCION")),
+                        Descripcion = reader.IsDBNull(reader.GetOrdinal("DESCRIPCION")) ? "" : reader.GetString(reader.GetOrdinal("DESCRIPCION")),
                     });
                 }
                 return categorias;
@@ -236,7 +259,7 @@ namespace FamKon_store_api.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error listando categorías");
-                return new List<CategoriaDto>();
+                throw;
             }
         }
 
@@ -249,6 +272,7 @@ namespace FamKon_store_api.Services
 
                 using var command = new OracleCommand("PKG_CATALOGO.SP_LISTAR_AREAS_ENTREGA", connection);
                 command.CommandType = CommandType.StoredProcedure;
+                command.BindByName = true;
 
                 command.Parameters.Add("P_ID_SITIO", OracleDbType.Int64).Value = idSitio;
                 command.Parameters.Add("P_SOLO_ACTIVAS", OracleDbType.Char).Value = soloActivas;
@@ -287,6 +311,7 @@ namespace FamKon_store_api.Services
 
                 using var command = new OracleCommand("PKG_CATALOGO.SP_LISTAR_METODOS_PAGO", connection);
                 command.CommandType = CommandType.StoredProcedure;
+                command.BindByName = true;
 
                 command.Parameters.Add("P_SOLO_ACTIVOS", OracleDbType.Char).Value = soloActivos;
                 command.Parameters.Add("O_DATOS", OracleDbType.RefCursor).Direction = ParameterDirection.Output;

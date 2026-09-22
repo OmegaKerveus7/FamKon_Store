@@ -1,4 +1,5 @@
 using FamKon_store_api.Services;
+using Oracle.ManagedDataAccess.Client;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,17 +10,20 @@ namespace FamKon_store_api.Controllers
     public class TiendaController : ControllerBase
     {
         private readonly CatalogoService _catalogo;
+        private readonly PermisoService _permisos;
         private readonly CarritoService _carrito;
         private readonly PedidoService _pedido;
         private readonly ILogger<TiendaController> _logger;
 
         public TiendaController(
             CatalogoService catalogo,
+            PermisoService permisos,
             CarritoService carrito,
             PedidoService pedido,
             ILogger<TiendaController> logger)
         {
             _catalogo = catalogo;
+            _permisos = permisos;
             _carrito = carrito;
             _pedido = pedido;
             _logger = logger;
@@ -42,8 +46,12 @@ namespace FamKon_store_api.Controllers
             [FromQuery] long? idCategoria = null,
             [FromQuery] string soloActivos = "S")
         {
-            var productos = await _catalogo.ListarProductosAsync(idSitio, idCategoria, soloActivos);
-            return Ok(new { codigoS = 200, productos });
+            try
+            {
+                var productos = await _catalogo.ListarProductosAsync(idSitio, idCategoria, soloActivos);
+                return Ok(new { codigoS = 200, productos });
+            }
+            catch (Exception ex) { return ErrorProducto(ex); }
         }
 
         [HttpGet("productos/{id}")]
@@ -58,8 +66,12 @@ namespace FamKon_store_api.Controllers
         [HttpGet("categorias")]
         public async Task<ActionResult> ListarCategorias([FromQuery] string soloActivas = "S")
         {
-            var categorias = await _catalogo.ListarCategoriasAsync(soloActivas);
-            return Ok(new { codigoS = 200, categorias });
+            try
+            {
+                var categorias = await _catalogo.ListarCategoriasAsync(soloActivas);
+                return Ok(new { codigoS = 200, categorias });
+            }
+            catch (Exception ex) { return ErrorProducto(ex); }
         }
 
         [HttpGet("entrega-areas")]
@@ -78,52 +90,135 @@ namespace FamKon_store_api.Controllers
             return Ok(new { codigoS = 200, metodos });
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        //  PRODUCTOS - ADMIN (requiere auth + rol ADMIN)
-        // ═══════════════════════════════════════════════════════════════
+        private async Task<bool> PuedeGestionarProductos()
+        {
+            var id = ObtenerUsuarioId();
+            return id.HasValue && (await _permisos.ListarPermisosAsync(id.Value))
+                .Any(p => p.CodigoPermiso == "GESTIONAR_PRODUCTOS");
+        }
+
+        private ActionResult ErrorProducto(Exception ex)
+        {
+            _logger.LogError(ex, "Error en gestión de productos");
+            var numero = ex is OracleException oracle ? Math.Abs(oracle.Number) : 0;
+            var (status, mensaje) = numero switch
+            {
+                1 or 20302 => (409, "Ya existe un producto con ese SKU."),
+                20304 or 20306 => (404, "El producto ya no existe. Actualiza el listado."),
+                2291 => (400, "La categoría o la imagen seleccionada ya no existe."),
+                20301 or 20303 => (400, "El precio no puede ser negativo."),
+                20305 => (400, "El estado del producto no es válido."),
+                _ => (500, "No se pudo completar la operación de productos. Intenta nuevamente.")
+            };
+            return StatusCode(status, new { codigoS = status, mensaje });
+        }
+
+        private static bool DatosProductoValidos(long categoria, string nombre, string? descripcion,
+            decimal precio, string? ladoA, string? ladoB) =>
+            categoria > 0 && !string.IsNullOrWhiteSpace(nombre) && nombre.Length <= 150 &&
+            (descripcion?.Length ?? 0) <= 1000 && precio >= 0 && precio <= 9999999999.99m &&
+            decimal.Round(precio, 2) == precio && ladoA is "S" or "N" && ladoB is "S" or "N";
+
+        [Authorize]
+        [HttpPost("admin/categorias")]
+        public async Task<ActionResult> CrearCategoria([FromBody] CrearCategoriaRequest request)
+        {
+            if (!await PuedeGestionarProductos())
+                return StatusCode(403, new { mensaje = "No tienes permiso para gestionar productos." });
+            if (string.IsNullOrWhiteSpace(request.Codigo) || request.Codigo.Length > 30 ||
+                string.IsNullOrWhiteSpace(request.Nombre) || request.Nombre.Length > 100 ||
+                (request.Descripcion?.Length ?? 0) > 300)
+                return BadRequest(new { mensaje = "Completa código (máximo 30), nombre (máximo 100) y descripción (máximo 300 caracteres)." });
+            try
+            {
+                var codigo = request.Codigo.Trim().ToUpperInvariant();
+                var nombre = request.Nombre.Trim();
+                var descripcion = request.Descripcion?.Trim() ?? "";
+                var id = await _catalogo.CrearCategoriaAsync(codigo, nombre, descripcion);
+                return Ok(new { codigoS = 200, categoria = new CategoriaDto {
+                    IdCategoria = id, Codigo = codigo, Nombre = nombre, Descripcion = descripcion
+                }});
+            }
+            catch (OracleException ex) when (Math.Abs(ex.Number) is 1 or 20312)
+            {
+                return Conflict(new { mensaje = "Ya existe una categoría con ese código. Usa otro código o selecciona la categoría existente." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creando categoría");
+                return StatusCode(500, new { mensaje = "No se pudo crear la categoría. Intenta nuevamente." });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("admin/productos")]
+        public async Task<ActionResult> ListarProductosAdmin()
+        {
+            if (!await PuedeGestionarProductos())
+                return StatusCode(403, new { mensaje = "No tienes permiso para gestionar productos." });
+            try
+            {
+                var productos = await _catalogo.ListarProductosAsync(1, null, "N");
+                return Ok(new { codigoS = 200, productos });
+            }
+            catch (Exception ex) { return ErrorProducto(ex); }
+        }
 
         [Authorize]
         [HttpPost("admin/productos")]
         public async Task<ActionResult> CrearProducto([FromBody] CrearProductoRequest request)
         {
+            if (!await PuedeGestionarProductos())
+                return StatusCode(403, new { mensaje = "No tienes permiso para gestionar productos." });
+            if (!DatosProductoValidos(request.IdCategoria, request.Nombre, request.Descripcion,
+                    request.PrecioBase, request.PermiteLadoA ?? "S", request.PermiteLadoB ?? "S") ||
+                request.IdSitio <= 0 || string.IsNullOrWhiteSpace(request.Sku) || request.Sku.Length > 40)
+                return BadRequest(new { mensaje = "Revisa SKU, nombre, categoría, precio y opciones de personalización." });
             try
             {
                 var id = await _catalogo.CrearProductoAsync(
                     request.IdSitio, request.IdCategoria, request.IdArchivoImagen,
-                    request.Sku, request.Nombre, request.Descripcion,
+                    request.Sku.Trim(), request.Nombre.Trim(), request.Descripcion ?? "",
                     request.PrecioBase, request.PermiteLadoA ?? "S", request.PermiteLadoB ?? "S");
                 return Ok(new { codigoS = 200, mensaje = "Producto creado.", idProducto = id });
             }
-            catch (Oracle.ManagedDataAccess.Client.OracleException ex)
-            {
-                return Ok(new { codigoS = 400, mensaje = ex.Message });
-            }
+            catch (Exception ex) { return ErrorProducto(ex); }
         }
 
         [Authorize]
         [HttpPut("admin/productos/{id}")]
         public async Task<ActionResult> ActualizarProducto(long id, [FromBody] ActualizarProductoRequest request)
         {
+            if (!await PuedeGestionarProductos())
+                return StatusCode(403, new { mensaje = "No tienes permiso para gestionar productos." });
+            if (id <= 0 || !DatosProductoValidos(request.IdCategoria, request.Nombre, request.Descripcion,
+                    request.PrecioBase, request.PermiteLadoA, request.PermiteLadoB))
+                return BadRequest(new { mensaje = "Revisa nombre, categoría, precio y opciones de personalización." });
             try
             {
                 await _catalogo.ActualizarProductoAsync(
                     id, request.IdCategoria, request.IdArchivoImagen,
-                    request.Nombre, request.Descripcion, request.PrecioBase,
+                    request.Nombre.Trim(), request.Descripcion ?? "", request.PrecioBase,
                     request.PermiteLadoA, request.PermiteLadoB);
                 return Ok(new { codigoS = 200, mensaje = "Producto actualizado." });
             }
-            catch (Oracle.ManagedDataAccess.Client.OracleException ex)
-            {
-                return Ok(new { codigoS = 400, mensaje = ex.Message });
-            }
+            catch (Exception ex) { return ErrorProducto(ex); }
         }
 
         [Authorize]
         [HttpPut("admin/productos/{id}/estado")]
         public async Task<ActionResult> CambiarEstadoProducto(long id, [FromBody] CambiarEstadoRequest request)
         {
-            await _catalogo.CambiarEstadoProductoAsync(id, request.Activo);
-            return Ok(new { codigoS = 200, mensaje = "Estado actualizado." });
+            if (!await PuedeGestionarProductos())
+                return StatusCode(403, new { mensaje = "No tienes permiso para gestionar productos." });
+            if (id <= 0 || request.Activo is not ("S" or "N"))
+                return BadRequest(new { mensaje = "El estado del producto no es válido." });
+            try
+            {
+                await _catalogo.CambiarEstadoProductoAsync(id, request.Activo);
+                return Ok(new { codigoS = 200, mensaje = "Estado actualizado." });
+            }
+            catch (Exception ex) { return ErrorProducto(ex); }
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -233,6 +328,13 @@ namespace FamKon_store_api.Controllers
     // ═══════════════════════════════════════════════════════════════
     //  Request DTOs
     // ═══════════════════════════════════════════════════════════════
+
+    public class CrearCategoriaRequest
+    {
+        public string Codigo { get; set; } = "";
+        public string Nombre { get; set; } = "";
+        public string? Descripcion { get; set; }
+    }
 
     public class CrearProductoRequest
     {

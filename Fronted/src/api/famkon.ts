@@ -257,6 +257,7 @@ export interface Producto {
   permiteLadoB: string;
   activo: string;
   imagen?: string;
+  idArchivoImagen?: number | null;
 }
 
 export interface Categoria {
@@ -617,4 +618,64 @@ export async function asignarRolUsuarioAdmin(
 export async function listarRolesAdmin(): Promise<RolDisponible[]> {
   const res = await request<ApiResponse>("/admin/roles");
   return (res.roles as RolDisponible[]) ?? [];
+}
+
+// Gestión de productos: las bajas se realizan cambiando ACTIVO.
+export interface ProductoAdminBody {
+  idCategoria: number;
+  idArchivoImagen: number | null;
+  nombre: string;
+  descripcion: string;
+  precioBase: number;
+  permiteLadoA: "S" | "N";
+  permiteLadoB: "S" | "N";
+}
+
+interface ResultadoProducto {
+  codigoS: number;
+  mensaje?: string;
+  idProducto?: number;
+}
+
+function comprobarResultadoProducto(res: ResultadoProducto) {
+  if (res.codigoS !== 200) throw new Error(res.mensaje || "No se pudo completar la operación.");
+  return res;
+}
+
+export async function listarProductosAdmin(): Promise<Producto[]> {
+  const res = await request<ResultadoProducto & { productos: Producto[] }>("/admin/productos");
+  comprobarResultadoProducto(res);
+  return res.productos;
+}
+
+export async function listarCategoriasProductoAdmin(): Promise<Categoria[]> {
+  const res = await request<ResultadoProducto & { categorias: Categoria[] }>("/categorias?soloActivas=N");
+  comprobarResultadoProducto(res);
+  return res.categorias;
+}
+
+export async function crearProductoAdmin(body: ProductoAdminBody & { sku: string; idSitio: number }) {
+  return comprobarResultadoProducto(await request<ResultadoProducto>("/admin/productos", {
+    method: "POST", body: JSON.stringify(body),
+  }));
+}
+
+export async function actualizarProductoAdmin(id: number, body: ProductoAdminBody) {
+  return comprobarResultadoProducto(await request<ResultadoProducto>(`/admin/productos/${id}`, {
+    method: "PUT", body: JSON.stringify(body),
+  }));
+}
+
+export async function cambiarEstadoProductoAdmin(id: number, activo: "S" | "N") {
+  return comprobarResultadoProducto(await request<ResultadoProducto>(`/admin/productos/${id}/estado`, {
+    method: "PUT", body: JSON.stringify({ activo }),
+  }));
+}
+
+export async function crearCategoriaProductoAdmin(body: { codigo: string; nombre: string; descripcion: string }): Promise<Categoria> {
+  const res = await request<ResultadoProducto & { categoria: Categoria }>("/admin/categorias", {
+    method: "POST", body: JSON.stringify(body),
+  });
+  comprobarResultadoProducto(res);
+  return res.categoria;
 }

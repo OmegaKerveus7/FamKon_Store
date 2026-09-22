@@ -14,10 +14,9 @@ import { useAuth } from "./context/AuthContext";
 import RegistroPage from "./pages/RegistroPage";
 import PerfilPage from "./pages/PerfilPage";
 import SupervisorPage from "./pages/SupervisorPage";
-import RepartidorPage from "./pages/RepartidorPage";
-import RepartidorAsignadosSection from "./pages/RepartidorAsignadosSection";
-import RepartidorRegistrarSection from "./pages/RepartidorRegistrarSection";
-import RepartidorCambiarEstadoSection from "./pages/RepartidorCambiarEstadoSection";
+import PedidosPage from "./pages/PedidosPage";
+import PagoPage from './pages/PagoPage';
+import CheckoutPage from "./pages/CheckoutPage";
 import EntregasAdminPage from "./pages/EntregasAdminPage";
 import AdminPage from "./pages/AdminPage";
 import UsuariosAdminPage from "./pages/UsuariosAdminPage";
@@ -98,28 +97,14 @@ export default function App() {
           }
         />
 
-        {/* Rutas del repartidor (tambien visibles para ADMIN/SUPERVISOR que gestionan entregas) */}
-        <Route
-          path="/repartidor"
-          element={
-            <RequirePermiso codigoPermiso="GESTIONAR_ENTREGAS">
-              <RepartidorPage />
-            </RequirePermiso>
-          }
-        >
-          <Route index element={<Navigate to="/repartidor/asignados" replace />} />
-          <Route path="asignados" element={<RepartidorAsignadosSection />} />
-          <Route path="registrar" element={<RepartidorRegistrarSection />} />
-          <Route path="cambiar-estado" element={<RepartidorCambiarEstadoSection />} />
-        </Route>
-        <Route
-          path="/entregas/tracking"
-          element={
-            <RequirePermiso codigoPermiso="GESTIONAR_ENTREGAS">
-              <EntregasAdminPage />
-            </RequirePermiso>
-          }
-        />
+        <Route path="/comprador/pago/:id" element={<RequirePermiso codigoPermiso="REALIZAR_PAGO"><PagoPage /></RequirePermiso>} />
+        <Route path="/comprador/checkout" element={<RequirePermiso codigoPermiso="CREAR_PEDIDO"><CheckoutPage /></RequirePermiso>} />
+        <Route path="/repartidor" element={<Navigate to="/repartidor/asignados" replace />} />
+        <Route path="/repartidor/asignados" element={<RequirePermiso codigoPermiso="VER_PEDIDOS_ASIGNADOS"><PedidosPage vista="repartidor" /></RequirePermiso>} />
+        <Route path="/repartidor/registrar" element={<Navigate to="/repartidor/asignados" replace />} />
+        <Route path="/repartidor/cambiar-estado" element={<Navigate to="/repartidor/asignados" replace />} />
+        <Route path="/admin/pedidos" element={<RequirePermiso codigoPermiso="VER_DASHBOARD"><PedidosPage vista="admin" /></RequirePermiso>} />
+        <Route path="/entregas/tracking" element={<RequirePermiso codigoPermiso="VER_DASHBOARD"><EntregasAdminPage /></RequirePermiso>} />
 
         {/* Rutas del supervisor */}
         <Route

@@ -65,18 +65,16 @@ namespace FamKon_store_api.Controllers
                 });
             }
 
-            var emailOk = false;
-            var whatsOk = false;
-
-            if (canal == CanalVerificacion.EMAIL || canal == CanalVerificacion.AMBOS)
-            {
-                emailOk = await _emailService.EnviarCodigoVerificacionAsync(request.Correo, request.Codigo, MinutosExpiracion);
-            }
-
-            if (canal == CanalVerificacion.WHATSAPP || canal == CanalVerificacion.AMBOS)
-            {
-                whatsOk = await _whatsAppService.EnviarCodigoVerificacionAsync(request.Telefono!, request.Codigo, MinutosExpiracion);
-            }
+            // Ambos envíos empiezan juntos: un SMTP lento no bloquea WhatsApp.
+            var emailTask = canal == CanalVerificacion.EMAIL || canal == CanalVerificacion.AMBOS
+                ? _emailService.EnviarCodigoVerificacionAsync(request.Correo, request.Codigo, MinutosExpiracion)
+                : Task.FromResult(false);
+            var whatsTask = canal == CanalVerificacion.WHATSAPP || canal == CanalVerificacion.AMBOS
+                ? _whatsAppService.EnviarCodigoVerificacionAsync(request.Telefono!, request.Codigo, MinutosExpiracion)
+                : Task.FromResult(false);
+            await Task.WhenAll(emailTask, whatsTask);
+            var emailOk = await emailTask;
+            var whatsOk = await whatsTask;
 
             var canalesFallidos = new List<string>();
             if ((canal == CanalVerificacion.EMAIL || canal == CanalVerificacion.AMBOS) && !emailOk)

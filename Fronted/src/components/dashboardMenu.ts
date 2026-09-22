@@ -4,8 +4,6 @@ import {
   Truck,
   History,
   ClipboardList,
-  Camera,
-  Package,
   BarChart3,
   Users,
   Boxes,
@@ -49,7 +47,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     items: [
       { codigo: "VER_CATALOGO",  path: "/comprador/catalogo", label: "Catalogo",  icon: Store },
       { codigo: "VER_CARRITO",   path: "/comprador/carrito",  label: "Mi Carrito", icon: ShoppingCart },
-      { codigo: "VER_TRACKING",  path: "/comprador/tracking", label: "Mis Envios", icon: Truck },
+      { codigo: "VER_TRACKING",  path: "/comprador/tracking", label: "Mis pedidos", icon: Truck },
       { codigo: "VER_HISTORICO", path: "/comprador/historico", label: "Historico", icon: History },
     ],
   },
@@ -60,8 +58,6 @@ export const MENU_GROUPS: MenuGroup[] = [
     codigoRol: "REPARTIDOR",
     items: [
       { codigo: "VER_PEDIDOS_ASIGNADOS",   path: "/repartidor/asignados",       label: "Mis Pedidos",      icon: ClipboardList },
-      { codigo: "GESTIONAR_ENTREGAS",      path: "/repartidor/registrar",       label: "Registrar Entrega", icon: Camera },
-      { codigo: "GESTIONAR_ESTADO_PEDIDO", path: "/repartidor/cambiar-estado",   label: "Cambiar Estado",    icon: Package },
     ],
   },
   {
@@ -90,6 +86,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     icon: Settings,
     codigoRol: "ADMIN",
     items: [
+      { codigo: "VER_DASHBOARD", path: "/admin/pedidos", label: "Gestión de pedidos", icon: ClipboardList },
       { codigo: "VER_DASHBOARD",         path: "/admin",              label: "Dashboard Admin",    icon: BarChart3 },
       { codigo: "GESTIONAR_USUARIOS",    path: "/admin/usuarios",     label: "Gestor Usuarios",    icon: Users },
       { codigo: "GESTIONAR_CATALOGOS",   path: "/admin/catalogos",    label: "Catalogos",          icon: Boxes },

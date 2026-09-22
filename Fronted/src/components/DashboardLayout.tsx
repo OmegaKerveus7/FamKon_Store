@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import SessionWarning from "./SessionWarning";
@@ -11,6 +11,11 @@ import {
 
 export default function DashboardLayout() {
   const [colapsado, setColapsado] = useState(false);
+  const [movil, setMovil] = useState(() => window.innerWidth < 768);
+  const [menuMovil, setMenuMovil] = useState(false);
+  const location = useLocation();
+  useEffect(() => { const resize = () => { setMovil(window.innerWidth < 768); setMenuMovil(false); }; window.addEventListener('resize', resize); return () => window.removeEventListener('resize', resize); }, []);
+  useEffect(() => { setMenuMovil(false); }, [location.pathname]);
   const [mostrarAviso, setMostrarAviso] = useState(false);
   const [segundosRestantes, setSegundosRestantes] = useState(
     Math.ceil(AVISO_INACTIVIDAD_MS / 1000),
@@ -71,9 +76,9 @@ export default function DashboardLayout() {
     function reset() {
       if (timerAviso) clearTimeout(timerAviso);
       if (timerExpiro) clearTimeout(timerExpiro);
-      // Aviso a los 9 min (10 min - 1 min de aviso)
+      // Aviso un minuto antes del límite de 2 horas.
       timerAviso = setTimeout(handleAviso, TIMEOUT_INACTIVIDAD_MS - AVISO_INACTIVIDAD_MS);
-      // Expiracion a los 10 min
+      // Expiración al alcanzar el límite de sesión.
       timerExpiro = setTimeout(handleExpiro, TIMEOUT_INACTIVIDAD_MS);
     }
 
@@ -122,9 +127,9 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50">
-      <Sidebar colapsado={colapsado} onToggle={() => setColapsado((v) => !v)} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Topbar onToggleSidebar={() => setColapsado((v) => !v)} />
+      {movil ? menuMovil && <><button aria-label="Cerrar menú" className="fixed inset-0 z-30 bg-slate-900/40" onClick={() => setMenuMovil(false)} /><div className="fixed inset-y-0 left-0 z-40 flex"><Sidebar colapsado={false} onToggle={() => setMenuMovil(false)} /></div></> : <Sidebar colapsado={colapsado} onToggle={() => setColapsado(v => !v)} />}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <Topbar onToggleSidebar={() => movil ? setMenuMovil(v => !v) : setColapsado(v => !v)} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />
         </main>

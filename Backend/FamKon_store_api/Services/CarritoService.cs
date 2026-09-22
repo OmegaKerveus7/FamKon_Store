@@ -81,7 +81,9 @@ namespace FamKon_store_api.Services
                         carrito.IdUsuario = reader.GetInt64(reader.GetOrdinal("ID_USUARIO"));
                         carrito.IdSitio = reader.GetInt64(reader.GetOrdinal("ID_SITIO"));
                         carrito.Estado = reader.GetString(reader.GetOrdinal("ESTADO"));
-                        carrito.Total = reader.GetDecimal(reader.GetOrdinal("TOTAL_CARRITO"));
+                        // SUM devuelve NULL cuando el carrito todavía no tiene detalles.
+                        var totalOrdinal = reader.GetOrdinal("TOTAL_CARRITO");
+                        carrito.Total = reader.IsDBNull(totalOrdinal) ? 0m : reader.GetDecimal(totalOrdinal);
                         first = false;
                     }
 

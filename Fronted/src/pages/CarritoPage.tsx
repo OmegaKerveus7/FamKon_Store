@@ -48,7 +48,7 @@ export default function CarritoPage() {
             ? {
                 ...i,
                 cantidad: nuevaCantidad,
-                subtotal: nuevaCantidad * i.precioUnitario + (i.precioPersonaliza ?? 0),
+                subtotal: nuevaCantidad * (i.precioUnitario + (i.precioPersonaliza ?? 0)),
               }
             : i,
         ),
@@ -69,16 +69,16 @@ export default function CarritoPage() {
 
   function handleProcederPago() {
     if (items.length === 0 || !idCarrito) return;
-    navigate(`/comprador/tracking?carrito=${idCarrito}`, { replace: true });
+    navigate("/comprador/checkout");
   }
 
   const subtotal = items.reduce((sum, i) => sum + i.subtotal, 0);
-  const cargoEntrega = items.length > 0 ? 25.0 : 0;
+  const cargoEntrega = 0;
   const total = subtotal + cargoEntrega;
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <header>
+      <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
           <ShoppingBag className="h-6 w-6 text-amber-600" />
           Mi Carrito
@@ -87,7 +87,7 @@ export default function CarritoPage() {
           </span>
         </h1>
         <p className="text-sm text-slate-500">Productos listos para tu pedido.</p>
-      </header>
+      </div>
 
       {cargando ? (
         <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white py-20">
@@ -187,14 +187,14 @@ export default function CarritoPage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Cargo de entrega</span>
+                <span>Entrega</span>
                 <span className="font-semibold text-slate-800">
-                  Q{cargoEntrega.toFixed(2)}
+                  Se elige al finalizar
                 </span>
               </div>
               <div className="border-t border-slate-200 pt-2">
                 <div className="flex justify-between">
-                  <span className="font-bold text-slate-900">Total</span>
+                  <span className="font-bold text-slate-900">Subtotal</span>
                   <span className="text-lg font-bold text-amber-600">
                     Q{total.toFixed(2)}
                   </span>
@@ -207,7 +207,7 @@ export default function CarritoPage() {
                 onClick={handleProcederPago}
                 className="flex-1 rounded-xl bg-amber-500 py-3 text-sm font-semibold text-white transition hover:bg-amber-400"
               >
-                Proceder al pago
+                Continuar compra
               </button>
             </div>
           </div>

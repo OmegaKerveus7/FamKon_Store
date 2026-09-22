@@ -11,6 +11,7 @@ namespace FamKon_store_api.Services
         private readonly string _email;
         private readonly string _password;
         private readonly string _remitente;
+        private readonly bool _checkCertificateRevocation;
         private readonly ILogger<EmailService> _logger;
 
         public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
@@ -20,6 +21,7 @@ namespace FamKon_store_api.Services
             _email = (configuration["Email:Address"] ?? string.Empty).Trim();
             _password = (configuration["Email:Password"] ?? string.Empty).Replace(" ", string.Empty);
             _remitente = configuration["Email:DisplayName"] ?? "FamKon";
+            _checkCertificateRevocation = configuration.GetValue("Email:CheckCertificateRevocation", true);
             _logger = logger;
         }
 
@@ -35,11 +37,11 @@ namespace FamKon_store_api.Services
 
             try
             {
-                using var client = new SmtpClient();
+                using var client = CrearClienteSmtp();
 
                 var opciones = _smtpPuerto == 465
                     ? SecureSocketOptions.SslOnConnect
-                    : SecureSocketOptions.StartTlsWhenAvailable;
+                    : SecureSocketOptions.StartTls;
 
                 _logger.LogInformation("Conectando a {Host}:{Puerto} ({Opciones}) como {Email} (password len={Len})",
                     _smtpHost, _smtpPuerto, opciones, _email, _password.Length);
@@ -103,10 +105,10 @@ namespace FamKon_store_api.Services
 
             try
             {
-                using var client = new SmtpClient();
+                using var client = CrearClienteSmtp();
                 var opciones = _smtpPuerto == 465
                     ? SecureSocketOptions.SslOnConnect
-                    : SecureSocketOptions.StartTlsWhenAvailable;
+                    : SecureSocketOptions.StartTls;
 
                 await client.ConnectAsync(_smtpHost, _smtpPuerto, opciones);
                 await client.AuthenticateAsync(_email, _password);
@@ -145,10 +147,10 @@ namespace FamKon_store_api.Services
 
             try
             {
-                using var client = new SmtpClient();
+                using var client = CrearClienteSmtp();
                 var opciones = _smtpPuerto == 465
                     ? SecureSocketOptions.SslOnConnect
-                    : SecureSocketOptions.StartTlsWhenAvailable;
+                    : SecureSocketOptions.StartTls;
 
                 await client.ConnectAsync(_smtpHost, _smtpPuerto, opciones);
                 await client.AuthenticateAsync(_email, _password);
@@ -159,6 +161,13 @@ namespace FamKon_store_api.Services
             {
                 return (false, $"{ex.GetType().Name}: {ex.Message}");
             }
+        }
+
+        private SmtpClient CrearClienteSmtp()
+        {
+            // Mantiene la validación de confianza, vigencia y nombre del certificado.
+            // Solo permite desactivar la consulta de revocación mediante configuración.
+            return new SmtpClient { CheckCertificateRevocation = _checkCertificateRevocation };
         }
 
         private MimeMessage ConstruirMensaje(string destino, string codigo, int minutosExpiracion)

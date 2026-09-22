@@ -101,7 +101,7 @@ export default function RegistroPage() {
     if (contrasena !== confirmacion) return "Las contraseñas no coinciden.";
     if (!fechaNacimiento) return "La fecha de nacimiento es obligatoria.";
     if (!foto) return "Debes tomar una fotografía.";
-    if (canal !== "EMAIL" && !/^[0-9+\-\s()]{8,20}$/.test(telefono)) {
+    if (!/^\+?[0-9 ()-]{8,25}$/.test(telefono.trim()) || telefono.replace(/\D/g, "").length < 8 || telefono.replace(/\D/g, "").length > 15) {
       return "Ingresa un número de teléfono válido (incluye código de país).";
     }
     return null;
@@ -150,7 +150,7 @@ export default function RegistroPage() {
       const respuesta = await enviarCodigoVerificacion(payload);
       console.log("[RegistroPage] enviarCodigo() ← respuesta:", respuesta);
 
-      if (respuesta.codigoS !== 200) {
+      if (respuesta.codigoS !== 200 && !respuesta.emailEnviado && !respuesta.whatsAppEnviado) {
         throw new Error(respuesta.mensaje || `Error ${respuesta.codigoS}`);
       }
 
@@ -214,6 +214,7 @@ export default function RegistroPage() {
       const fotoBase64 = stripBase64Prefix(foto);
       const resultado = await registrarComprador({
         nombres: nombres.trim(),
+        telefono: telefono.trim(),
         apellidos: apellidos.trim(),
         correo: correo.trim(),
         contrasena,

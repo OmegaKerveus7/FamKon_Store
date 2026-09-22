@@ -180,6 +180,56 @@ namespace FamKon_store_api.Services
             return lista;
         }
 
+        // Equivalente a VW_GESTOR_USUARIOS; compatible con instalaciones sin
+        // los procedimientos de lectura nuevos. Los filtros siempre se parametrizan.
+        private const string ConsultaGestor = """
+            SELECT
+                U.ID_USUARIO,
+                U.NICKNAME,
+                U.CORREO,
+                U.TELEFONO,
+                U.FECHA_NACIMIENTO,
+                CASE
+                    WHEN U.FECHA_NACIMIENTO IS NULL THEN NULL
+                    ELSE TRUNC(MONTHS_BETWEEN(SYSDATE, U.FECHA_NACIMIENTO) / 12)
+                END AS EDAD,
+                U.ID_SITIO,
+                U.ACTIVO,
+                U.BLOQUEADO,
+                U.INTENTOS_FALLIDOS,
+                U.ULTIMO_ACCESO,
+                U.NOTIFICA_EMAIL,
+                U.NOTIFICA_WHATSAPP,
+                (SELECT LISTAGG(R.CODIGO, ',') WITHIN GROUP (ORDER BY R.CODIGO)
+                   FROM USUARIO_ROL UR
+                   JOIN ROL R ON R.ID_ROL = UR.ID_ROL
+                  WHERE UR.ID_USUARIO = U.ID_USUARIO
+                    AND R.ACTIVO = 'S') AS ROLES,
+                (SELECT COUNT(*)
+                   FROM USUARIO_ROL UR
+                   JOIN ROL R ON R.ID_ROL = UR.ID_ROL
+                  WHERE UR.ID_USUARIO = U.ID_USUARIO
+                    AND R.ACTIVO = 'S') AS CANT_ROLES,
+                (SELECT COUNT(DISTINCT P.ID_PERMISO)
+                   FROM USUARIO_ROL UR
+                   JOIN ROL_PERMISO RP ON RP.ID_ROL = UR.ID_ROL
+                   JOIN PERMISO P    ON P.ID_PERMISO = RP.ID_PERMISO
+                  WHERE UR.ID_USUARIO = U.ID_USUARIO
+                    AND P.ACTIVO = 'S') AS CANT_PERMISOS,
+                (SELECT MAX(BA.FECHA_EVENTO)
+                   FROM BITACORA_ACCESO BA
+                  WHERE BA.ID_USUARIO = U.ID_USUARIO
+                    AND BA.RESULTADO = 'S') AS ULTIMA_CONEXION_OK,
+                (SELECT MAX(BA.FECHA_EVENTO)
+                   FROM BITACORA_ACCESO BA
+                  WHERE BA.ID_USUARIO = U.ID_USUARIO
+                    AND BA.RESULTADO = 'N') AS ULTIMA_CONEXION_FALLIDA,
+                (SELECT COUNT(*)
+                   FROM BITACORA_ACCESO BA
+                  WHERE BA.ID_USUARIO = U.ID_USUARIO) AS TOTAL_ACCESOS
+            FROM USUARIO U
+            """;
+
         public async Task<List<UsuarioGestorRow>> ListarUsuariosGestorAsync(string soloActivos = "N")
         {
             var lista = new List<UsuarioGestorRow>();
@@ -188,26 +238,21 @@ namespace FamKon_store_api.Services
                 using var connection = _dbContext.CreateConnection();
                 await _dbContext.OpenConnectionAsync(connection);
 
-                using var command = new OracleCommand("PKG_SEGURIDAD.SP_LISTAR_USUARIOS_GESTOR", connection);
-                command.CommandType = CommandType.StoredProcedure;
+                using var command = new OracleCommand(ConsultaGestor + " WHERE (:P_SOLO_ACTIVOS = 'N' OR U.ACTIVO = 'S') ORDER BY U.ID_USUARIO DESC", connection);
+                command.BindByName = true;
 
                 command.Parameters.Add("P_SOLO_ACTIVOS", OracleDbType.Char).Value = soloActivos;
-                var oDatos = new OracleParameter("O_DATOS", OracleDbType.RefCursor)
-                {
-                    Direction = ParameterDirection.Output
-                };
-                command.Parameters.Add(oDatos);
 
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
                     lista.Add(MapGestorRow(reader));
                 }
-                _logger.LogInformation("SP_LISTAR_USUARIOS_GESTOR total={Count}", lista.Count);
+                _logger.LogInformation("Consulta gestor usuarios total={Count}", lista.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error ejecutando PKG_SEGURIDAD.SP_LISTAR_USUARIOS_GESTOR");
+                _logger.LogError(ex, "Error consultando usuarios del gestor");
             }
             return lista;
         }
@@ -219,15 +264,10 @@ namespace FamKon_store_api.Services
                 using var connection = _dbContext.CreateConnection();
                 await _dbContext.OpenConnectionAsync(connection);
 
-                using var command = new OracleCommand("PKG_SEGURIDAD.SP_OBTENER_USUARIO_GESTOR", connection);
-                command.CommandType = CommandType.StoredProcedure;
+                using var command = new OracleCommand(ConsultaGestor + " WHERE U.ID_USUARIO = :P_ID_USUARIO", connection);
+                command.BindByName = true;
 
                 command.Parameters.Add("P_ID_USUARIO", OracleDbType.Int64).Value = idUsuario;
-                var oDatos = new OracleParameter("O_DATOS", OracleDbType.RefCursor)
-                {
-                    Direction = ParameterDirection.Output
-                };
-                command.Parameters.Add(oDatos);
 
                 using var reader = await command.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
@@ -237,7 +277,7 @@ namespace FamKon_store_api.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error ejecutando PKG_SEGURIDAD.SP_OBTENER_USUARIO_GESTOR id={Id}", idUsuario);
+                _logger.LogError(ex, "Error consultando usuario del gestor id={Id}", idUsuario);
             }
             return null;
         }
@@ -250,14 +290,8 @@ namespace FamKon_store_api.Services
                 using var connection = _dbContext.CreateConnection();
                 await _dbContext.OpenConnectionAsync(connection);
 
-                using var command = new OracleCommand("PKG_USUARIO.SP_LISTAR_ROLES", connection);
-                command.CommandType = CommandType.StoredProcedure;
+                using var command = new OracleCommand("SELECT ID_ROL, CODIGO, NOMBRE, DESCRIPCION, ACTIVO FROM ROL WHERE ACTIVO = 'S' ORDER BY ID_ROL", connection);
 
-                var oDatos = new OracleParameter("O_DATOS", OracleDbType.RefCursor)
-                {
-                    Direction = ParameterDirection.Output
-                };
-                command.Parameters.Add(oDatos);
 
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -275,7 +309,7 @@ namespace FamKon_store_api.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error ejecutando PKG_USUARIO.SP_LISTAR_ROLES");
+                _logger.LogError(ex, "Error consultando roles");
             }
             return lista;
         }

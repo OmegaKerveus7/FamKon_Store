@@ -276,6 +276,7 @@ namespace FamKon_store_api.Controllers
 
         [Authorize]
         [HttpPost("pedidos")]
+        [NonAction]
         public async Task<ActionResult> CrearPedido([FromBody] CrearPedidoRequest request)
         {
             var userId = ObtenerUsuarioId();
@@ -313,6 +314,7 @@ namespace FamKon_store_api.Controllers
             if (resumen is null)
                 return Ok(new { codigoS = 404, mensaje = "Pedido no encontrado." });
 
+            if (resumen.IdUsuario != ObtenerUsuarioId()) return NotFound();
             var detalles = await _pedido.ObtenerDetalleAsync(id);
             return Ok(new { codigoS = 200, resumen, detalles });
         }

@@ -21,8 +21,8 @@ const STORAGE_KEY = "famkon.usuario";
 const PERMISOS_KEY = "famkon.permisos";
 export const ACTIVIDAD_KEY = "famkon.ultima_actividad";
 
-// 10 minutos totales. Aviso al minuto 9 (60s antes del logout).
-export const TIMEOUT_INACTIVIDAD_MS = 10 * 60 * 1000;
+// 2 horas de sesión. Aviso un minuto antes del cierre.
+export const TIMEOUT_INACTIVIDAD_MS = 2 * 60 * 60 * 1000;
 export const AVISO_INACTIVIDAD_MS = 60 * 1000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     avisoActivoRef.current = false;
   }
 
-  // ─── Timers: auto-refresh cada 8 min + inactividad cada 10 min ─────────────
+  // ─── Timers: auto-refresh cada 8 min + inactividad de 2 horas ─────────────
   useEffect(() => {
     if (!token) return;
 

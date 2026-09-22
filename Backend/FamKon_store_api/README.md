@@ -161,3 +161,16 @@ dotnet run
 ```
 
 La API estará disponible en `http://localhost:5299` (puerto definido en `Properties/launchSettings.json`).
+## SMTP: comprobación de revocación en desarrollo
+
+Si MailKit informa `An incomplete certificate revocation check occurred`, la red
+o el sistema no pudieron completar la consulta de revocación. Para ese entorno
+local se puede configurar `Email:CheckCertificateRevocation` en `false` dentro de
+`appsettings.Development.json`. Esto conserva TLS y la validación de confianza,
+vigencia y nombre del certificado, pero omite comprobar si fue revocado.
+El valor predeterminado es `true`; no desactivarlo en la configuración compartida.
+Volver a `true` cuando se restablezca la consulta de revocación.
+
+Al seleccionar ambos canales, se intentan los dos envíos simultáneamente. Si
+solo uno tiene éxito, la pantalla informa cuál falló y permite usar el código
+recibido por el otro.

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import type { Usuario, Permiso } from "../api/famkon";
 import { guardarToken, eliminarToken, obtenerToken, refreshToken, obtenerPermisos } from "../api/famkon";
 
@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isRefreshingRef = useRef<boolean>(false);
   const actividadRef = useRef<number>(Date.now());
   const avisoActivoRef = useRef<boolean>(false);
 
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null);
     setToken(null);
     setPermisos([]);
+    isRefreshingRef.current = false;
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -66,10 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const renovarToken = useCallback(async (): Promise<boolean> => {
+    if (isRefreshingRef.current) return false;
     const currentToken = obtenerToken();
     if (!currentToken) return false;
 
     try {
+      isRefreshingRef.current = true;
       const respuesta = await refreshToken(currentToken);
       if (respuesta.codigoS === 200 && respuesta.token) {
         guardarToken(respuesta.token);
@@ -83,6 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       cerrarSesion();
       return false;
+    } finally {
+      isRefreshingRef.current = false;
     }
   }, [cerrarSesion]);
 
@@ -180,8 +186,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
-import { createContext, useContext } from "react";
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);

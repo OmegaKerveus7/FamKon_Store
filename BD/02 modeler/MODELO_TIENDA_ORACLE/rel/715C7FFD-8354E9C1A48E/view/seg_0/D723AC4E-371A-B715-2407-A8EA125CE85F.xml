@@ -1,0 +1,388 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableView class="oracle.dbtools.crest.model.design.relational.TableView" directorySegmentName="seg_0" id="D723AC4E-371A-B715-2407-A8EA125CE85F" schemaObject="935ADA5A-58F4-77E9-E261-9E0928D0FEB3" name="VW_PEDIDO_RESUMEN">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>VW_PEDIDO_RESUMEN</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:34 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<userDefined>true</userDefined>
+<userDefinedSQL><![CDATA[CREATE OR REPLACE VIEW VW_PEDIDO_RESUMEN
+AS 
+SELECT
+    P.ID_PEDIDO,
+    P.NUMERO_PEDIDO,
+    P.FECHA_PEDIDO,
+    P.ID_USUARIO,
+    U.NICKNAME AS COMPRADOR,
+    U.CORREO,
+    P.ID_SITIO,
+    S.NOMBRE AS SITIO,
+    EP.CODIGO AS CODIGO_ESTADO,
+    EP.NOMBRE AS ESTADO_PEDIDO,
+    AE.NOMBRE AS AREA_ENTREGA,
+    P.SUBTOTAL,
+    P.CARGO_ENTREGA,
+    P.TOTAL,
+    P.COD_MONEDA
+FROM PEDIDO P
+INNER JOIN USUARIO U ON U.ID_USUARIO = P.ID_USUARIO
+INNER JOIN SITIO S ON S.ID_SITIO = P.ID_SITIO
+INNER JOIN ESTADO_PEDIDO EP ON EP.ID_ESTADO_PEDIDO = P.ID_ESTADO_PEDIDO
+INNER JOIN AREA_ENTREGA AE ON AE.ID_AREA_ENTREGA = P.ID_AREA_ENTREGA]]></userDefinedSQL>
+<parsed>true</parsed>
+<viewElements>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="ID_PEDIDO" id="FBBB09CD-302C-37E4-92A9-0869BF931D49">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>ID_PEDIDO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>ID_PEDIDO</alias>
+<dataType>NUMBER (19)</dataType>
+<headerAlias>ID_PEDIDO</headerAlias>
+<reference>false</reference>
+<referencedColumn>F8F6EFCB-8629-AECC-43DE-9A2CC9E9173B</referencedColumn>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="NUMERO_PEDIDO" id="B82639BF-A261-D80D-5838-0568F866CF4B">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>NUMERO_PEDIDO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>NUMERO_PEDIDO</alias>
+<dataType>VARCHAR2 (30 BYTE)</dataType>
+<headerAlias>NUMERO_PEDIDO</headerAlias>
+<reference>false</reference>
+<referencedColumn>EC6DA1B9-6E23-31BB-9EAD-EF73DF855712</referencedColumn>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="FECHA_PEDIDO" id="1A82A283-2FFF-D528-8ED0-9D1D011764D8">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>FECHA_PEDIDO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>FECHA_PEDIDO</alias>
+<dataType>TIMESTAMP WITH TIME ZONE</dataType>
+<headerAlias>FECHA_PEDIDO</headerAlias>
+<reference>false</reference>
+<referencedColumn>2C485FFE-1CD3-1CCD-0528-CD61C885CF61</referencedColumn>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="ID_USUARIO" id="B376B638-9EC9-B647-9E19-CE1848B9C531">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>ID_USUARIO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>ID_USUARIO</alias>
+<dataType>NUMBER (19)</dataType>
+<headerAlias>ID_USUARIO</headerAlias>
+<reference>false</reference>
+<referencedColumn>D7608879-9781-62B5-A311-ACF77397E0AD</referencedColumn>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="COMPRADOR" id="9B037287-074E-0045-437C-97F4B9C4CECD">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>COMPRADOR</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>COMPRADOR</alias>
+<dataType>VARCHAR2 (150 BYTE)</dataType>
+<headerAlias>COMPRADOR</headerAlias>
+<reference>false</reference>
+<referencedColumn>C58A473D-C181-4168-5537-7A5C717AB871</referencedColumn>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="CORREO" id="E55E0CAB-EFDA-BD92-5EB2-AC6636E31334">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>CORREO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>CORREO</alias>
+<dataType>NUMBER (19)</dataType>
+<headerAlias>CORREO</headerAlias>
+<reference>false</reference>
+<referencedColumn>522C7EC5-6C60-6EDA-40F2-294F6D48284A</referencedColumn>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="ID_SITIO" id="1180BF1C-0C45-E76F-3705-4B764A9EB047">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>ID_SITIO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>ID_SITIO</alias>
+<dataType>NUMBER (14,2)</dataType>
+<headerAlias>ID_SITIO</headerAlias>
+<reference>false</reference>
+<referencedColumn>2260BA49-14BC-F0DC-14ED-3CB8A0AAFCE6</referencedColumn>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="SITIO" id="696D99AB-533F-1D26-01AF-E5761B840689">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>SITIO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>SITIO</alias>
+<dataType>NUMBER (12,2)</dataType>
+<headerAlias>SITIO</headerAlias>
+<reference>false</reference>
+<referencedColumn>2A803C36-E702-3D90-E943-E63D2E5FE910</referencedColumn>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="CODIGO_ESTADO" id="043718C3-4917-8F1C-DDC0-1F36FD67BB9C">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>CODIGO_ESTADO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>CODIGO_ESTADO</alias>
+<dataType>NUMBER (14,2)</dataType>
+<headerAlias>CODIGO_ESTADO</headerAlias>
+<reference>false</reference>
+<referencedColumn>6A345297-E408-5921-D4AE-E02EDB7F0F5F</referencedColumn>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="ESTADO_PEDIDO" id="C31583DF-9304-8F35-ED59-E58C25B28C34">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>ESTADO_PEDIDO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>ESTADO_PEDIDO</alias>
+<dataType>CHAR (3 BYTE)</dataType>
+<headerAlias>ESTADO_PEDIDO</headerAlias>
+<reference>false</reference>
+<referencedColumn>2B091616-A577-985D-95EC-FE1141897652</referencedColumn>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="AREA_ENTREGA" id="F8D24CAF-DD20-DA46-F40D-F99DB23728CE">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>AREA_ENTREGA</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>AREA_ENTREGA</alias>
+<dataType>VARCHAR2 (120 BYTE)</dataType>
+<headerAlias>AREA_ENTREGA</headerAlias>
+<reference>false</reference>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="SUBTOTAL" id="867F0990-D02E-9A67-A3A8-123913307616">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>SUBTOTAL</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>SUBTOTAL</alias>
+<dataType>NUMBER (14, 2)</dataType>
+<headerAlias>SUBTOTAL</headerAlias>
+<reference>false</reference>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="CARGO_ENTREGA" id="3B315A63-BBFA-E7EB-A988-85C3EA0DBA2A">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>CARGO_ENTREGA</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>CARGO_ENTREGA</alias>
+<dataType>NUMBER (12, 2)</dataType>
+<headerAlias>CARGO_ENTREGA</headerAlias>
+<reference>false</reference>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="TOTAL" id="FD20D256-FE2B-F5C3-381E-17296B88E996">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>TOTAL</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>TOTAL</alias>
+<dataType>NUMBER (14, 2)</dataType>
+<headerAlias>TOTAL</headerAlias>
+<reference>false</reference>
+</viewElement>
+<viewElement class="oracle.dbtools.crest.model.design.relational.ColumnView" name="COD_MONEDA" id="DED25E83-F28F-A3A4-DCD9-0EFE5EA7CAEB">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>VW_PEDIDO_RESUMEN</sourceObjSchema>
+<sourceObjName>COD_MONEDA</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:35 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<alias>COD_MONEDA</alias>
+<dataType>CHAR (3 BYTE)</dataType>
+<headerAlias>COD_MONEDA</headerAlias>
+<reference>false</reference>
+</viewElement>
+</viewElements>
+<usedObjects>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="13E82C01-837D-0239-4C12-11AD7DA6F602">
+<container>true</container>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="117335F7-C5F1-E007-7E30-9F75CDF94524">
+<container>true</container>
+<schema>TIENDA_APP</schema>
+<tableName>USUARIO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="B323F248-1D7B-F5E8-DAF5-EC148F3F675D">
+<container>true</container>
+<schema>TIENDA_APP</schema>
+<tableName>SITIO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="11C60E77-D0F0-A094-6FDD-3468F5C2DB47">
+<container>true</container>
+<schema>TIENDA_APP</schema>
+<tableName>ESTADO_PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="6596B07A-8EBB-5406-AE02-F2BC4E4ADBFF">
+<container>true</container>
+<schema>TIENDA_APP</schema>
+<tableName>AREA_ENTREGA</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="F8F6EFCB-8629-AECC-43DE-9A2CC9E9173B">
+<columnName>ID_PEDIDO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="EC6DA1B9-6E23-31BB-9EAD-EF73DF855712">
+<columnName>NUMERO_PEDIDO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="2C485FFE-1CD3-1CCD-0528-CD61C885CF61">
+<columnName>FECHA_PEDIDO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="D7608879-9781-62B5-A311-ACF77397E0AD">
+<columnName>ID_USUARIO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="C58A473D-C181-4168-5537-7A5C717AB871">
+<columnName>CORREO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>USUARIO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="522C7EC5-6C60-6EDA-40F2-294F6D48284A">
+<columnName>ID_SITIO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="2260BA49-14BC-F0DC-14ED-3CB8A0AAFCE6">
+<columnName>SUBTOTAL</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="2A803C36-E702-3D90-E943-E63D2E5FE910">
+<columnName>CARGO_ENTREGA</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="6A345297-E408-5921-D4AE-E02EDB7F0F5F">
+<columnName>TOTAL</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="2B091616-A577-985D-95EC-FE1141897652">
+<columnName>COD_MONEDA</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="77850919-F8E6-DA6A-FBA6-6BEAB0268181">
+<columnName>NOMBRE</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>ESTADO_PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="5F532B6C-8EDA-F6B3-E1AE-6E20699EC8DA">
+<columnName>ID_ESTADO_PEDIDO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>ESTADO_PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="6E2649D6-3294-3D67-4BBD-A3402596D619">
+<columnName>ID_ESTADO_PEDIDO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="69734C9D-264F-DCB2-8939-4B9CF2C497D6">
+<columnName>ID_USUARIO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>USUARIO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="C74DCC2E-5D8F-3BCB-132B-FCF748AACE9A">
+<columnName>NOMBRE</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>AREA_ENTREGA</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="8D1BA26E-F1B4-728B-846F-E23642851925">
+<columnName>CODIGO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>ESTADO_PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="E1C6822E-7D50-4309-3171-F4178BD53A13">
+<columnName>ID_AREA_ENTREGA</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>AREA_ENTREGA</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="1358468D-8842-4F77-438E-C976426830C1">
+<columnName>ID_AREA_ENTREGA</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>PEDIDO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="1CBC9CEB-79F4-7A85-E536-3203020A44E5">
+<columnName>NICKNAME</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>USUARIO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="E019499D-C4F7-B7A4-7A1A-206612B0D64F">
+<columnName>NOMBRE</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>SITIO</tableName>
+</UsedObject>
+<UsedObject class="oracle.dbtools.crest.swingui.editor.viewbuilder.SQLNameHelper" id="FC8F8A84-B3F6-C2A8-02F4-955E9E5EF7BA">
+<columnName>ID_SITIO</columnName>
+<schema>TIENDA_APP</schema>
+<tableName>SITIO</tableName>
+</UsedObject>
+</usedObjects>
+</TableView>

@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="B9A04D47-F8E1-0874-BC75-E51C16583B8D" containerWithKeyObject="D39CCCC2-4ED1-1A41-1AB7-1C652132F9F6" localFKIndex="F6668C92-5825-52F6-6D03-D2C7CD9A36F1" name="FK_ENTREGA_EVIDENCIA">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_ENTREGA_EVIDENCIA</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.ARCHIVO</referredTableLongName>
+<deleteRule>NO ACTION</deleteRule>
+<referredTableID>014AD4BD-1BC3-F333-DCB0-ADDCE5EC784F</referredTableID>
+<keyObject>E3C8CD00-F3D3-966D-0B23-CFD12DDC6B2D</keyObject>
+<referredKeyID>E3C8CD00-F3D3-966D-0B23-CFD12DDC6B2D</referredKeyID>
+<mandatory>false</mandatory>
+<refColNames>ID_ARCHIVO</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

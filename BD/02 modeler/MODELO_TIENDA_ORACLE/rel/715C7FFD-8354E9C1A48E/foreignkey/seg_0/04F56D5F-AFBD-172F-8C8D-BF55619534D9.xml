@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="04F56D5F-AFBD-172F-8C8D-BF55619534D9" containerWithKeyObject="5E091532-F506-0154-710C-6901642FC7CC" localFKIndex="C3B78C5E-B56A-FA86-AB98-59C5205989D5" name="FK_PED_DET_PERSONA">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_PED_DET_PERSONA</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.PERSONALIZACION</referredTableLongName>
+<deleteRule>NO ACTION</deleteRule>
+<referredTableID>A5C21A13-0A17-8D1A-21DE-FD240DD08318</referredTableID>
+<keyObject>32E34EE7-6473-87AC-0AB5-8F2598B7CAB3</keyObject>
+<referredKeyID>32E34EE7-6473-87AC-0AB5-8F2598B7CAB3</referredKeyID>
+<mandatory>false</mandatory>
+<refColNames>ID_PERSONALIZACION</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

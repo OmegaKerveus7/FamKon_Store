@@ -1,38 +1,82 @@
-using FamKon_store_api.Data;
-using Microsoft.EntityFrameworkCore;
+using FamKon_store_api.BD;
+using FamKon_store_api.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.MaxDepth = 64;
     });
+
 builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(options =>
 {
     options.Limits.MaxRequestBufferSize = 10 * 1024 * 1024;
     options.Limits.MaxRequestBodySize = 10 * 1024 * 1024;
 });
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("PermitirFrontend", policy =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseOracle(builder.Configuration.GetConnectionString("Oracle")));
-builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+
+builder.Services.AddSingleton<DBContext>();
+builder.Services.AddSingleton<JwtService>();
+builder.Services.AddScoped<LoginService>();
+builder.Services.AddScoped<UsuarioService>();
+builder.Services.AddScoped<UsuarioAdminService>();
+builder.Services.AddScoped<PermisoService>();
+builder.Services.AddScoped<BitacoraService>();
+builder.Services.AddScoped<CatalogoService>();
+builder.Services.AddScoped<CarritoService>();
+builder.Services.AddScoped<PedidoService>();
+builder.Services.AddScoped<RepartidorService>();
+builder.Services.AddScoped<ArchivoService>();
+
 builder.Services.AddHttpClient<FamKon_store_api.Services.BiometricService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(15);
 });
+
+builder.Services.AddHttpClient<FamKon_store_api.Services.WhatsAppService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
+builder.Services.AddScoped<FamKon_store_api.Services.EmailService>();
+
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]!;
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.MapInboundClaims = false;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero,
+        NameClaimType = "sub"
+    };
+});
+
+builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
 
 if (app.Environment.IsDevelopment())
 {
@@ -41,6 +85,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("PermitirFrontend");
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

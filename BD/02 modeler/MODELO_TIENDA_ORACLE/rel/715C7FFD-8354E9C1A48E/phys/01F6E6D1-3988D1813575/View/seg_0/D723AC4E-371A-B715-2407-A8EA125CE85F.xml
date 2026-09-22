@@ -1,0 +1,7 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableViewProxyOraclev10g class="oracle.dbtools.crest.model.design.storage.oracle.v10g.TableViewProxyOraclev10g" name="VW_PEDIDO_RESUMEN" directorySegmentName="seg_0" id="D723AC4E-371A-B715-2407-A8EA125CE85F">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:34 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<schemaObject>935ADA5A-58F4-77E9-E261-9E0928D0FEB3</schemaObject>
+</TableViewProxyOraclev10g>

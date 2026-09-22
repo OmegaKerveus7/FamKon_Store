@@ -1,5 +1,6 @@
-using FamKon_store_api.Data;
+using FamKon_store_api.BD;
 using Microsoft.AspNetCore.Mvc;
+using Oracle.ManagedDataAccess.Client;
 
 namespace FamKon_store_api.Controllers
 {
@@ -7,9 +8,9 @@ namespace FamKon_store_api.Controllers
     [Route("api/famkon")]
     public class EstadoController : ControllerBase
     {
-        private readonly AppDbContext _dbContext;
+        private readonly DBContext _dbContext;
 
-        public EstadoController(AppDbContext dbContext)
+        public EstadoController(DBContext dbContext)
         {
             _dbContext = dbContext;
         }
@@ -28,25 +29,19 @@ namespace FamKon_store_api.Controllers
 
             try
             {
-                var dbOk = await _dbContext.Database.CanConnectAsync();
-                respuesta.BaseDeDatos = dbOk;
+                using var connection = _dbContext.CreateConnection();
+                await _dbContext.OpenConnectionAsync(connection);
+                respuesta.BaseDeDatos = true;
 
-                if (dbOk)
-                {
-                    respuesta.Codigo = 200;
-                    respuesta.Mensaje = "Todo correcto. API y base de datos responden.";
-                    return Ok(respuesta);
-                }
-
-                respuesta.Codigo = 401;
-                respuesta.Mensaje = "La base de datos no responde.";
-                return StatusCode(401, respuesta);
+                respuesta.Codigo = 200;
+                respuesta.Mensaje = "Todo correcto. API y base de datos responden.";
+                return Ok(respuesta);
             }
             catch (Exception ex)
             {
-                respuesta.Codigo = 402;
-                respuesta.Mensaje = "Hubo un fallo de carga: " + ex.Message;
-                return StatusCode(402, respuesta);
+                respuesta.Codigo = 500;
+                respuesta.Mensaje = "La base de datos no responde: " + ex.Message;
+                return StatusCode(500, respuesta);
             }
         }
     }

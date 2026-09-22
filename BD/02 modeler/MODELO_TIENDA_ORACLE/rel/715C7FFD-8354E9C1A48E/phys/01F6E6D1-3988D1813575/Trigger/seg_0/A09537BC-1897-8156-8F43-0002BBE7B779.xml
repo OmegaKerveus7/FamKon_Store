@@ -1,0 +1,17 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TriggerOraclev10g class="oracle.dbtools.crest.model.design.storage.oracle.v10g.TriggerOraclev10g" name="TRG_CARRITO_BU_FECHA" directorySegmentName="seg_0" id="A09537BC-1897-8156-8F43-0002BBE7B779">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>TRG_CARRITO_BU_FECHA</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:56 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<actions>UPDATE</actions>
+<body><![CDATA[BEGIN
+    :NEW.FECHA_MODIFICACION := SYSTIMESTAMP;
+END;
+]]></body>
+<triggerTime>BEFORE</triggerTime>
+<owner>A06898BD-B23A-80A3-79C2-1E8D1F7633CA</owner>
+<table>DF027484-085E-C6F7-61CE-54CCCC8E3180</table>
+</TriggerOraclev10g>

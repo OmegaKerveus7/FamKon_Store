@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="EBC409C8-7362-01F6-D58E-6CEC121C4A32" containerWithKeyObject="5541D47A-FE13-F7F7-6A19-A74F73E0164C" localFKIndex="E5ACACC6-F191-46AD-4712-69F801DCEAC0" name="FK_BIT_ACCESO_USUARIO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_BIT_ACCESO_USUARIO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.USUARIO</referredTableLongName>
+<deleteRule>NO ACTION</deleteRule>
+<referredTableID>117335F7-C5F1-E007-7E30-9F75CDF94524</referredTableID>
+<keyObject>0AB55FF3-AC70-558C-81F3-93014A733B83</keyObject>
+<referredKeyID>0AB55FF3-AC70-558C-81F3-93014A733B83</referredKeyID>
+<mandatory>false</mandatory>
+<refColNames>ID_USUARIO</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="1AB8C3B9-1002-4921-B270-3AB9A1613DE2" containerWithKeyObject="51C38064-5494-048E-0206-7989A44696CB" localFKIndex="A7E6E78D-B59C-CB32-BE51-DD93A77FEDC8" name="FK_PRODUCTO_CATEGORIA">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_PRODUCTO_CATEGORIA</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.CATEGORIA_PRODUCTO</referredTableLongName>
+<deleteRule>NO ACTION</deleteRule>
+<referredTableID>50B4215B-4994-CFC9-D4D3-A54CCCE26716</referredTableID>
+<keyObject>A0F1DE2B-455D-8E30-2B65-AA1784CA155A</keyObject>
+<referredKeyID>A0F1DE2B-455D-8E30-2B65-AA1784CA155A</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>ID_CATEGORIA</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

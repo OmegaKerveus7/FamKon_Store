@@ -4,9 +4,18 @@ import { ScanFace, QrCode, LogIn, Loader2, Eye, EyeOff, Mail, Lock } from "lucid
 import { login } from "../api/famkon";
 import { useAuth } from "../context/AuthContext";
 
+function rutaInicialPorRol(roles: string): string {
+  const superiores = roles.split(",").map((r) => r.trim().toUpperCase());
+  const orden = ["ADMIN", "SUPERVISOR", "REPARTIDOR", "COMPRADOR"];
+  for (const r of orden) {
+    if (superiores.includes(r)) return "/inicio";
+  }
+  return "/inicio";
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { iniciarSesion } = useAuth();
+  const { iniciarSesion, cargarPermisos } = useAuth();
   const [identificador, setIdentificador] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [mostrar, setMostrar] = useState(false);
@@ -17,18 +26,28 @@ export default function LoginPage() {
     e.preventDefault();
     const valor = identificador.trim();
     if (!valor || !contrasena) {
-      setError("Ingresa tu correo o usuario y tu contraseña.");
+      setError("Ingresa tu correo o usuario y tu contrasena.");
       return;
     }
     setCargando(true);
     setError("");
     try {
       const esCorreo = valor.includes("@");
-      const usuario = await login(esCorreo ? valor : undefined, esCorreo ? undefined : valor, contrasena);
-      iniciarSesion(usuario);
-      navigate("/inicio", { replace: true });
+      const respuesta = await login(
+        esCorreo ? valor : undefined,
+        esCorreo ? undefined : valor,
+        contrasena
+      );
+      if (!respuesta.usuario || !respuesta.token) {
+        throw new Error(respuesta.mensaje || "No se pudo iniciar sesion.");
+      }
+      iniciarSesion(respuesta.usuario, respuesta.token);
+      await cargarPermisos();
+
+      const roles = respuesta.usuario.roles ?? "COMPRADOR";
+      navigate(rutaInicialPorRol(roles), { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo iniciar sesión.");
+      setError(err instanceof Error ? err.message : "No se pudo iniciar sesion.");
     } finally {
       setCargando(false);
     }
@@ -44,14 +63,14 @@ export default function LoginPage() {
             className="w-full max-w-sm mix-blend-multiply"
           />
           <p className="text-center text-sm font-medium text-slate-500">
-            Bienvenido a la tienda en línea de FamKon
+            Bienvenido a la tienda en linea de FamKon
           </p>
         </div>
 
         <div className="flex flex-col justify-center gap-6 p-8 sm:p-12">
           <div className="flex flex-col items-center gap-3 md:items-start">
             <img src="/images/logo-famkon.png" alt="Logo FamKon" className="h-20 w-20 object-contain" />
-            <h1 className="text-2xl font-bold text-slate-900">Iniciar sesión</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Iniciar sesion</h1>
             <p className="text-sm text-slate-500">Accede con tu cuenta de FamKon</p>
           </div>
 
@@ -75,7 +94,7 @@ export default function LoginPage() {
 
             <div className="space-y-1">
               <label htmlFor="contrasena" className="text-sm font-medium text-slate-700">
-                Contraseña
+                Contrasena
               </label>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -84,7 +103,7 @@ export default function LoginPage() {
                   type={mostrar ? "text" : "password"}
                   value={contrasena}
                   onChange={(e) => setContrasena(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="********"
                   autoComplete="current-password"
                   className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-10 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
                 />
@@ -92,7 +111,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setMostrar((m) => !m)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  aria-label="Mostrar u ocultar contraseña"
+                  aria-label="Mostrar u ocultar contrasena"
                 >
                   {mostrar ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -113,7 +132,7 @@ export default function LoginPage() {
             </button>
           </form>
               <p className="text-center text-sm text-slate-500">
-                  ¿Aún no tienes una cuenta?{" "}
+                  Aun no tienes una cuenta?{" "}
                  <button
                    type="button"
                     onClick={() => navigate("/registro")}

@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="1D6F7019-8F58-94BD-0C75-E70A927281A4" containerWithKeyObject="DF027484-085E-C6F7-61CE-54CCCC8E3180" localFKIndex="44CF38B0-5B54-8599-F820-F719187FFE51" name="FK_CARRITO_SITIO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_CARRITO_SITIO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.SITIO</referredTableLongName>
+<deleteRule>NO ACTION</deleteRule>
+<referredTableID>B323F248-1D7B-F5E8-DAF5-EC148F3F675D</referredTableID>
+<keyObject>D141F609-97A6-54E1-4569-A3D2397608C5</keyObject>
+<referredKeyID>D141F609-97A6-54E1-4569-A3D2397608C5</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>ID_SITIO</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

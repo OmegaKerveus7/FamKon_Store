@@ -17,8 +17,11 @@ export default function CarnetLoginPage() {
     setCargando(true);
     setError("");
     try {
-      const usuario = await loginCarnet(opts);
-      iniciarSesion(usuario);
+      const respuesta = await loginCarnet(opts);
+      if (!respuesta.usuario || !respuesta.token) {
+        throw new Error(respuesta.mensaje || "No se pudo reconocer el carnet.");
+      }
+      iniciarSesion(respuesta.usuario, respuesta.token);
       navigate("/inicio", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo reconocer el carnet.");

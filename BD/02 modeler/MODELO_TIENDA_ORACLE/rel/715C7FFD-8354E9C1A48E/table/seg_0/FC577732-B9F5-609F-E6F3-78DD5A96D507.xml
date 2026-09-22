@@ -1,0 +1,129 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="FC577732-B9F5-609F-E6F3-78DD5A96D507" schemaObject="935ADA5A-58F4-77E9-E261-9E0928D0FEB3" name="ROL_PERMISO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>ROL_PERMISO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<commentInRDBMS><![CDATA[Permisos autorizados para cada rol.]]></commentInRDBMS>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID_ROL" id="2B2FB7FE-4C9B-122E-DBD6-66BD492F10CB">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>ROL_PERMISO</sourceObjSchema>
+<sourceObjName>ID_ROL</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>19</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,19,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="99E5DE3B-0A53-E7BD-0707-956C471C96DF" referredColumn="5BC49CD5-47C2-CD5D-D147-F1E3A7D0D3F8"/>
+</associations>
+</Column>
+<Column name="ID_PERMISO" id="E9185814-2724-ACF7-7032-AEA4A47AC461">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>ROL_PERMISO</sourceObjSchema>
+<sourceObjName>ID_PERMISO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>19</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,19,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="B987F61C-3E9D-7631-8F2C-EF3309E1E4A1" referredColumn="5639E146-74AA-F7CC-7CB5-CC99039BF78C"/>
+</associations>
+</Column>
+<Column name="FECHA_ASIGNACION" id="6F07EB9B-C8DD-1FC3-2EF2-35F9E356B033">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>ROL_PERMISO</sourceObjSchema>
+<sourceObjName>FECHA_ASIGNACION</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:40 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT046</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<defaultValue>SYSTIMESTAMP</defaultValue>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="7B7C0CA6-E1DF-4B9B-EF65-169D232F255F" name="PK_ROL_PERMISO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>PK_ROL_PERMISO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:53 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="2B2FB7FE-4C9B-122E-DBD6-66BD492F10CB"/>
+<colUsage columnID="E9185814-2724-ACF7-7032-AEA4A47AC461"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="74EFA3A8-991B-80B6-431D-D6245FBC77E2" schemaObject="935ADA5A-58F4-77E9-E261-9E0928D0FEB3" name="IX_ROL_PERM_PERMISO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>IX_ROL_PERM_PERMISO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="E9185814-2724-ACF7-7032-AEA4A47AC461"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="4C8F0E4B-36C0-B591-13FA-DA1265054C45" schemaObject="935ADA5A-58F4-77E9-E261-9E0928D0FEB3" name="PK_ROL_PERMISO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>PK_ROL_PERMISO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:50 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="2B2FB7FE-4C9B-122E-DBD6-66BD492F10CB"/>
+<colUsage columnID="E9185814-2724-ACF7-7032-AEA4A47AC461"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="06902CCC-EF03-8487-0FB1-5329885234DB" name="FK_ROL_PER_PERMISO">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="E9185814-2724-ACF7-7032-AEA4A47AC461"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="0488C3A7-FBD7-E801-A8EC-BE251D3E5D99" name="FK_ROL_PER_ROL">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="2B2FB7FE-4C9B-122E-DBD6-66BD492F10CB"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

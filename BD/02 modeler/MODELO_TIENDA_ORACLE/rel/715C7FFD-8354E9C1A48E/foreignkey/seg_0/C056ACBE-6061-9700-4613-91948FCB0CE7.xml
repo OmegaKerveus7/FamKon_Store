@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="C056ACBE-6061-9700-4613-91948FCB0CE7" containerWithKeyObject="8B5980E3-5F06-D1D2-7217-03D0D7C7332E" localFKIndex="6B8F2E30-B797-EDCE-50A5-7A47F3B3E7AE" name="FK_TOKEN_REC_USUARIO">
+<sourceConnName>TIENDA_APP_XEPDB1</sourceConnName>
+<sourceObjSchema>TIENDA_APP</sourceObjSchema>
+<sourceObjName>FK_TOKEN_REC_USUARIO</sourceObjName>
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:57 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+<referredTableLongName>TIENDA_APP.USUARIO</referredTableLongName>
+<deleteRule>CASCADE</deleteRule>
+<referredTableID>117335F7-C5F1-E007-7E30-9F75CDF94524</referredTableID>
+<keyObject>0AB55FF3-AC70-558C-81F3-93014A733B83</keyObject>
+<referredKeyID>0AB55FF3-AC70-558C-81F3-93014A733B83</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>ID_USUARIO</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

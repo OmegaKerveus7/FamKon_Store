@@ -1,0 +1,6 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<SchemaObject class="oracle.dbtools.crest.model.design.relational.SchemaObject" name="TIENDA_APP" directorySegmentName="seg_0" id="935ADA5A-58F4-77E9-E261-9E0928D0FEB3">
+<createdBy>Deivid Mejía</createdBy>
+<createdTime>2026-09-04 00:36:34 UTC</createdTime>
+<ownerDesignName>MODELO_TIENDA_ORACLE</ownerDesignName>
+</SchemaObject>

@@ -2,16 +2,13 @@ namespace FamKon_store_api.Models
 {
     public class Usuario
     {
-        public int Id { get; set; }
-        public string Nombres { get; set; } = string.Empty;
-        public string Apellidos { get; set; } = string.Empty;
-        public string? Correo { get; set; }
-        public string? Nickname { get; set; }
-        public string Contrasena { get; set; } = string.Empty;
-        public string? FotoOriginal { get; set; }
-        public string? FotoEditada { get; set; }
-        public string? CodigoQr { get; set; }
-        public int Role { get; set; }
+        public long IdUsuario { get; set; }
+        public string Correo { get; set; } = string.Empty;
+        public string Telefono { get; set; } = string.Empty;
         public DateTime? FechaNacimiento { get; set; }
+        public string Nickname { get; set; } = string.Empty;
+        public string Activo { get; set; } = "S";
+        public string Bloqueado { get; set; } = "N";
+        public string? Roles { get; set; }
     }
 }

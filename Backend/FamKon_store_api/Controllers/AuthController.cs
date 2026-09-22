@@ -1,7 +1,7 @@
-using FamKon_store_api.Data;
 using FamKon_store_api.Models;
 using FamKon_store_api.Models.DTOs;
 using FamKon_store_api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FamKon_store_api.Controllers
@@ -10,49 +10,316 @@ namespace FamKon_store_api.Controllers
     [Route("api/famkon")]
     public class AuthController : ControllerBase
     {
-        private readonly IUsuarioRepository _usuarioRepository;
-        private readonly BiometricService _biometricService;
+        private readonly LoginService _loginService;
+        private readonly JwtService _jwtService;
+        private readonly PermisoService _permisoService;
+        private readonly BitacoraService _bitacoraService;
         private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IUsuarioRepository usuarioRepository, BiometricService biometricService, ILogger<AuthController> logger)
+        public AuthController(
+            LoginService loginService,
+            JwtService jwtService,
+            PermisoService permisoService,
+            BitacoraService bitacoraService,
+            ILogger<AuthController> logger)
         {
-            _usuarioRepository = usuarioRepository;
-            _biometricService = biometricService;
+            _loginService = loginService;
+            _jwtService = jwtService;
+            _permisoService = permisoService;
+            _bitacoraService = bitacoraService;
             _logger = logger;
         }
 
-        [HttpPost("login")]
-        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
+        private string? GetClientIp()
         {
-            if (string.IsNullOrWhiteSpace(request.Correo) && string.IsNullOrWhiteSpace(request.Nickname))
-                return BadRequest(new LoginResponse
+            var ip = HttpContext?.Connection?.RemoteIpAddress?.ToString();
+            if (string.IsNullOrEmpty(ip) || ip == "::1") ip = "127.0.0.1";
+            return ip;
+        }
+
+        private string? GetUserAgent()
+        {
+            return Request?.Headers?["User-Agent"].ToString();
+        }
+
+        private async Task RegistrarBitacoraAsync(
+            long? idUsuario,
+            string identificador,
+            string metodo,
+            string resultado,
+            string motivo)
+        {
+            try
+            {
+                await _bitacoraService.RegistrarAccesoAsync(
+                    idUsuario: idUsuario,
+                    identificador: identificador,
+                    metodoAcceso: metodo,
+                    resultado: resultado,
+                    direccionIp: GetClientIp(),
+                    ubicacion: null,
+                    userAgent: GetUserAgent(),
+                    motivo: motivo);
+            }
+            catch
+            {
+            }
+        }
+
+        [HttpPost("login_basic")]
+        public async Task<ActionResult<LoginResponse>> LoginBasico([FromBody] LoginRequest request)
+        {
+            var tieneCorreo = !string.IsNullOrWhiteSpace(request.Correo);
+            var tieneNickname = !string.IsNullOrWhiteSpace(request.Nickname);
+
+            if (tieneCorreo && tieneNickname)
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: null,
+                    identificador: $"{request.Correo}|{request.Nickname}",
+                    metodo: "CONTRASENA",
+                    resultado: "N",
+                    motivo: "Solicitud invalida: correo y nickname juntos.");
+                return Ok(new LoginResponse
                 {
                     CodigoS = 400,
-                    Mensaje = "Debe enviar el correo o el nickname."
+                    Mensaje = "Debe enviar solo correo o nickname, no ambos."
                 });
+            }
+
+            if (!tieneCorreo && !tieneNickname)
+            {
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "El campo 'correo' o 'nickname' es obligatorio."
+                });
+            }
 
             if (string.IsNullOrWhiteSpace(request.Contrasena))
-                return BadRequest(new LoginResponse
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: null,
+                    identificador: request.Correo ?? request.Nickname ?? "",
+                    metodo: "CONTRASENA",
+                    resultado: "N",
+                    motivo: "Contrasena vacia.");
+                return Ok(new LoginResponse
                 {
                     CodigoS = 400,
-                    Mensaje = "Debe enviar la contraseña."
+                    Mensaje = "El campo 'contrasena' es obligatorio."
                 });
+            }
 
-            var resultado = await _usuarioRepository.LoginPorCredencialesAsync(
-                request.Correo, request.Nickname, request.Contrasena);
+            var identificador = request.Correo ?? request.Nickname ?? "";
 
-            if (resultado.CodigoS != 200 || resultado.Usuario is null)
-                return Unauthorized(new LoginResponse
+            // 1) Obtener el registro del usuario (incluye PASSWORD_HASH) via PKG_SEGURIDAD.
+            var authUser = await _loginService.ObtenerAutenticacionAsync(identificador);
+
+            if (authUser is null)
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: null,
+                    identificador: identificador,
+                    metodo: "CONTRASENA",
+                    resultado: "N",
+                    motivo: "Usuario no encontrado.");
+                return Ok(new LoginResponse
                 {
-                    CodigoS = resultado.CodigoS,
-                    Mensaje = resultado.Mensaje
+                    CodigoS = 401,
+                    Mensaje = "Credenciales invalidas."
                 });
+            }
+
+            if (authUser.Bloqueado == "S")
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: authUser.IdUsuario,
+                    identificador: identificador,
+                    metodo: "CONTRASENA",
+                    resultado: "N",
+                    motivo: "Usuario bloqueado.");
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 403,
+                    Mensaje = "Usuario bloqueado. Contacte al administrador."
+                });
+            }
+
+            if (authUser.Activo != "S")
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: authUser.IdUsuario,
+                    identificador: identificador,
+                    metodo: "CONTRASENA",
+                    resultado: "N",
+                    motivo: "Usuario inactivo.");
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 403,
+                    Mensaje = "Usuario inactivo."
+                });
+            }
+
+            // 2) Validar password localmente con SHA-256 (Oracle STANDARD_HASH('SHA256') lowercase).
+            var passwordValido = LoginService.ValidarPassword(request.Contrasena, authUser.PasswordHash);
+
+            if (!passwordValido)
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: authUser.IdUsuario,
+                    identificador: identificador,
+                    metodo: "CONTRASENA",
+                    resultado: "N",
+                    motivo: "Contrasena incorrecta.");
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 401,
+                    Mensaje = "Credenciales invalidas."
+                });
+            }
+
+            // 3) Cargar datos completos del usuario (incluye roles) desde PKG_LOGIN.
+            var resultado = await _loginService.LoginAsync(
+                usuarioOCorreo: request.Correo ?? request.Nickname,
+                nickname: request.Nickname,
+                password: request.Contrasena,
+                tokenQr: null,
+                idArchivoFoto: null,
+                opcion: "C");
+
+            if (resultado.CodigoS != 200 || string.IsNullOrEmpty(resultado.Data))
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: authUser.IdUsuario,
+                    identificador: identificador,
+                    metodo: "CONTRASENA",
+                    resultado: "N",
+                    motivo: "No se pudo cargar el perfil completo del usuario.");
+                return Ok(new LoginResponse
+                {
+                    CodigoS = resultado.CodigoS == 0 ? 500 : resultado.CodigoS,
+                    Mensaje = resultado.Mensaje ?? ""
+                });
+            }
+
+            var usuarioData = LoginUsuarioData.FromJson(resultado.Data);
+            if (usuarioData is null)
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: authUser.IdUsuario,
+                    identificador: identificador,
+                    metodo: "CONTRASENA",
+                    resultado: "N",
+                    motivo: "Error parseando perfil completo del usuario.");
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 500,
+                    Mensaje = "Error al procesar los datos del usuario."
+                });
+            }
+
+            var usuario = usuarioData.ToUsuario();
+            var token = _jwtService.GenerateToken(
+                usuarioData.IdUsuario,
+                usuarioData.Nickname,
+                usuarioData.Correo,
+                usuarioData.Roles);
+
+            // 4) Auditoria exitosa en BITACORA_ACCESO.
+            await RegistrarBitacoraAsync(
+                idUsuario: authUser.IdUsuario,
+                identificador: identificador,
+                metodo: "CONTRASENA",
+                resultado: "S",
+                motivo: "Login exitoso.");
+
+            return Ok(new LoginResponse
+            {
+                CodigoS = 200,
+                Mensaje = "Login exitoso.",
+                Token = token,
+                Usuario = usuario
+            });
+        }
+
+        [HttpPost("login/carnet")]
+        public async Task<ActionResult<LoginResponse>> LoginCarnet([FromBody] CarnetLoginRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.CodigoQr) && string.IsNullOrWhiteSpace(request.Identificacion))
+            {
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "Debe enviar el codigo QR o la identificacion."
+                });
+            }
+
+            var identificador = !string.IsNullOrWhiteSpace(request.CodigoQr)
+                ? request.CodigoQr!
+                : request.Identificacion!;
+
+            var opcion = !string.IsNullOrWhiteSpace(request.CodigoQr) ? "Q" : "N";
+
+            var resultado = await _loginService.LoginAsync(
+                usuarioOCorreo: request.Identificacion,
+                nickname: null,
+                password: null,
+                tokenQr: request.CodigoQr,
+                idArchivoFoto: null,
+                opcion: opcion);
+
+            if (resultado.CodigoS != 200 || string.IsNullOrEmpty(resultado.Data))
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: null,
+                    identificador: identificador,
+                    metodo: "QR",
+                    resultado: "N",
+                    motivo: resultado.Mensaje ?? "Login QR fallido.");
+                return Ok(new LoginResponse
+                {
+                    CodigoS = resultado.CodigoS == 0 ? 500 : resultado.CodigoS,
+                    Mensaje = resultado.Mensaje ?? ""
+                });
+            }
+
+            var usuarioData = LoginUsuarioData.FromJson(resultado.Data);
+            if (usuarioData is null)
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: null,
+                    identificador: identificador,
+                    metodo: "QR",
+                    resultado: "N",
+                    motivo: "Error parseando datos del usuario.");
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 500,
+                    Mensaje = "Error al procesar los datos del usuario."
+                });
+            }
+
+            var usuario = usuarioData.ToUsuario();
+            var token = _jwtService.GenerateToken(
+                usuarioData.IdUsuario,
+                usuarioData.Nickname,
+                usuarioData.Correo,
+                usuarioData.Roles);
+
+            await RegistrarBitacoraAsync(
+                idUsuario: usuarioData.IdUsuario,
+                identificador: identificador,
+                metodo: "QR",
+                resultado: "S",
+                motivo: "Login QR exitoso.");
 
             return Ok(new LoginResponse
             {
                 CodigoS = 200,
                 Mensaje = resultado.Mensaje,
-                Data = resultado.Usuario
+                Token = token,
+                Usuario = usuario
             });
         }
 
@@ -60,316 +327,180 @@ namespace FamKon_store_api.Controllers
         public async Task<ActionResult<LoginResponse>> LoginFacial([FromBody] FacialLoginRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ImagenCompararBase64))
-                return BadRequest(new LoginResponse
+            {
+                return Ok(new LoginResponse
                 {
                     CodigoS = 400,
                     Mensaje = "Debe enviar la imagen a comparar."
                 });
-
-            Usuario? usuario_bd = null;
-
-            if (!string.IsNullOrWhiteSpace(request.Identificacion))
-            {
-                usuario_bd = await _usuarioRepository.ObtenerPorIdentificacionAsync(request.Identificacion);
             }
 
-            var imagenOriginal = usuario_bd?.FotoOriginal ?? request.ImagenOriginalBase64;
+            var identificador = request.Identificacion ?? request.ImagenCompararBase64[..Math.Min(40, request.ImagenCompararBase64.Length)];
 
-            if (string.IsNullOrWhiteSpace(imagenOriginal))
-                return BadRequest(new LoginResponse
-                {
-                    CodigoS = 400,
-                    Mensaje = "Debe enviar la imagen original o la identificación del usuario."
-                });
+            var resultado = await _loginService.LoginAsync(
+                usuarioOCorreo: request.Identificacion,
+                nickname: null,
+                password: null,
+                tokenQr: null,
+                idArchivoFoto: null,
+                opcion: "F");
 
-            try
+            if (resultado.CodigoS != 200 || string.IsNullOrEmpty(resultado.Data))
             {
-                var segmentarOriginal = await _biometricService.SegmentarRostroAsync(imagenOriginal);
-                var segmentarComparar = await _biometricService.SegmentarRostroAsync(request.ImagenCompararBase64);
-
-                if (segmentarOriginal is null || segmentarComparar is null)
-                    return StatusCode(StatusCodes.Status502BadGateway, new LoginResponse
-                    {
-                        CodigoS = 502,
-                        Mensaje = "La API de segmentación no respondió correctamente."
-                    });
-
-                if (!segmentarOriginal.Segmentado || !segmentarComparar.Segmentado)
-                    return BadRequest(new LoginResponse
-                    {
-                        CodigoS = 400,
-                        Mensaje = "No se pudo segmentar el rostro de una o ambas imágenes."
-                    });
-
-                var verificar = await _biometricService.VerificarRostroAsync(
-                    segmentarOriginal.Rostro,
-                    segmentarComparar.Rostro);
-
-                if (verificar is null)
-                    return StatusCode(StatusCodes.Status502BadGateway, new LoginResponse
-                    {
-                        CodigoS = 502,
-                        Mensaje = "La API de verificación no respondió correctamente."
-                    });
-
-                if (!verificar.Coincide)
-                    return Unauthorized(new LoginResponse
-                    {
-                        CodigoS = 401,
-                        Mensaje = "Los rostros no coinciden."
-                    });
-
-                if (usuario_bd is null)
-                    return Unauthorized(new LoginResponse
-                    {
-                        CodigoS = 401,
-                        Mensaje = "No se encontró el usuario del rostro."
-                    });
-
+                await RegistrarBitacoraAsync(
+                    idUsuario: null,
+                    identificador: identificador,
+                    metodo: "FACIAL",
+                    resultado: "N",
+                    motivo: resultado.Mensaje ?? "Login facial fallido.");
                 return Ok(new LoginResponse
                 {
-                    CodigoS = 200,
-                    Mensaje = "Login facial exitoso.",
-                    Data = usuario_bd
+                    CodigoS = resultado.CodigoS == 0 ? 500 : resultado.CodigoS,
+                    Mensaje = resultado.Mensaje ?? ""
                 });
             }
-            catch (Exception ex)
+
+            var usuarioData = LoginUsuarioData.FromJson(resultado.Data);
+            if (usuarioData is null)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new LoginResponse
+                await RegistrarBitacoraAsync(
+                    idUsuario: null,
+                    identificador: identificador,
+                    metodo: "FACIAL",
+                    resultado: "N",
+                    motivo: "Error parseando datos del usuario.");
+                return Ok(new LoginResponse
                 {
                     CodigoS = 500,
-                    Mensaje = "Error al consumir el servicio biométrico: " + ex.Message
+                    Mensaje = "Error al procesar los datos del usuario."
                 });
             }
-        }
 
-        [HttpPost("login/carnet")]
-        public async Task<ActionResult<LoginResponse>> LoginCarnet([FromBody] CarnetLoginRequest request)
-        {
-            if (string.IsNullOrWhiteSpace(request.CodigoQr) && string.IsNullOrWhiteSpace(request.Identificacion))
-                return BadRequest(new LoginResponse
-                {
-                    CodigoS = 400,
-                    Mensaje = "Debe enviar el código QR o la identificación."
-                });
+            var usuario = usuarioData.ToUsuario();
+            var token = _jwtService.GenerateToken(
+                usuarioData.IdUsuario,
+                usuarioData.Nickname,
+                usuarioData.Correo,
+                usuarioData.Roles);
 
-            LoginResult? resultado = null;
-
-            if (!string.IsNullOrWhiteSpace(request.CodigoQr))
-            {
-                resultado = await _usuarioRepository.LoginPorQrAsync(request.CodigoQr);
-            }
-
-            if (resultado is null || resultado.CodigoS != 200)
-            {
-                if (!string.IsNullOrWhiteSpace(request.Identificacion))
-                {
-                    var usuario = await _usuarioRepository.ObtenerPorIdentificacionAsync(request.Identificacion);
-                    if (usuario is not null)
-                    {
-                        resultado = new LoginResult
-                        {
-                            CodigoS = 200,
-                            Mensaje = "Login por identificación exitoso.",
-                            Usuario = usuario
-                        };
-                    }
-                }
-            }
-
-            if (resultado is null || resultado.CodigoS != 200 || resultado.Usuario is null)
-                return Unauthorized(new LoginResponse
-                {
-                    CodigoS = 401,
-                    Mensaje = "No se pudo autenticar con el carnet o código QR."
-                });
+            await RegistrarBitacoraAsync(
+                idUsuario: usuarioData.IdUsuario,
+                identificador: identificador,
+                metodo: "FACIAL",
+                resultado: "S",
+                motivo: "Login facial exitoso.");
 
             return Ok(new LoginResponse
             {
                 CodigoS = 200,
                 Mensaje = resultado.Mensaje,
-                Data = resultado.Usuario
+                Token = token,
+                Usuario = usuario
             });
         }
 
-        [HttpPut("actualizar-foto")]
-        public async Task<ActionResult<LoginResponse>> ActualizarFoto([FromBody] ActualizarFotoRequest request)
+        [Authorize]
+        [HttpGet("me")]
+        public ActionResult GetCurrentUser()
         {
-            try
+            var userId = User.FindFirst("sub")?.Value;
+            var nickname = User.FindFirst("nickname")?.Value;
+            var correo = User.FindFirst("email")?.Value;
+            var roles = User.FindFirst("roles")?.Value;
+
+            return Ok(new
             {
-                if (request is null)
-                    return BadRequest(new LoginResponse
-                    {
-                        CodigoS = 400,
-                        Mensaje = "El cuerpo de la solicitud es obligatorio."
-                    });
-
-                if (string.IsNullOrWhiteSpace(request.Correo))
-                    return BadRequest(new LoginResponse
-                    {
-                        CodigoS = 400,
-                        Mensaje = "El correo es obligatorio."
-                    });
-
-                if (string.IsNullOrWhiteSpace(request.Contrasena))
-                    return BadRequest(new LoginResponse
-                    {
-                        CodigoS = 400,
-                        Mensaje = "La contraseña es obligatoria."
-                    });
-
-                if (string.IsNullOrWhiteSpace(request.FotoOriginalBase64))
-                    return BadRequest(new LoginResponse
-                    {
-                        CodigoS = 400,
-                        Mensaje = "La nueva foto es obligatoria."
-                    });
-
-                var resultado = await _usuarioRepository.LoginPorCredencialesAsync(
-                    request.Correo, null, request.Contrasena);
-
-                if (resultado.CodigoS != 200 || resultado.Usuario is null)
-                    return Unauthorized(new LoginResponse
-                    {
-                        CodigoS = 401,
-                        Mensaje = "Credenciales incorrectas."
-                    });
-
-                var actualizado = await _usuarioRepository.ActualizarFotoAsync(
-                    resultado.Usuario.Id, request.FotoOriginalBase64);
-
-                if (!actualizado)
-                    return StatusCode(StatusCodes.Status500InternalServerError, new LoginResponse
-                    {
-                        CodigoS = 500,
-                        Mensaje = "No se pudo actualizar la foto."
-                    });
-
-                resultado.Usuario.FotoOriginal = request.FotoOriginalBase64;
-
-                return Ok(new LoginResponse
-                {
-                    CodigoS = 200,
-                    Mensaje = "Foto actualizada correctamente.",
-                    Data = resultado.Usuario
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new LoginResponse
-                {
-                    CodigoS = 500,
-                    Mensaje = "Error interno: " + ex.Message
-                });
-            }
+                id_usuario = userId,
+                nickname,
+                correo,
+                roles
+            });
         }
 
-        [HttpPost("registro")]
-        public async Task<ActionResult<RegistroResponse>> Registrar(
-    [FromBody] RegistroRequest request)
+        [Authorize]
+        [HttpGet("permisos")]
+        public async Task<ActionResult> ObtenerPermisos()
         {
-            _logger.LogInformation("Registro: iniciando con nickname={Nickname} correo={Correo} fotoOriginal chars={FotoOChars}",
-                request.Nickname, request.Correo, request.FotoOriginalBase64?.Length ?? 0);
+            var userId = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userId) || !long.TryParse(userId, out var idUsuario))
+                return Ok(new { codigoS = 401, mensaje = "Token invalido." });
 
-            if (string.IsNullOrWhiteSpace(request.Nombres))
+            var permisos = await _permisoService.ListarPermisosAsync(idUsuario);
+            return Ok(new
             {
-                return BadRequest(new RegistroResponse
-                {
-                    CodigoS = 400,
-                    Mensaje = "Los nombres son obligatorios."
-                });
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Apellidos))
-            {
-                return BadRequest(new RegistroResponse
-                {
-                    CodigoS = 400,
-                    Mensaje = "Los apellidos son obligatorios."
-                });
-            }
-
-            if (string.IsNullOrWhiteSpace(request.FotoOriginalBase64))
-            {
-                return BadRequest(new RegistroResponse
-                {
-                    CodigoS = 400,
-                    Mensaje = "La fotografía original es obligatoria."
-                });
-            }
-
-            if (request.FechaNacimiento == default ||
-                request.FechaNacimiento.Date > DateTime.Today)
-            {
-                return BadRequest(new RegistroResponse
-                {
-                    CodigoS = 400,
-                    Mensaje = "La fecha de nacimiento no es válida."
-                });
-            }
-
-            // Normalizar base64: eliminar prefijo data:*;base64, si existe
-            static string StripBase64Prefix(string s)
-            {
-                if (string.IsNullOrWhiteSpace(s)) return string.Empty;
-                var idx = s.IndexOf("base64,", StringComparison.OrdinalIgnoreCase);
-                return idx >= 0 ? s.Substring(idx + 7) : s;
-            }
-
-            var fotoOriginal = StripBase64Prefix(request.FotoOriginalBase64);
-            var fotoEditada = string.IsNullOrWhiteSpace(request.FotoEditadaBase64)
-                ? fotoOriginal
-                : StripBase64Prefix(request.FotoEditadaBase64!);
-
-            _logger.LogInformation("Registro: después normalización foto_o chars={FotoOChars} foto_e chars={FotoEChars} (es igual: {SonIguales})",
-                fotoOriginal.Length, fotoEditada.Length, fotoOriginal.Equals(fotoEditada));
-
-            // Validar que las cadenas sean base64 válidas (decodificables)
-            try
-            {
-                var bytesO = Convert.FromBase64String(fotoOriginal);
-                var bytesE = Convert.FromBase64String(fotoEditada);
-                _logger.LogInformation("Registro: base64 validado foto_o bytes={BytesO} foto_e bytes={BytesE}",
-                    bytesO.Length, bytesE.Length);
-            }
-            catch (FormatException ex)
-            {
-                _logger.LogWarning(ex, "Registro: base64 inválido");
-                return BadRequest(new RegistroResponse
-                {
-                    CodigoS = 400,
-                    Mensaje = "Las imágenes deben enviarse en Base64 válido."
-                });
-            }
-
-            // Reemplazar en el request las versiones normalizadas antes de enviarlo al repositorio
-            request.FotoOriginalBase64 = fotoOriginal;
-            request.FotoEditadaBase64 = fotoEditada;
-
-            var resultado = await _usuarioRepository.RegistrarCompradorAsync(request);
-
-            _logger.LogInformation("Registro: completado código={Codigo} mensaje={Mensaje} data={Data}",
-                resultado.CodigoS, resultado.Mensaje, resultado.Data is not null ? "OK" : "NULL");
-
-            var response = new RegistroResponse
-            {
-                CodigoS = resultado.CodigoS,
-                Mensaje = resultado.Mensaje,
-                Data = resultado.Data
-            };
-
-            return resultado.CodigoS switch
-            {
-                200 => Ok(response),
-                400 => BadRequest(response),
-                404 => NotFound(response),
-                409 => Conflict(response),
-                _ => StatusCode(
-                    StatusCodes.Status500InternalServerError,
-                    response)
-            };
+                codigoS = 200,
+                permisos
+            });
         }
 
+        [HttpPost("refresh-token")]
+        public ActionResult RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Token))
+                return Ok(new RefreshTokenResponse
+                {
+                    CodigoS = 400,
+                    Mensaje = "El campo 'token' es obligatorio."
+                });
 
+            var principal = _jwtService.ValidateToken(request.Token);
+            if (principal is null)
+                return Ok(new RefreshTokenResponse
+                {
+                    CodigoS = 401,
+                    Mensaje = "Token invalido o expirado."
+                });
+
+            var userId = principal.FindFirst("sub")?.Value;
+            var nickname = principal.FindFirst("nickname")?.Value;
+            var correo = principal.FindFirst("email")?.Value;
+            var roles = principal.FindFirst("roles")?.Value;
+
+            if (string.IsNullOrEmpty(userId) || !long.TryParse(userId, out var idUsuario))
+                return Ok(new RefreshTokenResponse
+                {
+                    CodigoS = 401,
+                    Mensaje = "Token invalido."
+                });
+
+            var newToken = _jwtService.GenerateToken(
+                idUsuario,
+                nickname ?? "",
+                correo ?? "",
+                roles ?? "");
+
+            return Ok(new RefreshTokenResponse
+            {
+                CodigoS = 200,
+                Mensaje = "Token renovado exitosamente.",
+                Token = newToken
+            });
+        }
+
+        [HttpPost("test-token")]
+        public ActionResult GenerarTokenPrueba([FromBody] TestTokenRequest request)
+        {
+            var token = _jwtService.GenerateToken(
+                request.IdUsuario,
+                request.Nickname,
+                request.Correo,
+                request.Roles);
+
+            return Ok(new
+            {
+                codigoS = 200,
+                mensaje = "Token generado. Usalo en Authorization: Bearer <token>",
+                token
+            });
+        }
+
+    }
+
+    public class TestTokenRequest
+    {
+        public long IdUsuario { get; set; } = 1;
+        public string Nickname { get; set; } = "test_user";
+        public string Correo { get; set; } = "test@famkon.com";
+        public string Roles { get; set; } = "COMPRADOR";
     }
 }

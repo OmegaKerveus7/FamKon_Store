@@ -1,44 +1,41 @@
-import { Link } from "react-router-dom";
-import { Package, Truck, ClipboardList, Camera, Search } from "lucide-react";
+import { Link, Outlet, useLocation } from "react-router-dom";
+import {
+  Truck,
+  ClipboardList,
+  Camera,
+  Package,
+  ChevronRight,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function RepartidorPage() {
-  const cards = [
+  const { tieneRol, usuario } = useAuth();
+  const esAdminOSupervisor = tieneRol("ADMIN") || tieneRol("SUPERVISOR");
+  const location = useLocation();
+
+  const tabs: Array<{ path: string; label: string; icon: typeof Truck; visible: boolean }> = [
     {
-      to: "/repartidor",
-      titulo: "Buscar Pedido",
-      descripcion: "Por teclado o escaneando el codigo QR del comprador.",
-      icon: Search,
-      color: "from-blue-500 to-cyan-500",
-    },
-    {
-      to: "/repartidor",
-      titulo: "Mis Pedidos Asignados",
-      descripcion: "Lista de pedidos que debes entregar hoy.",
+      path: "/repartidor/asignados",
+      label: "Mis Pedidos Asignados",
       icon: ClipboardList,
-      color: "from-orange-500 to-amber-500",
+      visible: true,
     },
     {
-      to: "/repartidor",
-      titulo: "Registrar Entrega",
-      descripcion: "Confirma la entrega (efectivo / foto evidencia).",
-      icon: Truck,
-      color: "from-emerald-500 to-green-500",
-    },
-    {
-      to: "/repartidor",
-      titulo: "Cambiar Estado",
-      descripcion: "Marcar entregado o comprador no encontrado.",
-      icon: Package,
-      color: "from-amber-500 to-yellow-500",
-    },
-    {
-      to: "/repartidor",
-      titulo: "Foto Evidencia",
-      descripcion: "Captura la foto del articulo entregado.",
+      path: "/repartidor/registrar",
+      label: "Registrar Entrega",
       icon: Camera,
-      color: "from-purple-500 to-fuchsia-500",
+      visible: true,
+    },
+    {
+      path: "/repartidor/cambiar-estado",
+      label: "Cambiar Estado",
+      icon: Package,
+      visible: true,
     },
   ];
+
+  const tabActiva = tabs.findIndex((t) => location.pathname.startsWith(t.path));
+  const indiceActual = tabActiva >= 0 ? tabActiva : 0;
 
   return (
     <div className="space-y-5">
@@ -46,35 +43,58 @@ export default function RepartidorPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-white/80">
           Modulo repartidor
         </p>
-        <h1 className="mt-1 text-2xl font-bold">Entregas asignadas</h1>
+        <h1 className="mt-1 text-2xl font-bold">Entregas y tracking</h1>
         <p className="mt-1 text-sm text-white/90">
-          Gestiona tus pedidos, registra entregas y cambia el estado.
+          Gestiona los pedidos asignados, registra entregas con foto de
+          evidencia y cambia el estado de cada pedido.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur">
+            Hola, {usuario?.nickname}
+          </span>
+          <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur">
+            Rol: {usuario?.roles}
+          </span>
+        </div>
+        {esAdminOSupervisor && (
+          <div className="mt-3 flex gap-2">
+            <Link
+              to="/entregas/tracking"
+              className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur hover:bg-white/25"
+            >
+              <Truck className="h-3 w-3" />
+              Ver tracking general
+            </Link>
+          </div>
+        )}
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((c) => {
-          const Icon = c.icon;
+      <nav className="flex flex-wrap items-center gap-1 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+        {tabs.filter((t) => t.visible).map((t, idx) => {
+          const Icon = t.icon;
+          const activo = idx === indiceActual;
           return (
             <Link
-              key={c.titulo}
-              to={c.to}
-              className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              key={t.path}
+              to={t.path}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition sm:flex-none ${
+                activo
+                  ? "bg-blue-500 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
             >
-              <div
-                className={`absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${c.color} opacity-15 transition group-hover:scale-125`}
+              <Icon size={18} />
+              <span className="hidden sm:inline">{t.label}</span>
+              <ChevronRight
+                size={14}
+                className={activo ? "opacity-100" : "opacity-0"}
               />
-              <div
-                className={`mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${c.color} text-white shadow-sm`}
-              >
-                <Icon size={20} />
-              </div>
-              <h3 className="text-base font-bold text-slate-900">{c.titulo}</h3>
-              <p className="mt-1 text-xs text-slate-500">{c.descripcion}</p>
             </Link>
           );
         })}
-      </div>
+      </nav>
+
+      <Outlet />
     </div>
   );
 }

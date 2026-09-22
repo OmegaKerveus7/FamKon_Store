@@ -34,6 +34,8 @@ builder.Services.AddScoped<BitacoraService>();
 builder.Services.AddScoped<CatalogoService>();
 builder.Services.AddScoped<CarritoService>();
 builder.Services.AddScoped<PedidoService>();
+builder.Services.AddScoped<RepartidorService>();
+builder.Services.AddScoped<ArchivoService>();
 
 builder.Services.AddHttpClient<FamKon_store_api.Services.BiometricService>(client =>
 {

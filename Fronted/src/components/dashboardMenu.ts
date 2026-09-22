@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   Tag,
+  MapPin,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 
@@ -58,9 +59,18 @@ export const MENU_GROUPS: MenuGroup[] = [
     icon: Truck,
     codigoRol: "REPARTIDOR",
     items: [
-      { codigo: "VER_PEDIDOS_ASIGNADOS",   path: "/repartidor",                  label: "Mis Pedidos",     icon: ClipboardList },
-      { codigo: "GESTIONAR_ENTREGAS",      path: "/repartidor",                  label: "Registrar Entrega", icon: Camera },
-      { codigo: "GESTIONAR_ESTADO_PEDIDO", path: "/repartidor",                  label: "Cambiar Estado",    icon: Package },
+      { codigo: "VER_PEDIDOS_ASIGNADOS",   path: "/repartidor/asignados",       label: "Mis Pedidos",      icon: ClipboardList },
+      { codigo: "GESTIONAR_ENTREGAS",      path: "/repartidor/registrar",       label: "Registrar Entrega", icon: Camera },
+      { codigo: "GESTIONAR_ESTADO_PEDIDO", path: "/repartidor/cambiar-estado",   label: "Cambiar Estado",    icon: Package },
+    ],
+  },
+  {
+    id: "tracking",
+    label: "Tracking",
+    icon: MapPin,
+    codigoRol: "SUPERVISOR",
+    items: [
+      { codigo: "GESTIONAR_ENTREGAS", path: "/entregas/tracking", label: "Tracking General", icon: Truck },
     ],
   },
   {

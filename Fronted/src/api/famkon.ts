@@ -679,3 +679,169 @@ export async function crearCategoriaProductoAdmin(body: { codigo: string; nombre
   comprobarResultadoProducto(res);
   return res.categoria;
 }
+
+// ─── Modulo Repartidor (entregas + cambios de estado) ───────────────────────
+
+export interface EntregaRepartidor {
+  idEntrega: number;
+  idPedido: number;
+  numeroPedido: string;
+  numeroIntento: number;
+  codigoEstado: string;
+  estadoEntrega: string;
+  areaEntrega: string;
+  referencia: string | null;
+  fechaAsignacion: string | null;
+  fechaIntento: string | null;
+  fechaEntrega: string | null;
+  montoEfectivo: number;
+  observaciones: string | null;
+  idArchivoEvidencia: number | null;
+}
+
+export interface PedidoParaEntrega {
+  idPedido: number;
+  numeroPedido: string;
+  estadoPedido: string;
+  areaEntrega: string;
+  referencia: string | null;
+  total: number;
+  fechaPedido: string;
+}
+
+export interface RepartidorDisponible {
+  idUsuario: number;
+  nickname: string;
+  correo: string;
+  telefono: string;
+}
+
+export async function listarMisEntregas(): Promise<EntregaRepartidor[]> {
+  const res = await request<ApiResponse>("/repartidor/entregas");
+  return (res.entregas as EntregaRepartidor[]) ?? [];
+}
+
+export async function listarEntregasDeRepartidor(
+  idRepartidor: number,
+): Promise<EntregaRepartidor[]> {
+  const res = await request<ApiResponse>(`/repartidor/entregas/${idRepartidor}`);
+  return (res.entregas as EntregaRepartidor[]) ?? [];
+}
+
+export async function listarPedidosParaEntrega(): Promise<PedidoParaEntrega[]> {
+  const res = await request<ApiResponse>("/repartidor/pedidos-disponibles");
+  return (res.pedidos as PedidoParaEntrega[]) ?? [];
+}
+
+export async function listarRepartidoresActivos(): Promise<RepartidorDisponible[]> {
+  const res = await request<ApiResponse>("/repartidor/repartidores");
+  return (res.repartidores as RepartidorDisponible[]) ?? [];
+}
+
+export async function asignarEntrega(
+  idPedido: number,
+  idRepartidor: number,
+): Promise<{ codigoS: number; mensaje: string; idEntrega?: number }> {
+  const res = await request<ApiResponse>("/repartidor/asignar", {
+    method: "POST",
+    body: JSON.stringify({ idPedido, idRepartidor }),
+  });
+  return {
+    codigoS: res.codigoS as number,
+    mensaje: (res.mensaje as string) ?? "",
+    idEntrega: res.idEntrega as number | undefined,
+  };
+}
+
+export async function cambiarEstadoPedidoRepartidor(
+  idPedido: number,
+  codigoEstado: string,
+  comentario?: string,
+): Promise<{ codigoS: number; mensaje: string }> {
+  const res = await request<ApiResponse>("/repartidor/cambiar-estado", {
+    method: "POST",
+    body: JSON.stringify({ idPedido, codigoEstado, comentario }),
+  });
+  return {
+    codigoS: res.codigoS as number,
+    mensaje: (res.mensaje as string) ?? "",
+  };
+}
+
+export async function registrarResultadoEntrega(
+  idEntrega: number,
+  codigoEstado: "ENTREGADA" | "NO_ENCONTRADO" | "CANCELADA",
+  montoEfectivo = 0,
+  observaciones?: string,
+  idArchivoEvidencia?: number,
+): Promise<{ codigoS: number; mensaje: string }> {
+  const res = await request<ApiResponse>("/repartidor/resultado", {
+    method: "POST",
+    body: JSON.stringify({
+      idEntrega, codigoEstado, montoEfectivo, observaciones, idArchivoEvidencia
+    }),
+  });
+  return {
+    codigoS: res.codigoS as number,
+    mensaje: (res.mensaje as string) ?? "",
+  };
+}
+
+// ─── Archivos (evidencia de entrega) ─────────────────────────────────────────
+
+export async function subirEvidenciaEntrega(
+  archivo: File,
+): Promise<{ codigoS: number; mensaje: string; idArchivo?: number; tamanoBytes?: number }> {
+  const fd = new FormData();
+  fd.append("archivo", archivo);
+
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}/repartidor/evidencia`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: fd,
+  });
+
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("famkon.usuario");
+    window.location.href = "/login";
+    throw new Error("Sesion expirada. Inicie sesion nuevamente.");
+  }
+
+  if (!res.ok) {
+    const text = await res.text();
+    let mensaje = `Error ${res.status}`;
+    try {
+      const parsed = JSON.parse(text) as { mensaje?: string };
+      mensaje = parsed.mensaje || mensaje;
+    } catch {
+      mensaje = text || mensaje;
+    }
+    throw new Error(mensaje);
+  }
+
+  const data = (await res.json()) as ApiResponse;
+  return {
+    codigoS: data.codigoS as number,
+    mensaje: (data.mensaje as string) ?? "",
+    idArchivo: data.idArchivo as number | undefined,
+    tamanoBytes: data.tamanoBytes as number | undefined,
+  };
+}
+
+export function urlArchivoEvidencia(idArchivo: number): string {
+  return `${BASE_URL}/archivos/${idArchivo}`;
+}
+
+export async function listarEntregasDeTodosRepartidores(): Promise<EntregaRepartidor[]> {
+  const repartidores = await listarRepartidoresActivos();
+  const todas: EntregaRepartidor[] = [];
+  await Promise.all(
+    repartidores.map(async (r) => {
+      const lista = await listarEntregasDeRepartidor(r.idUsuario);
+      todas.push(...lista);
+    }),
+  );
+  return todas;
+}

@@ -98,9 +98,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (respuesta.codigoS === 200 && respuesta.permisos) {
         localStorage.setItem(PERMISOS_KEY, JSON.stringify(respuesta.permisos));
         setPermisos(respuesta.permisos);
+      } else {
+        // Si falla la carga de permisos, limpiar y forzar logout
+        console.error("Error cargando permisos:", respuesta.mensaje);
+        localStorage.removeItem(PERMISOS_KEY);
+        setPermisos([]);
       }
-    } catch {
-      // Silenciar errores de permisos
+    } catch (err) {
+      console.error("Excepción cargando permisos:", err);
+      localStorage.removeItem(PERMISOS_KEY);
+      setPermisos([]);
     }
   }, []);
 

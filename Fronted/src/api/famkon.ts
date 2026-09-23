@@ -84,7 +84,11 @@ export interface PermisosResponse {
   permisos: Permiso[];
 }
 
-const BASE_URL = "/api/famkon";
+// En desarrollo usa el proxy de Vite (/api → localhost:5299).
+// En producción usa la variable de entorno VITE_API_BASE_URL (configurada en vite.config.ts)
+// que debería apuntar a la URL completa del backend (ej: https://famkon.site/api/famkon)
+// o mantener "/api/famkon" si Nginx hace el proxy en el mismo dominio.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/famkon";
 const TOKEN_KEY = "famkon.token";
 
 function getToken(): string | null {

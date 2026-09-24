@@ -1,6 +1,6 @@
-using MailKit.Net.Smtp;
-using MailKit.Security;
-using MimeKit;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace FamKon_store_api.Services
 {
@@ -11,19 +11,26 @@ namespace FamKon_store_api.Services
         private readonly string _email;
         private readonly string _password;
         private readonly string _remitente;
+        private readonly string _from;
         private readonly bool _checkCertificateRevocation;
         private readonly ILogger<EmailService> _logger;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+        public EmailService(IConfiguration configuration, ILogger<EmailService> logger, IHttpClientFactory httpClientFactory)
         {
             _smtpHost = configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
             _smtpPuerto = int.TryParse(configuration["Email:SmtpPort"], out var port) ? port : 587;
             _email = (configuration["Email:Address"] ?? string.Empty).Trim();
             _password = (configuration["Email:Password"] ?? string.Empty).Replace(" ", string.Empty);
             _remitente = configuration["Email:DisplayName"] ?? "FamKon";
+            _from = (configuration["Email:From"] ?? _email).Trim();
             _checkCertificateRevocation = configuration.GetValue("Email:CheckCertificateRevocation", true);
+            _httpClientFactory = httpClientFactory;
             _logger = logger;
         }
+
+        private bool EsBrevo => _smtpHost.Contains("brevo", StringComparison.OrdinalIgnoreCase);
+        private bool UsarApiRest => EsBrevo && (_smtpPuerto == 443 || _smtpPuerto == 587);
 
         public async Task<bool> EnviarCodigoVerificacionAsync(string destino, string codigo, int minutosExpiracion = 5)
         {
@@ -33,61 +40,10 @@ namespace FamKon_store_api.Services
                 return false;
             }
 
-            var mensaje = ConstruirMensaje(destino, codigo, minutosExpiracion);
+            var htmlBody = ConstruirHtmlVerificacion(codigo, minutosExpiracion);
+            var textBody = ConstruirTextVerificacion(codigo, minutosExpiracion);
 
-            try
-            {
-                using var client = CrearClienteSmtp();
-
-                var opciones = _smtpPuerto == 465
-                    ? SecureSocketOptions.SslOnConnect
-                    : SecureSocketOptions.StartTls;
-
-                _logger.LogInformation("Conectando a {Host}:{Puerto} ({Opciones}) como {Email} (password len={Len})",
-                    _smtpHost, _smtpPuerto, opciones, _email, _password.Length);
-
-                await client.ConnectAsync(_smtpHost, _smtpPuerto, opciones);
-                await client.AuthenticateAsync(_email, _password);
-                await client.SendAsync(mensaje);
-                await client.DisconnectAsync(true);
-
-                _logger.LogInformation("Email de verificación enviado a {Destino}", destino);
-                return true;
-            }
-            catch (MailKit.Security.AuthenticationException authEx)
-            {
-                _logger.LogError(authEx,
-                    "Fallo de autenticación SMTP para {Email}. Verifica que la App Password sea válida y que la cuenta tenga 2FA activo. Detalle: {Mensaje}",
-                    _email, authEx.Message);
-                return false;
-            }
-            catch (MailKit.Net.Smtp.SmtpCommandException smtpEx)
-            {
-                _logger.LogError(smtpEx,
-                    "Comando SMTP rechazado por {Host}: Status={Status} Code={Code} Message={Mensaje}",
-                    _smtpHost, smtpEx.StatusCode, smtpEx.ErrorCode, smtpEx.Message);
-                return false;
-            }
-            catch (MailKit.Net.Smtp.SmtpProtocolException protoEx)
-            {
-                _logger.LogError(protoEx,
-                    "Protocolo SMTP error con {Host}: {Mensaje}",
-                    _smtpHost, protoEx.Message);
-                return false;
-            }
-            catch (System.Net.Sockets.SocketException sockEx)
-            {
-                _logger.LogError(sockEx,
-                    "No se pudo conectar a {Host}:{Puerto}. Error de red: {Mensaje}",
-                    _smtpHost, _smtpPuerto, sockEx.Message);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error inesperado enviando email a {Destino}: {Tipo} {Mensaje}",
-                    destino, ex.GetType().Name, ex.Message);
-                return false;
-            }
+            return await EnviarAsync(destino, "Tu codigo de verificacion FamKon", htmlBody, textBody);
         }
 
         public async Task<(bool ok, string detalle)> EnviarCorreoTextoAsync(string destino, string asunto, string cuerpo)
@@ -97,47 +53,8 @@ namespace FamKon_store_api.Services
             if (string.IsNullOrWhiteSpace(destino))
                 return (false, "Destinatario vacío.");
 
-            var mensaje = new MimeMessage();
-            mensaje.From.Add(new MailboxAddress(_remitente, _email));
-            mensaje.To.Add(MailboxAddress.Parse(destino));
-            mensaje.Subject = asunto;
-            mensaje.Body = new TextPart("plain") { Text = cuerpo };
-
-            try
-            {
-                using var client = CrearClienteSmtp();
-                var opciones = _smtpPuerto == 465
-                    ? SecureSocketOptions.SslOnConnect
-                    : SecureSocketOptions.StartTls;
-
-                await client.ConnectAsync(_smtpHost, _smtpPuerto, opciones);
-                await client.AuthenticateAsync(_email, _password);
-                await client.SendAsync(mensaje);
-                await client.DisconnectAsync(true);
-
-                _logger.LogInformation("Correo de prueba enviado a {Destino}", destino);
-                return (true, $"Correo enviado a {destino}");
-            }
-            catch (MailKit.Security.AuthenticationException authEx)
-            {
-                return (false, $"AuthenticationException: {authEx.Message}");
-            }
-            catch (MailKit.Net.Smtp.SmtpCommandException smtpEx)
-            {
-                return (false, $"SmtpCommandException: Status={smtpEx.StatusCode} Code={smtpEx.ErrorCode} {smtpEx.Message}");
-            }
-            catch (MailKit.Net.Smtp.SmtpProtocolException protoEx)
-            {
-                return (false, $"SmtpProtocolException: {protoEx.Message}");
-            }
-            catch (System.Net.Sockets.SocketException sockEx)
-            {
-                return (false, $"SocketException: {sockEx.Message}");
-            }
-            catch (Exception ex)
-            {
-                return (false, $"{ex.GetType().Name}: {ex.Message}");
-            }
+            var ok = await EnviarAsync(destino, asunto, null, cuerpo);
+            return ok ? (true, $"Correo enviado a {destino}") : (false, "Error al enviar correo.");
         }
 
         public async Task<(bool ok, string detalle)> ProbarConexionAsync()
@@ -145,48 +62,130 @@ namespace FamKon_store_api.Services
             if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
                 return (false, "Email o password no configurados.");
 
+            if (UsarApiRest)
+            {
+                try
+                {
+                    var client = _httpClientFactory.CreateClient("BrevoApi");
+                    using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
+                    request.Headers.Add("api-key", _password);
+                    request.Content = new StringContent("{\"sender\":{\"name\":\"Test\",\"email\":\"" + _from + "\"},\"to\":[{\"email\":\"" + _from + "\"}],\"subject\":\"Test\",\"htmlContent\":\"Test\"}", Encoding.UTF8, "application/json");
+                    var response = await client.SendAsync(request);
+                    var body = await response.Content.ReadAsStringAsync();
+                    return response.IsSuccessStatusCode
+                        ? (true, $"Conectado a Brevo API OK como {_email}")
+                        : (false, $"Brevo API error: {response.StatusCode} - {body}");
+                }
+                catch (Exception ex)
+                {
+                    return (false, $"{ex.GetType().Name}: {ex.Message}");
+                }
+            }
+
+            return (false, "Solo Brevo API soportado en este método.");
+        }
+
+        private async Task<bool> EnviarAsync(string destino, string asunto, string? htmlBody, string textBody)
+        {
             try
             {
-                using var client = CrearClienteSmtp();
-                var opciones = _smtpPuerto == 465
-                    ? SecureSocketOptions.SslOnConnect
-                    : SecureSocketOptions.StartTls;
-
-                await client.ConnectAsync(_smtpHost, _smtpPuerto, opciones);
-                await client.AuthenticateAsync(_email, _password);
-                await client.DisconnectAsync(true);
-                return (true, $"Conectado a {_smtpHost}:{_smtpPuerto} OK como {_email}");
+                if (UsarApiRest)
+                {
+                    return await EnviarViaBrevoApiAsync(destino, asunto, htmlBody, textBody);
+                }
+                else
+                {
+                    return await EnviarViaSmtpAsync(destino, asunto, htmlBody, textBody);
+                }
             }
             catch (Exception ex)
             {
-                return (false, $"{ex.GetType().Name}: {ex.Message}");
+                _logger.LogError(ex, "Error enviando email a {Destino}: {Tipo} {Mensaje}", destino, ex.GetType().Name, ex.Message);
+                return false;
             }
         }
 
-        private SmtpClient CrearClienteSmtp()
+        private async Task<bool> EnviarViaBrevoApiAsync(string destino, string asunto, string? htmlBody, string textBody)
         {
-            // Mantiene la validación de confianza, vigencia y nombre del certificado.
-            // Solo permite desactivar la consulta de revocación mediante configuración.
-            return new SmtpClient { CheckCertificateRevocation = _checkCertificateRevocation };
+            var payload = new
+            {
+                sender = new { name = _remitente, email = _from },
+                to = new[] { new { email = destino } },
+                subject = asunto,
+                htmlContent = htmlBody ?? $"<html><body><p>{textBody}</p></body></html>",
+                textContent = textBody
+            };
+
+            var client = _httpClientFactory.CreateClient("BrevoApi");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
+            request.Headers.Add("api-key", _password);
+            var jsonPayload = JsonSerializer.Serialize(payload);
+            request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            _logger.LogInformation("Enviando email via Brevo REST API a {Destino}. Payload: {Payload}", destino, jsonPayload);
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await client.SendAsync(request);
+            }
+            catch (HttpRequestException httpEx)
+            {
+                _logger.LogError(httpEx, "HttpRequestException conectando a Brevo API: {Mensaje}", httpEx.Message);
+                return false;
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Brevo API response: Status={Status} Body={Body}", response.StatusCode, responseBody);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Email enviado via Brevo API a {Destino}", destino);
+                return true;
+            }
+
+            _logger.LogError("Brevo API error: Status={Status} Body={Body}", response.StatusCode, responseBody);
+            return false;
         }
 
-        private MimeMessage ConstruirMensaje(string destino, string codigo, int minutosExpiracion)
+        private async Task<bool> EnviarViaSmtpAsync(string destino, string asunto, string? htmlBody, string textBody)
         {
-            var mensaje = new MimeMessage();
-            mensaje.From.Add(new MailboxAddress(_remitente, _email));
-            mensaje.To.Add(MailboxAddress.Parse(destino));
-            mensaje.Subject = "Tu codigo de verificacion FamKon";
+            using var mailKit = new MailKit.Net.Smtp.SmtpClient { CheckCertificateRevocation = _checkCertificateRevocation };
 
-            mensaje.Headers.Add("List-Unsubscribe", $"<mailto:{_email}?subject=unsubscribe>");
-            mensaje.Headers.Add("List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
-            mensaje.Headers.Add("Auto-Submitted", "auto-generated");
-            mensaje.Headers.Add("X-Mailer", "FamKon");
-            mensaje.Headers.Add("X-Priority", "1");
-            mensaje.Headers.Add("Importance", "High");
+            var mensaje = new MimeKit.MimeMessage();
+            mensaje.From.Add(new MimeKit.MailboxAddress(_remitente, _from));
+            mensaje.To.Add(MimeKit.MailboxAddress.Parse(destino));
+            mensaje.Subject = asunto;
 
-            var builder = new BodyBuilder
+            if (!string.IsNullOrEmpty(htmlBody))
             {
-                HtmlBody = $@"
+                mensaje.Body = new MimeKit.BodyBuilder
+                {
+                    HtmlBody = htmlBody,
+                    TextBody = textBody
+                }.ToMessageBody();
+            }
+            else
+            {
+                mensaje.Body = new MimeKit.TextPart("plain") { Text = textBody };
+            }
+
+            var opciones = _smtpPuerto == 465
+                ? MailKit.Security.SecureSocketOptions.SslOnConnect
+                : MailKit.Security.SecureSocketOptions.StartTls;
+
+            _logger.LogInformation("Conectando a {Host}:{Puerto} ({Opciones}) como {Email}", _smtpHost, _smtpPuerto, opciones, _email);
+
+            await mailKit.ConnectAsync(_smtpHost, _smtpPuerto, opciones);
+            await mailKit.AuthenticateAsync(_email, _password);
+            await mailKit.SendAsync(mensaje);
+            await mailKit.DisconnectAsync(true);
+
+            _logger.LogInformation("Email enviado via SMTP a {Destino}", destino);
+            return true;
+        }
+
+        private string ConstruirHtmlVerificacion(string codigo, int minutosExpiracion) => $@"
 <!DOCTYPE html>
 <html lang='es'>
 <head><meta charset='UTF-8'></head>
@@ -194,22 +193,18 @@ namespace FamKon_store_api.Services
   <div style='max-width:520px;margin:0 auto;padding:24px 20px;'>
     <p style='margin:0 0 4px 0;color:#666;font-size:12px;'>FamKon</p>
     <hr style='border:none;border-top:1px solid #dddddd;margin:8px 0 20px 0;'>
-
     <p style='margin:0 0 14px 0;'>Hola,</p>
     <p style='margin:0 0 14px 0;'>Tu codigo de verificacion para completar el registro en FamKon es:</p>
-
     <p style='margin:20px 0;padding:14px 18px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;font-family:Consolas,Courier New,monospace;font-size:24px;font-weight:bold;letter-spacing:6px;text-align:center;color:#111;'>{codigo}</p>
-
-    <p style='margin:14px 0;color:#444;'>Este codigo expira en {minutosExpiracion} minutos. Si no lo usas antes de ese tiempo, deberas solicitar uno nuevo.</p>
-    <p style='margin:14px 0;color:#444;'>Si no solicitaste este codigo, puedes ignorar este mensaje.</p>
-
+    <p style='margin:14px 0;color:#444;'>Este codigo expira en {minutosExpiracion} minutos.</p>
     <hr style='border:none;border-top:1px solid #dddddd;margin:24px 0 12px 0;'>
-    <p style='margin:0;color:#999;font-size:11px;'>Este es un mensaje automatico, por favor no respondas a este correo.</p>
+    <p style='margin:0;color:#999;font-size:11px;'>Este es un mensaje automatico.</p>
     <p style='margin:4px 0 0 0;color:#999;font-size:11px;'>&copy; FamKon</p>
   </div>
 </body>
-</html>",
-                TextBody = $@"FamKon - Verificacion de cuenta
+</html>";
+
+        private string ConstruirTextVerificacion(string codigo, int minutosExpiracion) => $@"FamKon - Verificacion de cuenta
 
 Hola,
 
@@ -217,16 +212,10 @@ Tu codigo de verificacion para completar el registro en FamKon es:
 
     {codigo}
 
-Este codigo expira en {minutosExpiracion} minutos. Si no lo usas antes de ese tiempo, deberas solicitar uno nuevo.
-
-Si no solicitaste este codigo, puedes ignorar este mensaje.
+Este codigo expira en {minutosExpiracion} minutos.
 
 --
-Este es un mensaje automatico, por favor no respondas a este correo.
-(c) FamKon"
-            };
-            mensaje.Body = builder.ToMessageBody();
-            return mensaje;
-        }
+Este es un mensaje automatico.
+(c) FamKon";
     }
 }

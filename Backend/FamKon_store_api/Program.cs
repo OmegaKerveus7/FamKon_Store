@@ -50,6 +50,7 @@ builder.Services.AddHttpClient<FamKon_store_api.Services.WhatsAppService>(client
     client.Timeout = TimeSpan.FromSeconds(15);
 });
 
+builder.Services.AddHttpClient("BrevoApi", client => client.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddScoped<FamKon_store_api.Services.EmailService>();
 
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]!;

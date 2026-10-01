@@ -1,3 +1,4 @@
+import AvatarCredencial from './AvatarCredencial';
 import { Menu, Bell, ChevronRight, RefreshCw } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Link, useLocation } from "react-router-dom";
@@ -96,7 +97,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
           <div
             className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${colorAvatar(usuario?.roles)} text-sm font-bold text-white shadow-sm`}
           >
-            {iniciales(usuario?.nickname, usuario?.correo)}
+            <AvatarCredencial key={usuario?.idUsuario} fallback={iniciales(usuario?.nickname, usuario?.correo)} />
           </div>
           <div className="hidden text-left leading-tight sm:block">
             <p className="text-sm font-semibold text-slate-900">

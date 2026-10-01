@@ -1,3 +1,5 @@
+import EstadoConstancia from '../components/EstadoConstancia';
+import { crearConstancia, puedeDescargarConstancia } from '../domain/constancia';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, Clock3, Download, MapPin, Package, Phone, RefreshCw, Search, Store, Truck } from 'lucide-react';
@@ -42,6 +44,15 @@ export default function PedidosPage({ vista = 'cliente' }: { vista?: VistaCompra
   useEffect(() => { configCompra().then(setConfig).catch(e => setError(e.message)); }, []);
   useEffect(() => { const c = new AbortController(); setDetail(null); setFoto(null); void cargar(c.signal, true); const interval = setInterval(() => { if (!document.hidden) void cargar(c.signal); }, 20000); return () => { c.abort(); clearInterval(interval); requestNumber.current++; }; }, [cargar]);
 
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  async function descargarPdf() {
+    if (!detail || generandoPdf) return;
+    setGenerandoPdf(true);
+    try { const pdf = await crearConstancia(detail, window.location.origin, config?.direccionTienda || 'Campus central'); pdf.save(`constancia-${detail.pedido.idPedido}.pdf`); }
+    catch (e) { setError((e as Error).message); }
+    finally { setGenerandoPdf(false); }
+  }
+
   const volver = () => { setParams({}); setDetail(null); };
   const heading = vista === 'cliente' ? 'Mis pedidos' : vista === 'admin' ? 'Gestión de pedidos' : 'Mis entregas';
   const subtitle = vista === 'cliente' ? 'Tu compra, paso a paso. Consultá aquí cada avance.' : vista === 'admin' ? 'Revisá las compras, coordiná la preparación y supervisá cada entrega.' : 'Tu ruta empieza aquí. Registrá cada entrega y su evidencia.';
@@ -65,8 +76,10 @@ export default function PedidosPage({ vista = 'cliente' }: { vista?: VistaCompra
             {vista === 'admin' && detail.auditoria.length > 0 && <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="mb-4 font-bold">Notas internas y correcciones</h2>{detail.auditoria.map((a, i) => <div key={i} className="border-b border-slate-100 py-3 text-sm"><p>{a.motivo}</p><p className="mt-1 text-xs text-slate-400">{a.actor} · {fechaCompra(a.fecha)}</p></div>)}</section>}
           </div>
           <aside className="space-y-5">
+            {vista === "cliente" && <EstadoConstancia key={p.idPedido} id={p.idPedido} />}
             <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="mb-3 flex items-center gap-2 font-bold"><MapPin size={18} className="text-amber-600" />{p.idModalidadEntrega === 1 ? 'Punto de recogida' : 'Destino'}</h2><p className="text-sm">{p.idModalidadEntrega === 1 ? config?.direccionTienda || 'Campus central' : p.direccionEntrega}</p><p className="mt-2 text-xs text-slate-500">{p.idModalidadEntrega === 1 ? config?.horario || 'Lunes a domingo, 8:00 a. m. a 5:00 p. m.' : [p.municipio, p.departamento].filter(Boolean).join(', ')}</p>{p.referenciaEntrega && <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{p.referenciaEntrega}</p>}<div className="mt-4 space-y-2">{[p.telefonoContacto, p.telefonoAlterno].filter(Boolean).map((t, i) => <a key={i} href={`tel:${t!.replace(/[^+\d]/g, '')}`} className="flex items-center gap-2 text-sm text-amber-700"><Phone size={15} />{t}{i === 1 ? ' (alterno)' : ''}</a>)}</div></section>
             <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="mb-3 font-bold">Resumen de compra</h2>{detail.productos.map((item, i) => <div key={i} className="flex justify-between gap-3 border-b border-slate-100 py-3 text-sm"><span>{item.cantidad} × {item.nombreProducto}</span><strong className="shrink-0">{moneda(item.subtotal)}</strong></div>)}<p className="mt-4 flex justify-between text-sm text-slate-500"><span>Envío</span><span>{moneda(p.cargoEntrega)}</span></p><p className="mt-3 flex justify-between font-bold"><span>Total</span><span>{moneda(p.total)}</span></p></section>
+            {puedeDescargarConstancia(p) && <button disabled={generandoPdf} onClick={descargarPdf} className={`${botonSecundario} flex w-full items-center justify-center gap-2`}><Download size={16} />{generandoPdf ? 'Generando PDF…' : 'Constancia PDF con QR'}</button>}
             {['ENTREGADO', 'RECOGIDO'].includes(p.estado) && <button onClick={() => descargar(`/compras/${p.idPedido}/comprobante?vista=${vista}`, `comprobante-${p.numeroPedido}.html`)} className={`${botonSecundario} flex w-full items-center justify-center gap-2`}><Download size={16} />Descargar comprobante</button>}
           </aside>
         </div>

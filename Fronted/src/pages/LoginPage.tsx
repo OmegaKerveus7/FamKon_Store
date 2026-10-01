@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ScanFace, QrCode, LogIn, Loader2, Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { login } from "../api/famkon";
 import { useAuth } from "../context/AuthContext";
@@ -15,6 +15,7 @@ function rutaInicialPorRol(roles: string): string {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { iniciarSesion, cargarPermisos } = useAuth();
   const [identificador, setIdentificador] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -45,7 +46,8 @@ export default function LoginPage() {
       await cargarPermisos();
 
       const roles = respuesta.usuario.roles ?? "COMPRADOR";
-      navigate(rutaInicialPorRol(roles), { replace: true });
+      const volverA = state?.volverA;
+      navigate(typeof volverA === 'string' && /^\/comprador\/tracking\?pedido=\d+$/.test(volverA) ? volverA : rutaInicialPorRol(roles), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesion.");
     } finally {
@@ -75,6 +77,7 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {state?.passwordUpdated && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">Contraseña actualizada. Ingresa con tu nueva contraseña.</p>}
             <div className="space-y-1">
               <label htmlFor="identificador" className="text-sm font-medium text-slate-700">
                 Correo o usuario
@@ -117,6 +120,8 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            <Link to="/recuperar-contrasena" state={{ identificador }} className="block text-right text-sm font-semibold text-amber-700 hover:underline">¿Olvidaste tu contraseña?</Link>
 
             {error && (
               <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{error}</p>

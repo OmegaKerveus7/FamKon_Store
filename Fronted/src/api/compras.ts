@@ -23,7 +23,7 @@ export interface DetalleCompra {
   entregas: EntregaCompra[];
   auditoria: { motivo: string; actor: string; fecha: string }[];
 }
-export interface ConfigCompra { direccionTienda: string; horario: string; cargoDomicilio: number; cargoTienda: number; tarjetaDisponible: boolean; entorno: string }
+export interface ConfigCompra { direccionTienda: string; horario: string; cargoDomicilio: number; cargoTienda: number; tarjetaDisponible: boolean; entorno: string; recaptchaSiteKey: string | null }
 export async function comprasRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await comprasFetch(path, init);
   return res.json() as Promise<T>;
@@ -48,7 +48,7 @@ export const configCompra = () => comprasRequest<ConfigCompra>('/compras/configu
 export const listarCompras = (vista: VistaCompra, pagina: number, estado: string, busqueda: string, signal?: AbortSignal) =>
   comprasRequest<{ pedidos: Compra[]; total: number; pagina: number; tamanoPagina: number }>(`/compras?${new URLSearchParams({ vista, pagina: String(pagina), estado, busqueda })}`, { signal });
 export const detalleCompra = (id: number, vista: VistaCompra, signal?: AbortSignal) => comprasRequest<DetalleCompra>(`/compras/${id}?vista=${vista}`, { signal });
-export const crearCompra = (body: DireccionCompra & { idCarrito: number; idModalidadEntrega: number; metodoPago: string }) => comprasRequest<{ idPedido: number }>('/compras', { method: 'POST', body: JSON.stringify(body) });
+export const crearCompra = (body: DireccionCompra & { idCarrito: number; idModalidadEntrega: number; metodoPago: string; recaptchaToken: string }) => comprasRequest<{ idPedido: number }>('/compras', { method: 'POST', body: JSON.stringify(body) });
 export const accionCompra = (id: number, accion: string, body: object = {}, method = 'POST') => comprasRequest<{ mensaje: string }>(`/compras/${id}/${accion}`, { method, body: JSON.stringify(body) });
 export const iniciarPago = (id: number) => comprasRequest<{ url: string }>(`/compras/${id}/pago`, { method: 'POST' });
 export const verificarPago = (id: number) => comprasRequest<{ estado: string }>(`/compras/${id}/verificar-pago`, { method: 'POST' });

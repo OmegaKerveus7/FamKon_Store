@@ -31,6 +31,10 @@ export interface RefreshTokenResponse {
 }
 
 export interface RegistroRequest {
+  solicitudRostro: string;
+  temaCredencial: string;
+  notificaEmail?: boolean;
+  notificaWhatsapp?: boolean;
   telefono: string;
   nombres: string;
   apellidos: string;
@@ -150,6 +154,14 @@ export async function login(
   return request<LoginApiResponse>("/login_basic", {
     method: "POST",
     body: JSON.stringify({ correo, nickname, contrasena }),
+  });
+}
+
+export async function comprobarCorreo(correo: string, signal?: AbortSignal) {
+  return request<{ codigoS: number; existe?: boolean; mensaje?: string }>("/registro/comprobar-correo", {
+    method: "POST",
+    body: JSON.stringify({ correo }),
+    signal,
   });
 }
 

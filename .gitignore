@@ -32,4 +32,6 @@ appsettings.Development.json
 
 # Sistema
 .DS_Store
-Thumbs.db
+Thumbs.db**/.idea/
+**/.idea/
+**/.idea/

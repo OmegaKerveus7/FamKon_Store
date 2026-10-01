@@ -25,7 +25,7 @@ namespace FamKon_store_api.Services
             _logger = logger;
         }
 
-        public async Task<bool> EnviarCodigoVerificacionAsync(string destino, string codigo, int minutosExpiracion = 5)
+        public async Task<bool> EnviarCodigoVerificacionAsync(string destino, string codigo, int minutosExpiracion = 5, bool recuperacion = false)
         {
             if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
             {
@@ -33,7 +33,7 @@ namespace FamKon_store_api.Services
                 return false;
             }
 
-            var mensaje = ConstruirMensaje(destino, codigo, minutosExpiracion);
+            var mensaje = ConstruirMensaje(destino, codigo, minutosExpiracion, recuperacion);
 
             try
             {
@@ -163,6 +163,24 @@ namespace FamKon_store_api.Services
             }
         }
 
+        public async Task<bool> EnviarConstanciaAsync(string destino, long pedido, byte[] pdf, bool credencial = false)
+        {
+            try {
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(_remitente, _email));
+                message.To.Add(MailboxAddress.Parse(destino));
+                message.Subject = credencial ? "FamKon - Tu credencial de acceso" : $"FamKon - Constancia del pedido {pedido}";
+                var body = new BodyBuilder { TextBody = credencial ? "Adjuntamos tu credencial personal. Su QR permite entrar a tu cuenta; no lo compartas. Puedes reemplazarlo en Mi perfil." : "Adjuntamos tu constancia de compra. Escanea el QR del PDF para consultar el tracking e inicia sesión con tu cuenta." };
+                body.Attachments.Add(credencial ? "credencial-famkon.pdf" : $"constancia-{pedido}.pdf", pdf, new ContentType("application", "pdf"));
+                message.Body = body.ToMessageBody();
+                using var client = CrearClienteSmtp(); client.Timeout = 30000;
+                await client.ConnectAsync(_smtpHost, _smtpPuerto, _smtpPuerto == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls);
+                await client.AuthenticateAsync(_email, _password);
+                await client.SendAsync(message);
+                return true;
+            } catch { _logger.LogWarning("No se pudo enviar constancia del pedido {Pedido} por correo", pedido); return false; }
+        }
+
         private SmtpClient CrearClienteSmtp()
         {
             // Mantiene la validación de confianza, vigencia y nombre del certificado.
@@ -170,12 +188,13 @@ namespace FamKon_store_api.Services
             return new SmtpClient { CheckCertificateRevocation = _checkCertificateRevocation };
         }
 
-        private MimeMessage ConstruirMensaje(string destino, string codigo, int minutosExpiracion)
+        private MimeMessage ConstruirMensaje(string destino, string codigo, int minutosExpiracion, bool recuperacion)
         {
             var mensaje = new MimeMessage();
             mensaje.From.Add(new MailboxAddress(_remitente, _email));
             mensaje.To.Add(MailboxAddress.Parse(destino));
-            mensaje.Subject = "Tu codigo de verificacion FamKon";
+            mensaje.Subject = recuperacion ? "Recupera tu contraseña de FamKon" : "Tu codigo de verificacion FamKon";
+            var proposito = recuperacion ? "restablecer tu contraseña" : "completar el registro";
 
             mensaje.Headers.Add("List-Unsubscribe", $"<mailto:{_email}?subject=unsubscribe>");
             mensaje.Headers.Add("List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
@@ -196,7 +215,7 @@ namespace FamKon_store_api.Services
     <hr style='border:none;border-top:1px solid #dddddd;margin:8px 0 20px 0;'>
 
     <p style='margin:0 0 14px 0;'>Hola,</p>
-    <p style='margin:0 0 14px 0;'>Tu codigo de verificacion para completar el registro en FamKon es:</p>
+    <p style='margin:0 0 14px 0;'>Tu codigo de verificacion para {proposito} en FamKon es:</p>
 
     <p style='margin:20px 0;padding:14px 18px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;font-family:Consolas,Courier New,monospace;font-size:24px;font-weight:bold;letter-spacing:6px;text-align:center;color:#111;'>{codigo}</p>
 
@@ -213,7 +232,7 @@ namespace FamKon_store_api.Services
 
 Hola,
 
-Tu codigo de verificacion para completar el registro en FamKon es:
+Tu codigo de verificacion para {proposito} en FamKon es:
 
     {codigo}
 

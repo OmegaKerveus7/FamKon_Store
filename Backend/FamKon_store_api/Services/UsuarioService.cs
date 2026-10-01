@@ -24,6 +24,16 @@ namespace FamKon_store_api.Services
             _logger = logger;
         }
 
+        public async Task<bool> CorreoExisteAsync(string correo)
+        {
+            using var connection = _dbContext.CreateConnection();
+            await _dbContext.OpenConnectionAsync(connection);
+            using var command = new OracleCommand("SELECT COUNT(*) FROM USUARIO WHERE LOWER(TRIM(CORREO)) = :correo", connection);
+            command.BindByName = true;
+            command.Parameters.Add("correo", OracleDbType.Varchar2).Value = correo.Trim().ToLowerInvariant();
+            return Convert.ToInt64(await command.ExecuteScalarAsync()) > 0;
+        }
+
         public async Task<UsuarioResult> CrearUsuarioAsync(
             long idSitio,
             string correo,

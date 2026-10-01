@@ -12,10 +12,12 @@ namespace FamKon_store_api.Controllers;
 public class CompraExceptionFilter(ILogger<CompraExceptionFilter> logger):IExceptionFilter {
     public void OnException(ExceptionContext ctx) {
         var ex=ctx.Exception; var status=500; var message="No se pudo completar la operación. Intenta nuevamente.";
-        if(ex is OracleException o) {
+        if(ex is RecaptchaException captcha) { status=captcha.Status;message=captcha.Message; }
+        else if(ex is OracleException o) {
             var n=Math.Abs(o.Number);
             status=n switch {20703=>403,1403=>404,20709 or 1=>409,20700 or 12899=>400,_=>500};
-            if(n is >=20700 and <=20799) message=o.Message.Split('\n')[0].Split(':',2).Last().Trim();
+            if(n is 50000 or 12570 or 12170 or 12541 or 1013 or 30006 or 54) { status=503; message="La base de datos no respondió a tiempo o está ocupada. Intenta nuevamente en unos momentos."; }
+            else if(n is >=20700 and <=20799) message=o.Message.Split('\n')[0].Split(':',2).Last().Trim();
             else if(n==1403)message="No se encontró el pedido, asignación o configuración requerida.";
         } else if(ex is UnauthorizedAccessException) {status=403;message="No tienes acceso a esta operación.";}
         else if(ex is InvalidOperationException) {status=409;message=ex.Message;}
@@ -26,11 +28,11 @@ public class CompraExceptionFilter(ILogger<CompraExceptionFilter> logger):IExcep
     }
 }
 [ApiController,Authorize,Route("api/famkon/compras"),ServiceFilter(typeof(CompraExceptionFilter))]
-public class ComprasController(CompraService compras,RecurrenteService pagos,ArchivoService archivos,IConfiguration config):ControllerBase {
+public class ComprasController(CompraService compras,RecurrenteService pagos,ArchivoService archivos,IConfiguration config,IRecaptchaVerifier recaptcha):ControllerBase {
     private long Actor=>long.Parse(User.FindFirst("sub")!.Value);
     private static bool VistaValida(string vista)=>vista is "cliente" or "admin" or "repartidor";
     [HttpGet("configuracion")]
-    public IActionResult Configuracion()=>Ok(new{direccionTienda=config["Tienda:Direccion"]??"Campus central",horario="Lunes a domingo, 8:00 a. m. a 5:00 p. m.",cargoDomicilio=25,cargoTienda=0,tarjetaDisponible=pagos.Disponible,entorno=pagos.Entorno});
+    public IActionResult Configuracion()=>Ok(new{direccionTienda=config["Tienda:Direccion"]??"Campus central",horario="Lunes a domingo, 8:00 a. m. a 5:00 p. m.",cargoDomicilio=25,cargoTienda=0,tarjetaDisponible=pagos.Disponible,entorno=pagos.Entorno,recaptchaSiteKey=recaptcha.SiteKey});
     [HttpGet]
     public async Task<IActionResult> Listar([FromQuery]string vista="cliente",[FromQuery]int pagina=1,[FromQuery]string? estado=null,[FromQuery]string? busqueda=null) {
         if(!VistaValida(vista))return BadRequest(); if(vista=="admin"&&!await compras.EsAdmin(Actor))return Forbid();
@@ -45,6 +47,7 @@ public class ComprasController(CompraService compras,RecurrenteService pagos,Arc
     [HttpPost]
     public async Task<IActionResult> Crear(CrearCompraRequest r) {
         if(r.MetodoPago=="TARJETA"&&!pagos.Disponible)return Conflict(new{mensaje="La tarjeta aún no está disponible. Puedes elegir efectivo."});
+        await recaptcha.Verificar(r.RecaptchaToken, HttpContext.RequestAborted);
         var id=await compras.Crear(Actor,r,pagos.Entorno);return Ok(new{idPedido=id});
     }
     [HttpPost("{id:long}/estado")]

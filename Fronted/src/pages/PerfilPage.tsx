@@ -1,8 +1,15 @@
+import MiCredencial from '../components/MiCredencial';
+import AvatarCredencial from '../components/AvatarCredencial';
+import PreferenciasNotificacion from '../components/PreferenciasNotificacion';
+import EnrolamientoFacial from "../modules/biometria/EnrolamientoFacial";
+import PasswordForm from "../components/PasswordForm";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { User, Mail, Phone, Calendar, ShieldCheck, Shield } from "lucide-react";
 
 export default function PerfilPage() {
-  const { usuario, permisos } = useAuth();
+  const { usuario, permisos, cerrarSesion } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
@@ -11,10 +18,18 @@ export default function PerfilPage() {
         <p className="text-sm text-slate-500">Datos de tu cuenta y permisos asignados.</p>
       </header>
 
+      <EnrolamientoFacial />
+      <PreferenciasNotificacion />
+      <MiCredencial />
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <PasswordForm perfil onFinished={() => { cerrarSesion(); navigate('/login', { replace: true, state: { passwordUpdated: true } }); }} />
+      </div>
+
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
-            <User className="h-8 w-8" />
+            <AvatarCredencial key={usuario?.idUsuario} fallback={<User className="h-8 w-8" />} />
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-900">{usuario?.nickname}</h2>

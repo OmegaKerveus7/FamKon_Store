@@ -1,12 +1,18 @@
+import VistaPreviaCarnet from '../components/VistaPreviaCarnet';
+import { comprasRequest } from '../api/compras';
+import EditorFotoCredencial from '../components/EditorFotoCredencial';
+import { getCountries, getCountryCallingCode, getExampleNumber, type CountryCode } from "libphonenumber-js/max";
+import ejemplosTelefono from "libphonenumber-js/mobile/examples";
+import { REGLA_PASSWORD, validarPassword, validarTelefono, normalizarTelefono } from "../utils/registroValidacion";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Camera,
+  ChevronDown,
   Loader2,
   UserPlus,
   Mail,
   MessageCircle,
-  Send,
   ArrowLeft,
   ArrowRight,
   ShieldCheck,
@@ -20,6 +26,7 @@ import CameraCapture, {
 } from "../components/CameraCapture";
 import {
   registrarComprador,
+  comprobarCorreo,
   enviarCodigoVerificacion,
   stripBase64Prefix,
   type CanalVerificacion,
@@ -28,6 +35,12 @@ import {
 type Paso = "datos" | "verificar";
 
 const MINUTOS_EXPIRACION = 5;
+const nombresPaises = new Intl.DisplayNames(["es"], { type: "region" });
+const paisesTelefono = getCountries().map((codigo) => ({
+  codigo,
+  nombre: nombresPaises.of(codigo) ?? codigo,
+  prefijo: getCountryCallingCode(codigo),
+})).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 
 function generarCodigoOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -36,6 +49,7 @@ function generarCodigoOTP(): string {
 export default function RegistroPage() {
   const navigate = useNavigate();
   const cameraRef = useRef<CameraCaptureHandle>(null);
+  const envioEnCursoRef = useRef(false);
 
   // ─── Estado del wizard ──────────────────────────────────────────
   const [paso, setPaso] = useState<Paso>("datos");
@@ -47,15 +61,57 @@ export default function RegistroPage() {
   const [nombres, setNombres] = useState("");
   const [apellidos, setApellidos] = useState("");
   const [correo, setCorreo] = useState("");
+  const [consultaCorreo, setConsultaCorreo] = useState<{
+    correo: string;
+    estado: "consultando" | "disponible" | "registrado" | "error";
+  } | null>(null);
+  const correoNormalizado = correo.trim().toLowerCase();
+  const estadoCorreo = consultaCorreo?.correo === correoNormalizado ? consultaCorreo.estado : null;
+
+  useEffect(() => {
+    if (correoNormalizado.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoNormalizado)) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setConsultaCorreo({ correo: correoNormalizado, estado: "consultando" });
+      try {
+        const respuesta = await comprobarCorreo(correoNormalizado, controller.signal);
+        if (controller.signal.aborted) return;
+        setConsultaCorreo({
+          correo: correoNormalizado,
+          estado: respuesta.codigoS !== 200 || typeof respuesta.existe !== "boolean"
+            ? "error" : respuesta.existe ? "registrado" : "disponible",
+        });
+      } catch {
+        if (!controller.signal.aborted) setConsultaCorreo({ correo: correoNormalizado, estado: "error" });
+      }
+    }, 500);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [correoNormalizado]);
   const [telefono, setTelefono] = useState("");
+  const [paisTelefono, setPaisTelefono] = useState<CountryCode>("GT");
+  const ejemploTelefono = getExampleNumber(paisTelefono, ejemplosTelefono)?.formatNational();
+  const telefonoValido = validarTelefono(telefono, paisTelefono);
+  const ayudaTelefono = paisTelefono === "GT"
+    ? ""
+    : `Ingresa tu número nacional, sin +${getCountryCallingCode(paisTelefono)}.${ejemploTelefono ? ` Ejemplo: ${ejemploTelefono}.` : ""}`;
   const [nickname, setNickname] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [confirmacion, setConfirmacion] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
+  const [rostro, setRostro] = useState("");
+  const [solicitudRostro, setSolicitudRostro] = useState("");
+  const [errorRostro, setErrorRostro] = useState("");
+  const [segmentando, setSegmentando] = useState(false);
+  const [temaCredencial, setTemaCredencial] = useState("AZUL");
+  const [registrado, setRegistrado] = useState(false);
+  const [fotoEditada, setFotoEditada] = useState("");
   const [foto, setFoto] = useState("");
 
   // ─── Paso 2: verificación por código ────────────────────────────
-  const [canal, setCanal] = useState<CanalVerificacion>("EMAIL");
+  const [canal, setCanal] = useState<Exclude<CanalVerificacion, "AMBOS">>("EMAIL");
   const [codigoEsperado, setCodigoEsperado] = useState<string>("");
   const [codigoIngresado, setCodigoIngresado] = useState("");
   const [codigoEnviadoEn, setCodigoEnviadoEn] = useState<number | null>(null);
@@ -83,26 +139,34 @@ export default function RegistroPage() {
   }, [codigoEnviadoEn, codigoVerificado]);
 
   // ─── Paso 1: handlers ───────────────────────────────────────────
+  async function prepararRostro(imagen: string) {
+    setFoto(imagen); setRostro(""); setFotoEditada(""); setSolicitudRostro(""); setError(""); setErrorRostro(""); setSegmentando(true);
+    try {
+      const r = await comprasRequest<{ solicitudRostro: string; rostroBase64: string; mime: string }>('/registro/rostro', {method:'POST',body:JSON.stringify({fotoOriginalBase64:stripBase64Prefix(imagen)}),signal:AbortSignal.timeout(30000)});
+      setSolicitudRostro(r.solicitudRostro); setRostro(`data:${r.mime};base64,${r.rostroBase64}`);
+    } catch(e) { const detalle=(e as Error).message; setErrorRostro((e as Error).name === 'TimeoutError' ? 'No pudimos preparar la foto a tiempo. Toma otra fotografía para volver a intentarlo.' : detalle === 'Pedido no disponible.' ? 'El backend no tiene disponible la preparación de fotos. Reinicia el backend actualizado y toma otra fotografía.' : `No pudimos preparar tu foto: ${detalle}`); }
+    finally { setSegmentando(false); }
+  }
   function capturarFoto() {
+    if(segmentando)return;
     const imagen = cameraRef.current?.capturar();
-    if (!imagen) {
-      setError("Primero activa la cámara.");
-      return;
-    }
-    setFoto(imagen);
-    setError("");
+    if (!imagen) { setError("Primero activa la cámara."); return; }
+    void prepararRostro(imagen);
   }
 
   function validarPaso1(): string | null {
     if (!nombres.trim() || !apellidos.trim()) return "Nombres y apellidos son obligatorios.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return "Ingresa un correo válido.";
+    if (estadoCorreo === "registrado") return "Este correo ya está registrado. Inicia sesión o utiliza otro correo.";
+    if (correo.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) return "Ingresa un correo válido.";
     if (!nickname.trim()) return "El nombre de usuario es obligatorio.";
-    if (contrasena.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
+    if (!validarPassword(contrasena)) return REGLA_PASSWORD;
     if (contrasena !== confirmacion) return "Las contraseñas no coinciden.";
     if (!fechaNacimiento) return "La fecha de nacimiento es obligatoria.";
     if (!foto) return "Debes tomar una fotografía.";
-    if (!/^\+?[0-9 ()-]{8,25}$/.test(telefono.trim()) || telefono.replace(/\D/g, "").length < 8 || telefono.replace(/\D/g, "").length > 15) {
-      return "Ingresa un número de teléfono válido (incluye código de país).";
+    if (segmentando) return "Estamos preparando tu fotografía automáticamente. Espera un momento.";
+    if (!solicitudRostro || !fotoEditada) return errorRostro || "Toma una fotografía para preparar tu carnet automáticamente.";
+    if (!telefonoValido) {
+      return `Ingresa un teléfono válido para ${nombresPaises.of(paisTelefono)}. ${ayudaTelefono}`;
     }
     return null;
   }
@@ -116,6 +180,7 @@ export default function RegistroPage() {
       return;
     }
     setPaso("verificar");
+    void enviarCodigo();
   }
 
   function volverAPaso1() {
@@ -124,10 +189,15 @@ export default function RegistroPage() {
     setMensaje("");
     setCodigoIngresado("");
     setCodigoVerificado(false);
+    setCodigoEsperado("");
+    setCodigoEnviadoEn(null);
+    setSegundosRestantes(0);
   }
 
   // ─── Paso 2: handlers ───────────────────────────────────────────
   async function enviarCodigo() {
+    if (envioEnCursoRef.current) return;
+    envioEnCursoRef.current = true;
     setError("");
     setMensaje("");
     setCodigoIngresado("");
@@ -135,34 +205,35 @@ export default function RegistroPage() {
     const nuevoCodigo = generarCodigoOTP();
     const payload = {
       codigo: nuevoCodigo,
-      correo: correo.trim(),
-      telefono: telefono.trim() || undefined,
+      correo: correo.trim().toLowerCase(),
+      telefono: normalizarTelefono(telefono, paisTelefono),
       canal,
     };
-    console.log("[RegistroPage] enviarCodigo() → payload:", payload);
-
-    setCodigoEsperado(nuevoCodigo);
-    setCodigoEnviadoEn(Date.now());
+    setCodigoEsperado("");
+    setCodigoEnviadoEn(null);
+    setSegundosRestantes(0);
     setCodigoVerificado(false);
 
     setEnviandoCodigo(true);
     try {
       const respuesta = await enviarCodigoVerificacion(payload);
-      console.log("[RegistroPage] enviarCodigo() ← respuesta:", respuesta);
-
-      if (respuesta.codigoS !== 200 && !respuesta.emailEnviado && !respuesta.whatsAppEnviado) {
+      if (!respuesta.emailEnviado && !respuesta.whatsAppEnviado) {
         throw new Error(respuesta.mensaje || `Error ${respuesta.codigoS}`);
       }
+
+      setCodigoEsperado(nuevoCodigo);
+      setCodigoEnviadoEn(Date.now());
+      setSegundosRestantes(MINUTOS_EXPIRACION * 60);
 
       const canalesEnviados: string[] = [];
       if (respuesta.emailEnviado) canalesEnviados.push("correo");
       if (respuesta.whatsAppEnviado) canalesEnviados.push("WhatsApp");
 
       const canalesFallidos: string[] = [];
-      if ((canal === "EMAIL" || canal === "AMBOS") && !respuesta.emailEnviado) {
+      if (canal === "EMAIL" && !respuesta.emailEnviado) {
         canalesFallidos.push("correo");
       }
-      if ((canal === "WHATSAPP" || canal === "AMBOS") && !respuesta.whatsAppEnviado) {
+      if (canal === "WHATSAPP" && !respuesta.whatsAppEnviado) {
         canalesFallidos.push("WhatsApp");
       }
 
@@ -178,6 +249,7 @@ export default function RegistroPage() {
       setCodigoEnviadoEn(null);
       setError(err instanceof Error ? err.message : "No se pudo enviar el código.");
     } finally {
+      envioEnCursoRef.current = false;
       setEnviandoCodigo(false);
     }
   }
@@ -213,15 +285,19 @@ export default function RegistroPage() {
     try {
       const fotoBase64 = stripBase64Prefix(foto);
       const resultado = await registrarComprador({
+        solicitudRostro,
+        temaCredencial,
         nombres: nombres.trim(),
-        telefono: telefono.trim(),
+        telefono: normalizarTelefono(telefono, paisTelefono),
         apellidos: apellidos.trim(),
-        correo: correo.trim(),
+        correo: correo.trim().toLowerCase(),
         contrasena,
         fechaNacimiento,
         nickname: nickname.trim(),
+        notificaEmail: true,
+        notificaWhatsapp: false,
         fotoOriginalBase64: fotoBase64,
-        fotoEditadaBase64: fotoBase64,
+        fotoEditadaBase64: stripBase64Prefix(fotoEditada),
       });
 
       if (resultado.codigoS !== 200) {
@@ -229,6 +305,7 @@ export default function RegistroPage() {
       }
 
       setMensaje(resultado.mensaje);
+      setRegistrado(true);
       cameraRef.current?.apagar();
     } catch (err) {
       setError(
@@ -245,6 +322,8 @@ export default function RegistroPage() {
     const s = (seg % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   }
+
+  if (registrado) return <main className="mx-auto max-w-xl space-y-5 p-8"><h1 className="text-2xl font-bold">Tu cuenta está creada</h1><p role="status">{mensaje}</p><p>Revisa tu correo y los medios de notificación seleccionados. El QR del PDF se usa en Acceso con credencial. También puedes verla en Mi perfil.</p><button onClick={()=>navigate('/login/carnet')} className="rounded-lg bg-amber-500 p-3">Acceder con mi credencial</button><button onClick={()=>navigate('/login')} className="ml-3 rounded-lg border p-3">Entrar con contraseña</button></main>;
 
   // ─── Render ─────────────────────────────────────────────────────
   return (
@@ -320,17 +399,56 @@ export default function RegistroPage() {
                 label="Correo electrónico"
                 type="email"
                 value={correo}
-                onChange={setCorreo}
+                onChange={(valor) => {
+                  setCorreo(valor);
+                  if (valor.trim().toLowerCase() !== correoNormalizado) setConsultaCorreo(null);
+                }}
                 autoComplete="email"
               />
-              <Campo
-                id="telefono"
-                label="Teléfono (con código de país, ej. +502 1234 5678)"
-                type="tel"
-                value={telefono}
-                onChange={setTelefono}
-                autoComplete="tel"
-              />
+              {estadoCorreo && (
+                <p role="status" className={`text-xs ${estadoCorreo === "registrado" ? "text-red-700" : estadoCorreo === "disponible" ? "text-emerald-700" : "text-slate-600"}`}>
+                  {estadoCorreo === "consultando" && "Comprobando correo..."}
+                  {estadoCorreo === "registrado" && "Este correo ya está registrado. Inicia sesión o utiliza otro correo."}
+                  {estadoCorreo === "disponible" && "Correo disponible para registrarte."}
+                  {estadoCorreo === "error" && "No se pudo comprobar el correo. Se revisará al continuar."}
+                </p>
+              )}
+              <div className="space-y-2">
+                <label htmlFor="telefono" className="block text-sm font-medium text-slate-700">Teléfono</label>
+                <div className="flex overflow-hidden rounded-xl border border-slate-300 focus-within:border-amber-500">
+                  <div className="relative flex shrink-0 items-center gap-1 border-r border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 hover:bg-slate-100 focus-within:ring-2 focus-within:ring-inset focus-within:ring-amber-500">
+                    <span aria-hidden="true">+{getCountryCallingCode(paisTelefono)}</span>
+                    <ChevronDown aria-hidden="true" className="h-4 w-4" />
+                    <select
+                      id="pais-telefono"
+                      aria-label="País y código telefónico"
+                      title={`Cambiar país: ${nombresPaises.of(paisTelefono)}`}
+                      value={paisTelefono}
+                      onChange={(event) => setPaisTelefono(event.target.value as CountryCode)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    >
+                      {paisesTelefono.map((pais) => <option key={pais.codigo} value={pais.codigo}>{pais.nombre} (+{pais.prefijo})</option>)}
+                    </select>
+                  </div>
+                  <input
+                    id="telefono"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel-national"
+                    required
+                    value={telefono}
+                    onChange={(event) => setTelefono(event.target.value)}
+                    placeholder={ejemploTelefono}
+                    aria-describedby="telefono-ayuda telefono-estado"
+                    aria-invalid={!!telefono && !telefonoValido}
+                    className="min-w-0 flex-1 px-3 py-2.5 text-sm outline-none"
+                  />
+                </div>
+                <p id="telefono-ayuda" className="text-xs text-slate-600">{ayudaTelefono}</p>
+                <p id="telefono-estado" role="status" className={`text-xs ${telefonoValido ? "text-emerald-700" : "text-red-700"}`}>
+                  {telefono && (telefonoValido ? "El número cumple el formato del país seleccionado." : "Revisa la cantidad de dígitos y el formato para el país seleccionado.")}
+                </p>
+              </div>
               <Campo
                 id="nickname"
                 label="Nombre de usuario"
@@ -354,6 +472,12 @@ export default function RegistroPage() {
                 autoComplete="new-password"
                 minLength={8}
               />
+              <p className="text-xs text-slate-600">{REGLA_PASSWORD}</p>
+              {contrasena && (
+                <p aria-live="polite" className={`text-xs ${validarPassword(contrasena) ? "text-emerald-700" : "text-amber-700"}`}>
+                  {validarPassword(contrasena) ? "La contraseña cumple los requisitos." : "Contraseña débil: revisa los requisitos."}
+                </p>
+              )}
               <Campo
                 id="confirmacion"
                 label="Confirmar contraseña"
@@ -373,12 +497,17 @@ export default function RegistroPage() {
               <button
                 type="button"
                 onClick={capturarFoto}
+                disabled={segmentando}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400 px-4 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-50"
               >
                 <Camera className="h-4 w-4" />
-                Tomar fotografía
+                {segmentando ? "Preparando fotografía…" : foto ? "Tomar otra fotografía" : "Tomar fotografía"}
               </button>
 
+              {segmentando && <p role="status" className="text-sm">Detectando y segmentando tu rostro…</p>}
+              {errorRostro && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{errorRostro}</p>}
+              {rostro && <EditorFotoCredencial segmentada original={rostro} onChange={setFotoEditada} />}
+              {fotoEditada && <VistaPreviaCarnet foto={fotoEditada} nickname={nickname} tema={temaCredencial} onTema={setTemaCredencial} />}
               {foto && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-slate-700">
@@ -395,10 +524,10 @@ export default function RegistroPage() {
               <div className="rounded-xl bg-slate-50 p-4 text-xs text-slate-600">
                 <p className="font-medium text-slate-700">Canal de verificación</p>
                 <p className="mt-1">
-                  Te enviaremos un código de 6 dígitos para confirmar tu cuenta. Puedes recibirlo por
-                  correo, WhatsApp o ambos.
+                  Te enviaremos un código de 6 dígitos para confirmar tu cuenta. Elige si deseas recibirlo por
+                  correo o WhatsApp.
                 </p>
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <CanalOpcion
                     icono={<Mail className="h-4 w-4" />}
                     titulo="Correo"
@@ -411,12 +540,6 @@ export default function RegistroPage() {
                     activo={canal === "WHATSAPP"}
                     onClick={() => setCanal("WHATSAPP")}
                   />
-                  <CanalOpcion
-                    icono={<ShieldCheck className="h-4 w-4" />}
-                    titulo="Ambos"
-                    activo={canal === "AMBOS"}
-                    onClick={() => setCanal("AMBOS")}
-                  />
                 </div>
               </div>
 
@@ -428,9 +551,10 @@ export default function RegistroPage() {
 
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400"
+                disabled={segmentando || !solicitudRostro || !fotoEditada}
+                className="disabled:opacity-50 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400"
               >
-                Continuar a verificación
+                {segmentando ? "Preparando tu carnet…" : "Continuar a verificación"}
                 <ArrowRight className="h-4 w-4" />
               </button>
 
@@ -469,7 +593,7 @@ export default function RegistroPage() {
                 {telefono && (
                   <div>
                     <dt className="text-xs uppercase tracking-wide text-slate-400">Teléfono</dt>
-                    <dd className="font-medium text-slate-800">{telefono}</dd>
+                    <dd className="font-medium text-slate-800">{normalizarTelefono(telefono, paisTelefono)}</dd>
                   </div>
                 )}
                 <div className="sm:col-span-2">
@@ -477,7 +601,6 @@ export default function RegistroPage() {
                   <dd className="font-medium text-slate-800">
                     {canal === "EMAIL" && "Correo electrónico"}
                     {canal === "WHATSAPP" && "WhatsApp"}
-                    {canal === "AMBOS" && "Correo electrónico y WhatsApp"}
                   </dd>
                 </div>
               </dl>
@@ -488,8 +611,6 @@ export default function RegistroPage() {
                 <div className="rounded-full bg-amber-200 p-2 text-amber-800">
                   {canal === "WHATSAPP" ? (
                     <MessageCircle className="h-5 w-5" />
-                  ) : canal === "AMBOS" ? (
-                    <ShieldCheck className="h-5 w-5" />
                   ) : (
                     <Mail className="h-5 w-5" />
                   )}
@@ -499,7 +620,7 @@ export default function RegistroPage() {
                     Código de verificación
                   </h3>
                   <p className="mt-1 text-xs text-slate-600">
-                    Genera un código de 6 dígitos y te lo enviaremos al canal seleccionado.
+                    El código de 6 dígitos se envía automáticamente al canal seleccionado.
                     Caduca en {MINUTOS_EXPIRACION} minutos.
                   </p>
                 </div>
@@ -514,18 +635,14 @@ export default function RegistroPage() {
                 >
                   {enviandoCodigo ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : codigoEsperado && segundosRestantes > 0 ? (
-                    <RotateCcw className="h-4 w-4" />
                   ) : (
-                    <Send className="h-4 w-4" />
+                    <RotateCcw className="h-4 w-4" />
                   )}
-                  {codigoEsperado && segundosRestantes > 0
-                    ? `Reenviar en ${formatoTiempo(segundosRestantes)}`
-                    : enviandoCodigo
+                  {enviandoCodigo
                     ? "Enviando..."
-                    : codigoEsperado
-                    ? "Reenviar código"
-                    : "Enviar código"}
+                    : codigoEsperado && segundosRestantes > 0
+                    ? `Reenviar en ${formatoTiempo(segundosRestantes)}`
+                    : "Reenviar código"}
                 </button>
 
                 {codigoEsperado && segundosRestantes > 0 && (
@@ -590,7 +707,7 @@ export default function RegistroPage() {
               <button
                 type="button"
                 onClick={volverAPaso1}
-                disabled={cargando}
+                disabled={cargando || enviandoCodigo}
                 className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
               >
                 <ArrowLeft className="h-4 w-4" />

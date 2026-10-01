@@ -2,6 +2,10 @@ namespace FamKon_store_api.Models.DTOs
 {
     public class RegistroRequest
     {
+        public bool NotificaEmail { get; set; } = true;
+        public bool NotificaWhatsapp { get; set; }
+        public string SolicitudRostro { get; set; } = "";
+        public string TemaCredencial { get; set; } = "AZUL";
         public string Nombres { get; set; } = string.Empty;
         public string Apellidos { get; set; } = string.Empty;
         public string Telefono { get; set; } = string.Empty;

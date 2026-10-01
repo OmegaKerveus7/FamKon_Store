@@ -1,0 +1,89 @@
+================================================================================
+  FAMKON.SITE — GUÍA DE CONFIGURACIÓN Y DESPLIEGUE
+  Frontend (Vite + React + Bun) + Backend (.NET 8) + Nginx + Docker
+  Droplet DigitalOcean + Dominio en Hostinger
+================================================================================
+
+ÚLTIMA ACTUALIZACIÓN: 2026-09-22
+IP DEL DROPLET: 24.144.102.159
+DOMINIO: famkon.site
+USUARIO SSH: root@FamKon-droplet
+
+
+================================================================================
+  1. ESTRUCTURA DE CARPETAS EN EL DROPLET
+================================================================================
+
+/root/
+├── Bakend_Store/
+│   ├── docker-compose.yml
+│   └── api/
+│       ├── Dockerfile.dev
+│       └── publish/
+│           ├── FamKon_store_api.dll
+│           └── ... (resto de dependencias)
+│
+└── Frontend_Store/
+    ├── docker-compose.yml
+    └── front/
+        ├── Dockerfile.dev
+        └── sitio_web/
+            ├── package.json
+            ├── bun.lock
+            ├── vite.config.ts
+            ├── index.html
+            ├── src/
+            └── ...
+
+
+================================================================================
+  2. PUERTOS Y SERVICIOS
+================================================================================
+
+SERVICIO              CONTENEDOR                     IMAGEN
+──────────────────────────────────────────────────────────────────────
+API .NET              cont-famkon-store-api          img-famkon-store-api:1
+Frontend Vite/Bun     cont-famkon-store-frontend     img-famkon-store-frontend:1
+Oracle XE (BD)        (local en droplet:1521)        gvenzl/oracle-xe:21-slim
+Nginx (host, sistema) —                              nginx/1.28.3 (Ubuntu)
+
+
+PUERTO HOST   PUERTO CONTENEDOR   SERVICIO
+──────────────────────────────────────────────────────
+5299          8080                API .NET
+5147          5147                Frontend Vite (dev server)
+80            80                  Nginx (proxy a API y Frontend)
+443           443                 Nginx HTTPS (pendiente Certbot)
+
+
+================================================================================
+  3. ARCHIVOS DEL FRONTEND (Windows → droplet)
+================================================================================
+
+3.1  FRONTEND_STORE/FRONT/SITIO_WEB/VITE.CONFIG.TS
+─────────────────────────────────────────────────
+Este archivo debe verse EXACTAMENTE así:
+
+```ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    host: "0.0.0.0",
+    port: 5147,
+    strictPort: true,
+    allowedHosts: [
+      "famkon.site",
+      "www.famkon.site",
+      "localhost",
+      "127.0.0.1",
+      "24.144.102.159",
+    ],
+    watch: {
+      usePolling: true,
+    },
+  },
+});

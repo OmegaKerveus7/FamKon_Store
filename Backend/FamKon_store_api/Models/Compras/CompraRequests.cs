@@ -9,6 +9,7 @@ public class DireccionCompra {
     [StringLength(300)] public string? ReferenciaEntrega { get; set; }
 }
 public class CrearCompraRequest : DireccionCompra {
+    [StringLength(8192)] public string? RecaptchaToken { get; set; }
     [Range(1,long.MaxValue)] public long IdCarrito { get; set; }
     [Range(1,2)] public int IdModalidadEntrega { get; set; }
     [Required, RegularExpression("^(EFECTIVO|TARJETA)$")] public string MetodoPago { get; set; } = "EFECTIVO";

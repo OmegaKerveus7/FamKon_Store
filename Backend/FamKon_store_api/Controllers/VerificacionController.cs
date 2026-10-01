@@ -10,15 +10,18 @@ namespace FamKon_store_api.Controllers
     {
         private const int MinutosExpiracion = 5;
 
+        private readonly UsuarioService _usuarioService;
         private readonly EmailService _emailService;
         private readonly WhatsAppService _whatsAppService;
         private readonly ILogger<VerificacionController> _logger;
 
         public VerificacionController(
+            UsuarioService usuarioService,
             EmailService emailService,
             WhatsAppService whatsAppService,
             ILogger<VerificacionController> logger)
         {
+            _usuarioService = usuarioService;
             _emailService = emailService;
             _whatsAppService = whatsAppService;
             _logger = logger;
@@ -64,6 +67,25 @@ namespace FamKon_store_api.Controllers
                     Mensaje = "El teléfono es obligatorio para el canal WHATSAPP."
                 });
             }
+
+            if (!RegistroValidacion.CorreoValido(request.Correo))
+                return Ok(new EnviarCodigoResponse { CodigoS = 400, Mensaje = "Ingresa un correo válido." });
+            if ((canal == CanalVerificacion.WHATSAPP || canal == CanalVerificacion.AMBOS) &&
+                !RegistroValidacion.TelefonoValido(request.Telefono))
+                return Ok(new EnviarCodigoResponse { CodigoS = 400, Mensaje = "Ingresa un teléfono válido con código de país (ej. +502 4567 8901)." });
+
+            try
+            {
+                if (await _usuarioService.CorreoExisteAsync(request.Correo))
+                    return Ok(new EnviarCodigoResponse { CodigoS = 409, Mensaje = "Este correo ya está registrado. Inicia sesión o utiliza otro correo." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error comprobando correo antes de enviar código");
+                return Ok(new EnviarCodigoResponse { CodigoS = 503, Mensaje = "No se pudo comprobar el correo. Intenta de nuevo." });
+            }
+            request.Correo = request.Correo.Trim().ToLowerInvariant();
+            request.Telefono = RegistroValidacion.NormalizarTelefono(request.Telefono);
 
             // Ambos envíos empiezan juntos: un SMTP lento no bloquea WhatsApp.
             var emailTask = canal == CanalVerificacion.EMAIL || canal == CanalVerificacion.AMBOS

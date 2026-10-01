@@ -9,7 +9,8 @@ namespace FamKon_store_api.Services;
 public class CompraService(DBContext db) {
     public async Task<OracleConnection> Abrir(long? actor=null) {
         var c=db.CreateConnection();
-        try { await db.OpenConnectionAsync(c); c.ClientId=actor?.ToString() ?? "RECURRENTE"; return c; }
+        try { using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(15)); await c.OpenAsync(timeout.Token); c.ClientId=actor?.ToString() ?? "RECURRENTE"; return c; }
+        catch (OperationCanceledException) { c.Dispose(); throw new InvalidOperationException("La base de datos tardó demasiado en responder. Intenta nuevamente en unos momentos."); }
         catch { c.Dispose(); throw; }
     }
     public static OracleCommand Comando(OracleConnection c,string sql,params (string,object?)[] args) {
@@ -86,7 +87,16 @@ public class CompraService(DBContext db) {
             using var cmd=Comando(c,"PKG_COMPRA."+procedimiento,args); cmd.CommandType=CommandType.StoredProcedure;
             OracleParameter? output=null;
             if(procedimiento=="CREAR") { output=new("O_PEDIDO",OracleDbType.Int64){Direction=ParameterDirection.Output};cmd.Parameters.Add(output); }
-            await cmd.ExecuteNonQueryAsync(); var id=output is null?0:((OracleDecimal)output.Value).ToInt64(); tx.Commit(); return id;
+            await cmd.ExecuteNonQueryAsync(); var id=output is null?0:((OracleDecimal)output.Value).ToInt64();
+            if(procedimiento is "CREAR" or "CONFIRMAR_PAGO") {
+                var pedidoId=id;
+                if(procedimiento=="CONFIRMAR_PAGO") {
+                    using var lookup=Comando(c,"SELECT ID_PEDIDO FROM PAGO WHERE ID_CHECKOUT_PROVEEDOR=:checkout",("checkout",args.First(a=>a.Item1=="P_CHECKOUT").Item2));
+                    pedidoId=Convert.ToInt64(await lookup.ExecuteScalarAsync());
+                }
+                await ConstanciaEnvio.Encolar(c,pedidoId);
+            }
+            tx.Commit(); return id;
         } catch {tx.Rollback();throw;}
     }
     public Task<long> Crear(long actor,CrearCompraRequest r,string entorno)=>Ejecutar(actor,"CREAR",("P_ACTOR",actor),("P_CARRITO",r.IdCarrito),("P_MODALIDAD",r.IdModalidadEntrega),("P_TELEFONO",r.TelefonoContacto),("P_ALTERNO",r.TelefonoAlterno),("P_DEPARTAMENTO",r.Departamento),("P_MUNICIPIO",r.Municipio),("P_DIRECCION",r.DireccionEntrega),("P_REFERENCIA",r.ReferenciaEntrega),("P_METODO",r.MetodoPago),("P_ENTORNO",entorno));

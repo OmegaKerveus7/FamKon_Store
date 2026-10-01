@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import IndexPage from "./pages/IndexPage";
 import LoginPage from "./pages/LoginPage";
+import RecuperarPasswordPage from "./pages/RecuperarPasswordPage";
 import FacialLoginPage from "./pages/FacialLoginPage";
 import CarnetLoginPage from "./pages/CarnetLoginPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -30,7 +31,8 @@ import DashboardLayout from "./components/DashboardLayout";
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { usuario } = useAuth();
-  if (!usuario) return <Navigate to="/login" replace />;
+  const location = useLocation();
+  if (!usuario) return <Navigate to="/login" state={{ volverA: location.pathname + location.search }} replace />;
   return children;
 }
 
@@ -40,6 +42,7 @@ export default function App() {
       {/* Rutas publicas (sin dashboard) */}
       <Route path="/" element={<IndexPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/recuperar-contrasena" element={<RecuperarPasswordPage />} />
       <Route path="/registro" element={<RegistroPage />} />
       <Route path="/login/facial" element={<FacialLoginPage />} />
       <Route path="/login/carnet" element={<CarnetLoginPage />} />

@@ -2,11 +2,49 @@ import EstadoConstancia from '../components/EstadoConstancia';
 import { crearConstancia, puedeDescargarConstancia } from '../domain/constancia';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Clock3, Download, MapPin, Package, Phone, RefreshCw, Search, Store, Truck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Clock3, Download, MapPin, Package, Phone, QrCode, RefreshCw, Search, Store, Truck, X } from 'lucide-react';
 import { configCompra, descargarCompra, detalleCompra, fotoCompra, listarCompras, verificarPago, type Compra, type ConfigCompra, type DetalleCompra, type VistaCompra } from '../api/compras';
 import { ESTADOS_COMPRA, ESTADOS_PAGO, fechaCompra, moneda, puedePagar } from '../domain/compras';
 import CompraAcciones, { botonSecundario } from '../components/CompraAcciones';
 import { campoCompra } from '../components/DireccionCompraFields';
+import QrScanner from '../components/QrScanner';
+
+const PASOS_DOMICILIO = [
+  { estados: ['GENERADO', 'PAGO_PENDIENTE', 'PAGO_CONFIRMADO'], etiqueta: 'Confirmado' },
+  { estados: ['EN_ELABORACION'], etiqueta: 'Preparación' },
+  { estados: ['LISTO_ENTREGA'], etiqueta: 'Listo' },
+  { estados: ['EN_RUTA'], etiqueta: 'En ruta' },
+  { estados: ['ENTREGADO'], etiqueta: 'Entregado' },
+];
+const PASOS_TIENDA = [
+  { estados: ['GENERADO', 'PAGO_PENDIENTE', 'PAGO_CONFIRMADO'], etiqueta: 'Confirmado' },
+  { estados: ['EN_ELABORACION'], etiqueta: 'Preparación' },
+  { estados: ['LISTO_RECOGER'], etiqueta: 'Listo' },
+  { estados: ['RECOGIDO'], etiqueta: 'Recogido' },
+];
+
+function ProgresoPedido({ pedido }: { pedido: Compra }) {
+  const pasos = pedido.idModalidadEntrega === 1 ? PASOS_TIENDA : PASOS_DOMICILIO;
+  const actual = pasos.findIndex(paso => paso.estados.includes(pedido.estado));
+  const cancelado = pedido.estado === 'CANCELADO';
+  return <section aria-label="Progreso del pedido" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
+    <div className="mb-5 flex items-center justify-between gap-3">
+      <div><h2 className="font-bold text-slate-900">Estado de tu pedido</h2><p className="mt-1 text-xs text-slate-500">Sigue cada etapa hasta recibir tu compra.</p></div>
+      <Badge estado={pedido.estado} />
+    </div>
+    {cancelado ? <p className="rounded-xl bg-red-50 p-4 text-sm font-medium text-red-700">Este pedido fue cancelado.</p> : <ol className="grid grid-cols-1 gap-0 sm:grid-cols-[repeat(var(--steps),minmax(0,1fr))]" style={{ '--steps': pasos.length } as React.CSSProperties}>
+      {pasos.map((paso, indice) => {
+        const completado = actual >= 0 && indice <= actual;
+        const vigente = indice === actual;
+        return <li key={paso.etiqueta} className="relative flex gap-3 pb-4 last:pb-0 sm:block sm:pb-0 sm:text-center">
+          {indice < pasos.length - 1 && <span className={`absolute left-[15px] top-8 h-[calc(100%-1.5rem)] w-0.5 sm:left-1/2 sm:top-4 sm:h-0.5 sm:w-full ${indice < actual ? 'bg-orange-500' : 'bg-slate-200'}`} />}
+          <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 sm:mx-auto ${completado ? 'border-orange-500 bg-orange-500 text-white' : 'border-slate-200 bg-white text-slate-400'} ${vigente ? 'ring-4 ring-orange-100' : ''}`}>{completado ? <Check size={16} /> : indice + 1}</span>
+          <span className={`pt-1 text-sm sm:mt-3 sm:block sm:pt-0 ${vigente ? 'font-bold text-orange-700' : completado ? 'font-medium text-slate-700' : 'text-slate-400'}`}>{paso.etiqueta}</span>
+        </li>;
+      })}
+    </ol>}
+  </section>;
+}
 function Badge({ estado, pago = false }: { estado: string; pago?: boolean }) {
   const good = ['ENTREGADO', 'RECOGIDO', 'APROBADO', 'PAGADO_EFECTIVO'].includes(estado);
   const bad = ['CANCELADO', 'RECHAZADO', 'COMPRADOR_NO_ENCONTRADO', 'REEMBOLSO_PENDIENTE'].includes(estado);
@@ -24,6 +62,7 @@ export default function PedidosPage({ vista = 'cliente' }: { vista?: VistaCompra
   const [estado, setEstado] = useState(''); const [busqueda, setBusqueda] = useState(''); const [inputSearch, setInputSearch] = useState('');
   const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [refreshed, setRefreshed] = useState('');
   const [pagoAviso, setPagoAviso] = useState('');
+  const [mostrarQr, setMostrarQr] = useState(false); const [errorQr, setErrorQr] = useState('');
   const [foto, setFoto] = useState<number | null>(null); const requestNumber = useRef(0);
   const cargar = useCallback(async (signal?: AbortSignal, visible = false) => {
     const n = ++requestNumber.current; if (visible) setLoading(true);
@@ -54,6 +93,16 @@ export default function PedidosPage({ vista = 'cliente' }: { vista?: VistaCompra
   }
 
   const volver = () => { setParams({}); setDetail(null); };
+  function abrirDesdeQr(texto: string) {
+    try {
+      const url = new URL(texto, window.location.origin);
+      const id = Number(url.searchParams.get('pedido'));
+      if (url.origin !== window.location.origin || url.pathname !== '/comprador/tracking' || !Number.isSafeInteger(id) || id <= 0) throw new Error();
+      setMostrarQr(false); setErrorQr(''); setParams({ pedido: String(id) });
+    } catch {
+      setErrorQr('Este QR no corresponde al seguimiento de un pedido FamKon.');
+    }
+  }
   const heading = vista === 'cliente' ? 'Mis pedidos' : vista === 'admin' ? 'Gestión de pedidos' : 'Mis entregas';
   const subtitle = vista === 'cliente' ? 'Tu compra, paso a paso. Consultá aquí cada avance.' : vista === 'admin' ? 'Revisá las compras, coordiná la preparación y supervisá cada entrega.' : 'Tu ruta empieza aquí. Registrá cada entrega y su evidencia.';
   const p = detail?.pedido;
@@ -65,7 +114,8 @@ export default function PedidosPage({ vista = 'cliente' }: { vista?: VistaCompra
     {selected ? <>
       <button onClick={volver} className="flex items-center gap-2 text-sm font-semibold text-slate-600"><ArrowLeft size={16} />Volver al listado</button>
       {loading && !p ? <p role="status" className="rounded-2xl bg-white p-10">Cargando pedido…</p> : p && detail && <>
-        <section className="rounded-2xl bg-slate-900 p-6 text-white"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-widest text-slate-400">Seguimiento de orden</p><h2 className="mt-2 break-all text-2xl font-bold">{p.numeroPedido}</h2><p className="mt-2 text-sm text-slate-300">{fechaCompra(p.fechaPedido)} · {p.cliente}</p></div><Badge estado={p.estado} /></div><div className="mt-6 grid gap-4 border-t border-white/10 pt-5 sm:grid-cols-3"><div><p className="text-xs text-slate-400">Modalidad</p><p className="mt-1 flex items-center gap-2 font-semibold">{p.idModalidadEntrega === 1 ? <Store size={17} /> : <Truck size={17} />}{p.idModalidadEntrega === 1 ? 'Recoger en tienda' : 'Domicilio'}</p></div><div><p className="text-xs text-slate-400">Pago · {p.metodoPago === 'EFECTIVO' ? 'Efectivo' : 'Tarjeta'}</p><div className="mt-1"><Badge estado={p.estadoPago} pago /></div></div><div><p className="text-xs text-slate-400">Total del pedido</p><p className="mt-1 text-2xl font-bold text-amber-400">{moneda(p.total)}</p></div></div></section>
+        <section className="rounded-2xl bg-slate-900 p-5 text-white sm:p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-widest text-slate-400">Seguimiento de orden</p><h2 className="mt-2 break-all text-xl font-bold sm:text-2xl">{p.numeroPedido}</h2><p className="mt-2 text-sm text-slate-300">{fechaCompra(p.fechaPedido)} · {p.cliente}</p></div></div><div className="mt-6 grid gap-4 border-t border-white/10 pt-5 sm:grid-cols-3"><div><p className="text-xs text-slate-400">Modalidad</p><p className="mt-1 flex items-center gap-2 font-semibold">{p.idModalidadEntrega === 1 ? <Store size={17} /> : <Truck size={17} />}{p.idModalidadEntrega === 1 ? 'Recoger en tienda' : 'Domicilio'}</p></div><div><p className="text-xs text-slate-400">Pago · {p.metodoPago === 'EFECTIVO' ? 'Efectivo' : 'Tarjeta'}</p><div className="mt-1"><Badge estado={p.estadoPago} pago /></div></div><div><p className="text-xs text-slate-400">Total del pedido</p><p className="mt-1 text-2xl font-bold text-amber-400">{moneda(p.total)}</p></div></div></section>
+        <ProgresoPedido pedido={p} />
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-6">
             <CompraAcciones key={`${p.idPedido}-${vista}`} detail={detail} vista={vista} onChanged={() => cargar()} />
@@ -80,15 +130,17 @@ export default function PedidosPage({ vista = 'cliente' }: { vista?: VistaCompra
             <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="mb-3 flex items-center gap-2 font-bold"><MapPin size={18} className="text-amber-600" />{p.idModalidadEntrega === 1 ? 'Punto de recogida' : 'Destino'}</h2><p className="text-sm">{p.idModalidadEntrega === 1 ? config?.direccionTienda || 'Campus central' : p.direccionEntrega}</p><p className="mt-2 text-xs text-slate-500">{p.idModalidadEntrega === 1 ? config?.horario || 'Lunes a domingo, 8:00 a. m. a 5:00 p. m.' : [p.municipio, p.departamento].filter(Boolean).join(', ')}</p>{p.referenciaEntrega && <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{p.referenciaEntrega}</p>}<div className="mt-4 space-y-2">{[p.telefonoContacto, p.telefonoAlterno].filter(Boolean).map((t, i) => <a key={i} href={`tel:${t!.replace(/[^+\d]/g, '')}`} className="flex items-center gap-2 text-sm text-amber-700"><Phone size={15} />{t}{i === 1 ? ' (alterno)' : ''}</a>)}</div></section>
             <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="mb-3 font-bold">Resumen de compra</h2>{detail.productos.map((item, i) => <div key={i} className="flex justify-between gap-3 border-b border-slate-100 py-3 text-sm"><span>{item.cantidad} × {item.nombreProducto}</span><strong className="shrink-0">{moneda(item.subtotal)}</strong></div>)}<p className="mt-4 flex justify-between text-sm text-slate-500"><span>Envío</span><span>{moneda(p.cargoEntrega)}</span></p><p className="mt-3 flex justify-between font-bold"><span>Total</span><span>{moneda(p.total)}</span></p></section>
             {puedeDescargarConstancia(p) && <button disabled={generandoPdf} onClick={descargarPdf} className={`${botonSecundario} flex w-full items-center justify-center gap-2`}><Download size={16} />{generandoPdf ? 'Generando PDF…' : 'Constancia PDF con QR'}</button>}
-            {['ENTREGADO', 'RECOGIDO'].includes(p.estado) && <button onClick={() => descargar(`/compras/${p.idPedido}/comprobante?vista=${vista}`, `comprobante-${p.numeroPedido}.html`)} className={`${botonSecundario} flex w-full items-center justify-center gap-2`}><Download size={16} />Descargar comprobante</button>}
+            {['ENTREGADO', 'RECOGIDO'].includes(p.estado) && <button onClick={() => descargar(`/compras/${p.idPedido}/comprobante?vista=${vista}`, `comprobante-${p.numeroPedido}.html`)} className={`${botonSecundario} flex w-full items-center justify-center gap-2`}><Download size={16} />Comprobante imprimible</button>}
           </aside>
         </div>
       </>}
     </> : <>
-      <form onSubmit={e => { e.preventDefault(); setPagina(1); setBusqueda(inputSearch); }} className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white p-4"><div className="relative min-w-48 flex-1"><Search size={18} className="absolute left-3 top-3.5 text-slate-400" /><input aria-label="Buscar pedido" placeholder="Buscar por número o cliente…" value={inputSearch} onChange={e => setInputSearch(e.target.value)} className={`${campoCompra} !mt-0 pl-10`} /></div><select aria-label="Filtrar por estado" value={estado} onChange={e => { setEstado(e.target.value); setPagina(1); }} className={`${campoCompra} !mt-0 !w-auto`}><option value="">Todos los estados</option>{Object.entries(ESTADOS_COMPRA).map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select><button type="submit" className={botonSecundario}>Buscar</button></form>
+      {vista === 'cliente' && <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 to-slate-800 p-5 text-white shadow-sm sm:p-6"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-orange-300">Rastreo rápido</p><h2 className="mt-2 text-xl font-bold">¿Tienes el QR de tu compra?</h2><p className="mt-1 text-sm text-slate-300">Escanéalo para abrir el seguimiento al instante.</p></div><button type="button" onClick={() => { setErrorQr(''); setMostrarQr(true); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3 font-bold text-white transition hover:bg-orange-400"><QrCode size={20} />Escanear QR</button></div></section>}
+      <form onSubmit={e => { e.preventDefault(); setPagina(1); setBusqueda(inputSearch.trim()); }} className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto]"><div className="relative min-w-0"><Search size={18} className="absolute left-3 top-3.5 text-slate-400" /><input aria-label="Buscar pedido" placeholder={vista === 'cliente' ? 'Número de compra…' : 'Número de compra o cliente…'} value={inputSearch} onChange={e => setInputSearch(e.target.value)} className={`${campoCompra} !mt-0 pl-10`} /></div><select aria-label="Filtrar por estado" value={estado} onChange={e => { setEstado(e.target.value); setPagina(1); }} className={`${campoCompra} !mt-0 !w-full sm:!w-auto`}><option value="">Todos los estados</option>{Object.entries(ESTADOS_COMPRA).map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select><button type="submit" className={`${botonSecundario} min-h-11`}>Buscar</button></form>
       {loading ? <p role="status" className="rounded-2xl bg-white p-12 text-center text-slate-500">Cargando pedidos…</p> : pedidos.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center"><Package size={40} className="mx-auto mb-4 text-amber-400" /><h2 className="font-bold">{vista === 'repartidor' ? 'Sin entregas asignadas' : 'No hay pedidos para mostrar'}</h2><p className="mt-2 text-sm text-slate-500">{vista === 'cliente' ? 'Tus compras aparecerán aquí con su seguimiento.' : 'Los pedidos aparecerán aquí conforme avance la operación.'}</p>{vista === 'cliente' && <Link to="/comprador/catalogo" className="mt-4 inline-block font-semibold text-amber-700">Explorar catálogo</Link>}</div> : <div className="grid gap-4 md:grid-cols-2">{pedidos.map(order => <button key={order.idPedido} onClick={() => setParams({ pedido: String(order.idPedido) })} className="group rounded-2xl border border-slate-200 bg-white p-5 text-left transition hover:border-amber-400 hover:shadow-sm"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-slate-400">{fechaCompra(order.fechaPedido)}</span><Badge estado={order.estado} /></div><p className="mt-3 break-all text-base font-bold">{order.numeroPedido}</p><p className="mt-1 text-sm text-slate-500">{order.cliente} · {order.idModalidadEntrega === 1 ? 'Tienda FamKon' : 'Domicilio'}</p><div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4"><Badge estado={order.estadoPago} pago /><span className="flex items-center gap-3 font-bold">{moneda(order.total)}<ArrowRight size={16} className="text-amber-600" /></span></div></button>)}</div>}
       <div className="flex items-center justify-between gap-4 text-sm text-slate-500"><span>{total} pedidos · página {pagina}</span><div className="flex gap-2"><button disabled={pagina <= 1 || loading} onClick={() => setPagina(p => p - 1)} className={botonSecundario}>Anterior</button><button disabled={pagina * 20 >= total || loading} onClick={() => setPagina(p => p + 1)} className={botonSecundario}>Siguiente</button></div></div>
     </>}
     {refreshed && <p className="text-right text-xs text-slate-400">Actualizado a las {refreshed} · actualización automática cada 20 s</p>}
+    {mostrarQr && <div role="dialog" aria-modal="true" aria-labelledby="titulo-qr" className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"><div className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-lg sm:rounded-3xl sm:p-6"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-orange-600">Rastreo rápido</p><h2 id="titulo-qr" className="mt-1 text-xl font-bold text-slate-950">Escanear QR del pedido</h2></div><button type="button" aria-label="Cerrar lector QR" onClick={() => setMostrarQr(false)} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600"><X size={20} /></button></div><QrScanner onDetected={abrirDesdeQr} description="Coloca dentro del recuadro el QR incluido en tu comprobante de compra." />{errorQr && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{errorQr}</p>}</div></div>}
   </div>;
 }

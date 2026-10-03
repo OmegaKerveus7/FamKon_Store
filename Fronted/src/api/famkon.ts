@@ -85,6 +85,7 @@ export interface Permiso {
 
 export interface PermisosResponse {
   codigoS: number;
+  mensaje?: string;
   permisos: Permiso[];
 }
 

@@ -1,7 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
-export default function QrScanner({ onDetected }: { onDetected: (text: string) => void }) {
+export default function QrScanner({
+ onDetected,
+ description = 'Coloca el código QR dentro del recuadro.',
+}: {
+ onDetected: (text: string) => void;
+ description?: string;
+}) {
  const id='qr-'+useId().replace(/:/g,'');
  const reader=useRef<Html5Qrcode|null>(null), callback=useRef(onDetected), busy=useRef(false), mounted=useRef(true);
  callback.current=onDetected;
@@ -25,7 +31,7 @@ export default function QrScanner({ onDetected }: { onDetected: (text: string) =
  }
  return <section className="space-y-3">
   <div id={id} className="min-h-[220px] w-full overflow-hidden rounded-xl bg-slate-50"/>
-  <p className="text-sm text-slate-600">Coloca el QR de tu carnet dentro del recuadro.</p>
+  <p className="text-sm text-slate-600">{description}</p>
   <div className="flex flex-wrap gap-3">
    {estado==='camara'?<button type="button" onClick={()=>void detener().then(()=>setEstado('inactivo'))} className="rounded-xl border px-4 py-2">Apagar cámara</button>:<button type="button" disabled={estado==='cargando'} onClick={()=>void activar()} className="rounded-xl bg-amber-500 px-4 py-2 disabled:opacity-50">{estado==='cargando'?'Preparando lector…':'Activar cámara'}</button>}
 

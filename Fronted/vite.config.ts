@@ -18,6 +18,8 @@ export default defineConfig(({ mode }) => {
         "localhost",
         "127.0.0.1",
         "24.144.102.159",
+        ".ngrok.io",
+        ".ngrok-free.app",
       ],
       watch: {
         usePolling: true,

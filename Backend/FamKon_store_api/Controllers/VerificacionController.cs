@@ -87,16 +87,27 @@ namespace FamKon_store_api.Controllers
             request.Correo = request.Correo.Trim().ToLowerInvariant();
             request.Telefono = RegistroValidacion.NormalizarTelefono(request.Telefono);
 
-            // Ambos envíos empiezan juntos: un SMTP lento no bloquea WhatsApp.
-            var emailTask = canal == CanalVerificacion.EMAIL || canal == CanalVerificacion.AMBOS
-                ? _emailService.EnviarCodigoVerificacionAsync(request.Correo, request.Codigo, MinutosExpiracion)
-                : Task.FromResult(false);
-            var whatsTask = canal == CanalVerificacion.WHATSAPP || canal == CanalVerificacion.AMBOS
-                ? _whatsAppService.EnviarCodigoVerificacionAsync(request.Telefono!, request.Codigo, MinutosExpiracion)
-                : Task.FromResult(false);
-            await Task.WhenAll(emailTask, whatsTask);
-            var emailOk = await emailTask;
-            var whatsOk = await whatsTask;
+            bool emailOk = false;
+            bool whatsOk = false;
+
+            try
+            {
+                // Ambos envíos empiezan juntos: un SMTP lento no bloquea WhatsApp.
+                var emailTask = canal == CanalVerificacion.EMAIL || canal == CanalVerificacion.AMBOS
+                    ? _emailService.EnviarCodigoVerificacionAsync(request.Correo, request.Codigo, MinutosExpiracion)
+                    : Task.FromResult(false);
+                var whatsTask = canal == CanalVerificacion.WHATSAPP || canal == CanalVerificacion.AMBOS
+                    ? _whatsAppService.EnviarCodigoVerificacionAsync(request.Telefono!, request.Codigo, MinutosExpiracion)
+                    : Task.FromResult(false);
+                await Task.WhenAll(emailTask, whatsTask);
+                emailOk = await emailTask;
+                whatsOk = await whatsTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enviando código de verificación. EmailOk={EmailOk}, WhatsOk={WhatsOk}", emailOk, whatsOk);
+                return Ok(new EnviarCodigoResponse { CodigoS = 500, Mensaje = "No se pudo enviar el código OTP. Revisa los logs del backend." });
+            }
 
             var canalesFallidos = new List<string>();
             if ((canal == CanalVerificacion.EMAIL || canal == CanalVerificacion.AMBOS) && !emailOk)

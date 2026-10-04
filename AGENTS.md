@@ -9,25 +9,20 @@ Tienda_Online_FamKon/
 ├── Backend/                    # ASP.NET Core 8 API (C#)
 │   └── FamKon_store_api/
 │       ├── BD/DBContext.cs     # Singleton Oracle connection
-│       ├── Controllers/        # API endpoints
+│       ├── Controllers/        # API endpoints (Auth, Tienda, Repartidor, Admin, etc.)
 │       ├── Models/             # Entidades y DTOs
-│       ├── Services/           # LoginService, JwtService, UsuarioService, BiometricService
+│       ├── Services/           # LoginService, JwtService, BiometricService, RepartidorService, etc.
+│       ├── Modules/Biometria/  # Lógica de reconocimiento facial
 │       ├── Program.cs          # Entry point
 │       └── appsettings.json    # Config (NO commitear - tiene secretos)
 ├── Fronted/                    # React 19 + TypeScript + Vite (Bun)
 │   └── src/
 │       ├── api/famkon.ts       # API client con JWT + interfaces de tienda
 │       ├── context/AuthContext  # Auth state + token storage + auto-refresh
-│       ├── pages/              # Componentes de página
-│       │   ├── LoginPage.tsx           # Login principal
-│       │   ├── RegistroPage.tsx        # Registro de comprador
-│       │   ├── HomePage.tsx            # Dashboard del comprador
-│       │   ├── CatalogoPage.tsx        # Catálogo de productos
-│       │   ├── ProductoDetallePage.tsx # Detalle de producto
-│       │   ├── CarritoPage.tsx         # Carrito de compras
-│       │   ├── TrackingPage.tsx        # Tracking de envío
-│       │   └── ...otras páginas
-│       └── components/         # Componentes reutilizables
+│       ├── modules/            # Modulos especializados
+│       │   └── biometria/     # AccesoFacialPage, EnrolamientoFacial, api
+│       ├── pages/              # Componentes de página (30+ páginas)
+│       └── components/         # Componentes reutilizables (20+ componentes)
 └── BD/                         # Scripts SQL Oracle
     └── 01 scrip/pkg/           # Paquetes PL/SQL (04_PACKAGES_TIENDA_ORACLE.sql)
 ```
@@ -132,6 +127,7 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - Passwords hasheados con SHA-256 en la BD (via PKG_SEGURIDAD o PKG_LOGIN)
 - JWT tokens de 10 minutos con auto-refresh cada 8 minutos
 - Auditoría en BITACORA_ACCESO via PKG_SEGURIDAD
+- reCAPTCHA v2 de Google integrado para protección contra bots
 
 ## Frontend
 
@@ -145,7 +141,7 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 
 Todas las rutas autenticadas se montan dentro de `<DashboardLayout>` (en `App.tsx`):
 
-- **Sidebar** (`components/Sidebar.tsx`) → menu lateral colapsable con grupos por rol/permiso (Compras, Entregas, Supervision, Administracion, Cuenta). Cada item se muestra solo si el usuario tiene el `codigoPermiso` o `codigoRol` correspondiente (definido en `components/dashboardMenu.ts`).
+- **Sidebar** (`components/Sidebar.tsx`) → menu lateral colapsable con grupos por rol/permiso (Compras, Entregas, Tracking, Supervision, Administracion, Cuenta). Cada item se muestra solo si el usuario tiene el `codigoPermiso` o `codigoRol` correspondiente (definido en `components/dashboardMenu.ts`).
 - **Topbar** (`components/Topbar.tsx`) → breadcrumb + boton hamburguesa + avatar con iniciales del nickname, badge con el rol principal y boton de notificaciones.
 - **DashboardLayout** (`components/DashboardLayout.tsx`) → arma el shell (`flex h-screen`) + `<Outlet />` para que cada ruta protegida renderice solo su contenido (no su propio header).
 - **DashboardPage** (`pages/DashboardPage.tsx`) → welcome del usuario con tarjetas agrupadas por modulo y permisos; los grupos solo aparecen si el usuario tiene los permisos para verlos.
@@ -173,82 +169,246 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 | `/` | IndexPage | No | Health check → redirect a /login |
 | `/login` | LoginPage | No | Login principal |
 | `/registro` | RegistroPage | No | Registro de comprador |
-| `/login/facial` | FacialLoginPage | No | Login facial (inactivo) |
+| `/recuperar-contrasena` | RecuperarPasswordPage | No | Recuperación de contraseña |
+| `/login/facial` | FacialLoginPage | No | Login facial (reconocimiento biométrico) |
 | `/login/carnet` | CarnetLoginPage | No | Login por QR/carnet |
-| `/inicio` | HomePage | **Sí** | Dashboard del comprador |
+| `/inicio` | DashboardPage | **Sí** | Dashboard principal |
+| `/perfil` | PerfilPage | **Sí** | Mi perfil + enrolamiento facial |
 | `/comprador/catalogo` | CatalogoPage | **Sí** | Catálogo de productos |
 | `/comprador/producto/:id` | ProductoDetallePage | **Sí** | Detalle de producto |
 | `/comprador/carrito` | CarritoPage | **Sí** | Carrito de compras |
-| `/comprador/tracking` | TrackingPage | **Sí** | Tracking de envío |
+| `/comprador/tracking` | TrackingPage | **Sí** | Mis pedidos |
+| `/comprador/historico` | TrackingPage | **Sí** | Histórico de pedidos |
+| `/comprador/pago/:id` | PagoPage | **Sí** | Formulario de pago |
+| `/comprador/checkout` | CheckoutPage | **Sí** | Confirmar pedido |
+| `/repartidor/asignados` | PedidosPage (vista=repartidor) | **Sí** | Pedidos asignados al repartidor |
+| `/entregas/tracking` | EntregasAdminPage | **Sí** | Tracking general (SUPERVISOR) |
+| `/supervisor` | SupervisorPage | **Sí** | Dashboard supervisor |
+| `/admin` | AdminPage | **Sí** | Dashboard administrador |
+| `/admin/pedidos` | PedidosPage (vista=admin) | **Sí** | Gestión de pedidos |
+| `/admin/usuarios` | UsuariosAdminPage | **Sí** | Gestor de usuarios |
+| `/admin/productos` | AdminProductosPage | **Sí** | Gestor de productos |
+| `/admin/catalogos` | AdminCatalogosPage | **Sí** | Gestión de catálogos |
+| `/admin/roles` | AdminRolesPage | **Sí** | Roles y permisos |
+| `/admin/bitacora` | AdminBitacoraPage | **Sí** | Bitácora de accesos |
+| `/admin/configuracion` | AdminConfiguracionPage | **Sí** | Configuración del sistema |
 
 ### Estado del Carrito
 - Conectado a `PKG_CARRITO` via `CarritoService.cs` + `TiendaController.cs`
 - Frontend usa `obtenerCarrito()`, `agregarAlCarritoAPI()`, `actualizarCantidadCarritoAPI()`, `eliminarDelCarritoAPI()`
 - Compatibilidad con localStorage: `obtenerCarritoLocal()`, `guardarCarritoLocal()`, `vaciarCarrito()`
 
+## Módulos Implementados
+
+### Módulo de Reconocimiento Facial (Biometría)
+- **Backend**: `BiometricService` + `RegistroRostroService` + `RegistroRostroController`
+- **Frontend**: `modules/biometria/AccesoFacialPage` + `EnrolamientoFacial`
+- **Servicios externos**:
+  - Segmentación: `https://biosys.daossystem.pro/Rostro/Segmentar`
+  - Verificación: `https://biosys.daossystem.pro/Rostro/Verificar`
+- El servicio de segmentación recibe el rostro A (base64) y devuelve la imagen ya segmentada.
+- El servicio de verificación compara la imagen segmentada almacenada en la BD con la nueva imagen segmentada del escaneo.
+- Flujo de registro facial: captura foto → segmenta → guarda token de solicitud → verificación en backend.
+
+### Módulo de Repartidor (Entregas)
+- **Backend**: `RepartidorController` + `RepartidorService`
+- **Endpoints**:
+  - `GET /api/famkon/repartidor/entregas` → Entregas asignadas
+  - `GET /api/famkon/repartidor/pedidos-disponibles` → Pedidos para asignar
+  - `POST /api/famkon/repartidor/asignar` → Asignar entrega
+  - `POST /api/famkon/repartidor/cambiar-estado` → Cambiar estado pedido
+  - `POST /api/famkon/repartidor/resultado` → Resultado entrega
+  - `POST /api/famkon/repartidor/evidencia` → Subir evidencia (foto)
+  - `GET /api/famkon/archivos/{id}` → Descargar archivo/evidencia
+
+### Módulo de Compras/Pedidos
+- **Backend**: `ComprasController` + `CompraService`
+- **Frontend**: `PagoPage`, `CheckoutPage`, `TrackingPage`
+- Estados de pedido: PENDIENTE → PAGO_CONFIRMADO → LISTO_ENTREGA → ENVIADO → ENTREGADO
+- Soporte para pago en efectivo (monto recibido del repartidor)
+
+### Módulo de Credenciales
+- **Backend**: `CredencialController` + `CredencialService` + `CredencialPdf`
+- **Frontend**: `MiCredencial`, `VistaPreviaCarnet`, `AvatarCredencial`, `EditorFotoCredencial`
+- Generación de credencial PDF con QR y foto del usuario
+
+### Módulo de Constancias
+- **Backend**: `ConstanciasController` + `ConstanciaPdf` + `ConstanciaEnvio`
+- **Frontend**: `EstadoConstancia`
+- Generación de constancias de envío en PDF
+
+### Módulo de Recuperación de Contraseña
+- **Backend**: `PasswordController` + `PasswordRecoveryService` + `PasswordRecoveryStore`
+- **Frontend**: `RecuperarPasswordPage`
+- Flujo: solicita correo → genera token → envía link por email → redefine contraseña
+
+### Módulo de Notificaciones
+- **Backend**: `EmailService` (Gmail SMTP) + `WhatsAppService` (WAWP API)
+- **Frontend**: `PreferenciasNotificacion` component
+- Soporta notificación por email y/o WhatsApp
+
+### Módulo de Archivos
+- **Backend**: `ArchivoService`
+- **Tabla**: `ARCHIVO` en Oracle
+- Tipos: EVIDENCIA_ENTREGA, FOTO_USUARIO, CREDENCIAL_PDF, etc.
+
 ## Estado Actual del Proyecto
 
 ### Backend (FUNCIONAL ✅)
-- **Login con JWT ya funciona** en el backend
-- **Registro de usuarios funciona** vía `PKG_SEGURIDAD.SP_CREAR_USUARIO`
-- El AuthController genera y valida tokens JWT correctamente
+- **Login con JWT** funciona (correo/nickname + password)
+- **Login facial** implementado via `RegistroRostroController` + `BiometricService`
+- **Login QR/Carnet** estructurado via `CarnetLoginPage`
+- **Registro de usuarios** funciona vía `PKG_SEGURIDAD.SP_CREAR_USUARIO`
+- **Reconocimiento facial**: segmentación y verificación funcionando
+- **AuthController** genera y valida tokens JWT correctamente
 - Refresh token funciona en `/api/famkon/refresh-token`
 - Endpoints protegidos retornan 401 cuando el token es inválido/expirado
 - **TiendaController** con endpoints completos para catálogo, carrito, pedidos y tracking
+- **RepartidorController** con gestión completa de entregas y evidencias
+- **UsuariosAdminController** para gestión de usuarios (CRUD completo)
 - **CatalogoService** conectado a `PKG_CATALOGO`
 - **CarritoService** conectado a `PKG_CARRITO`
 - **PedidoService** conectado a `PKG_PEDIDO`
+- **RepartidorService** conectado a `PKG_PEDIDO` + `PKG_PAGO_ENTREGA`
+- **UsuarioAdminService** conectado a `PKG_USUARIO` + `PKG_SEGURIDAD`
+- **ArchivoService** conectado a `PKG_ARCHIVO` para subir/descargar archivos
+- **CredencialPdf** + **ConstanciaPdf** para generación de documentos
+- **reCAPTCHA v2** integrado para protección
 
-### Frontend - Fase Catálogo (FUNCIONAL ✅)
+### Frontend (FUNCIONAL ✅)
 - ✅ Login con JWT integrado en AuthContext
 - ✅ Auto-refresh de token cada 8 minutos
 - ✅ Manejo de 401 → redirect a /login
 - ✅ Dashboard del comprador (HomePage)
-- ✅ Catálogo de productos con filtros y búsqueda (conectado a backend)
-- ✅ Detalle de producto con agregar al carrito (conectado a backend)
-- ✅ Carrito de compras (conectado a backend)
-- ✅ Tracking de envío con timeline (conectado a backend)
-- ⏳ Imágenes de productos reales
-- ⏳ Formulario de pago
+- ✅ Catálogo de productos con filtros y búsqueda
+- ✅ Detalle de producto con agregar al carrito
+- ✅ Carrito de compras
+- ✅ Checkout y formulario de pago
+- ✅ Tracking de envío con timeline
+- ✅ Login facial con captura de cámara y segmentación
+- ✅ Enrolamiento facial para registro
+- ✅ Login por QR/carnet
+- ✅ Recuperación de contraseña
+- ✅ Perfil de usuario con enrolamiento facial
+- ✅ Módulo repartidor (pedidos asignados, cambiar estado, resultado entrega)
+- ✅ Tracking general para supervisores
+- ✅ Dashboard admin con gestión de pedidos
+- ✅ Gestor de usuarios admin
+- ✅ Gestor de productos admin
+- ✅ Gestión de catálogos admin
+- ✅ Roles y permisos admin
+- ✅ Bitácora de accesos admin
+- ✅ Configuración del sistema admin
+- ⏳ Métricas y estadísticas del dashboard (en desarrollo)
 
 ### Servicios Externos (Funcionales ✅)
-- **Reconocimiento facial**: `https://biosys.daossystem.pro/Rostro/Segmentar`
-- **Verificación facial**: `https://biosys.daossystem.pro/Rostro/Verificar`
-- El servicio de segmentación recibe el rostro A (base64) y devuelve la imagen ya segmentada.
-- El servicio de verificación compara la imagen segmentada almacenada en la BD con la nueva imagen segmentada del escaneo, e indica si fue un éxito.
+- **Reconocimiento facial**: `https://biosys.daossystem.pro/Rostro/Segmentar` y `/Verificar`
+- **WhatsApp**: WAWP API
+- **Email**: Gmail SMTP
+- **reCAPTCHA**: Google reCAPTCHA v2
 
 ## Archivos Importantes
 
-### Backend
-- `Backend/FamKon_store_api/Program.cs` — Configuración de servicios y middleware
-- `Backend/FamKon_store_api/BD/DBContext.cs` — Conexión singleton a Oracle
-- `Backend/FamKon_store_api/Services/LoginService.cs` — Lógica de login vía PKG_LOGIN
-- `Backend/FamKon_store_api/Services/BitacoraService.cs` — Bitácora de accesos vía PKG_SEGURIDAD.SP_REGISTRAR_ACCESO
-- `Backend/FamKon_store_api/Services/JwtService.cs` — Generación y validación JWT
-- `Backend/FamKon_store_api/Services/UsuarioService.cs` — CRUD usuarios vía PKG_SEGURIDAD
-- `Backend/FamKon_store_api/Services/UsuarioAdminService.cs` — Gestor de usuarios (PKG_USUARIO.MAGNAMETS_USER + PKG_SEGURIDAD.SP_ASIGNAR_ROL + SP_LISTAR_USUARIOS + SP_ACTUALIZAR_USUARIO + SP_ACTIVAR_USUARIO / SP_DESACTIVAR_USUARIO / SP_BLOQUEAR_USUARIO + vista VW_GESTOR_USUARIOS)
-- `Backend/FamKon_store_api/Services/PermisoService.cs` — Permisos vía PKG_SEGURIDAD
-- `Backend/FamKon_store_api/Services/CatalogoService.cs` — Productos, categorías, áreas de entrega, métodos de pago
-- `Backend/FamKon_store_api/Services/CarritoService.cs` — Carrito de compras vía PKG_CARRITO
-- `Backend/FamKon_store_api/Services/PedidoService.cs` — Pedidos y tracking vía PKG_PEDIDO
-- `Backend/FamKon_store_api/Controllers/AuthController.cs` — Endpoints de autenticación
-- `Backend/FamKon_store_api/Controllers/RegistroController.cs` — Endpoint de registro
-- `Backend/FamKon_store_api/Controllers/TiendaController.cs` — Endpoints de la tienda
-- `Backend/FamKon_store_api/Controllers/UsuariosAdminController.cs` — Gestor de usuarios (`/api/famkon/admin/usuarios`)
+### Backend Controllers (`Backend/FamKon_store_api/Controllers/`)
+- `AuthController.cs` — Login básico, refresh token, logout
+- `RegistroController.cs` — Registro de usuarios
+- `VerificacionController.cs` — Envío de códigos OTP
+- `RegistroRostroController.cs` — Segmentación y registro de rostro
+- `PasswordController.cs` — Recuperación de contraseña
+- `TiendaController.cs` — Catálogo, carrito, productos
+- `RepartidorController.cs` — Gestión de entregas y evidencias
+- `ComprasController.cs` — Pedidos y pagos
+- `CredencialController.cs` — Generación de credenciales PDF
+- `ConstanciasController.cs` — Generación de constancias PDF
+- `EstadoController.cs` — Estados del sistema
+- `UsuariosAdminController.cs` — Gestor de usuarios (`/api/famkon/admin/usuarios`)
+- `TestController.cs` — Endpoints de prueba
 
-### Frontend
-- `Fronted/src/api/famkon.ts` — Cliente API + interfaces de tienda
-- `Fronted/src/context/AuthContext.tsx` — Estado de autenticación + auto-refresh
-- `Fronted/src/App.tsx` — Rutas principales
-- `Fronted/src/pages/HomePage.tsx` — Dashboard del comprador
-- `Fronted/src/pages/CatalogoPage.tsx` — Catálogo de productos
-- `Fronted/src/pages/ProductoDetallePage.tsx` — Detalle de producto
-- `Fronted/src/pages/CarritoPage.tsx` — Carrito de compras
-- `Fronted/src/pages/TrackingPage.tsx` — Tracking de envío
+### Backend Services (`Backend/FamKon_store_api/Services/`)
+- `LoginService.cs` — Lógica de login vía PKG_LOGIN
+- `JwtService.cs` — Generación y validación JWT
+- `BitacoraService.cs` — Bitácora de accesos vía PKG_SEGURIDAD.SP_REGISTRAR_ACCESO
+- `PermisoService.cs` — Permisos vía PKG_SEGURIDAD
+- `UsuarioService.cs` — CRUD usuarios vía PKG_SEGURIDAD
+- `UsuarioAdminService.cs` — Gestor de usuarios (PKG_USUARIO + PKG_SEGURIDAD)
+- `BiometricService.cs` — Cliente para servicio de reconocimiento facial
+- `RegistroRostroService.cs` — Guardado de rostro segmentado
+- `RepartidorService.cs` — Gestión de entregas
+- `CatalogoService.cs` — Productos, categorías, áreas de entrega, métodos de pago
+- `CarritoService.cs` — Carrito de compras vía PKG_CARRITO
+- `PedidoService.cs` — Pedidos y tracking vía PKG_PEDIDO
+- `CompraService.cs` — Lógica de compra/pago
+- `ArchivoService.cs` — Gestión de archivos/imágenes
+- `CredencialService.cs` — Generación de credenciales
+- `CredencialPdf.cs` — PDF de credencial
+- `ConstanciaPdf.cs` — PDF de constancia
+- `ConstanciaEnvio.cs` — Envío de constancias
+- `EmailService.cs` — Envío de emails (Gmail SMTP)
+- `WhatsAppService.cs` — Envío de mensajes WhatsApp (WAWP)
+- `RecaptchaService.cs` — Verificación reCAPTCHA v2
+- `PasswordRecoveryService.cs` — Recuperación de contraseña
+- `PasswordRecoveryStore.cs` — Almacenamiento de tokens de recuperación
+- `RecurrenteService.cs` — Servicios recurrentes
+
+### Frontend Pages (`Fronted/src/pages/`)
+- `IndexPage.tsx` — Health check
+- `LoginPage.tsx` — Login principal
+- `RegistroPage.tsx` — Registro de comprador
+- `RecuperarPasswordPage.tsx` — Recuperación de contraseña
+- `FacialLoginPage.tsx` — Login facial (redirige a modules/biometria)
+- `CarnetLoginPage.tsx` — Login por QR/carnet
+- `DashboardPage.tsx` — Dashboard principal
+- `PerfilPage.tsx` — Mi perfil + enrolamiento facial
+- `CatalogoPage.tsx` — Catálogo de productos
+- `ProductoDetallePage.tsx` — Detalle de producto
+- `CarritoPage.tsx` — Carrito de compras
+- `TrackingPage.tsx` — Tracking de envío
+- `PagoPage.tsx` — Formulario de pago
+- `CheckoutPage.tsx` — Confirmar pedido
+- `PedidosPage.tsx` — Pedidos (repartidor/admin)
+- `EntregasAdminPage.tsx` — Tracking general
+- `SupervisorPage.tsx` — Dashboard supervisor
+- `AdminPage.tsx` — Dashboard admin
+- `UsuariosAdminPage.tsx` — Gestor de usuarios
+- `AdminProductosPage.tsx` — Gestor de productos
+- `AdminCatalogosPage.tsx` — Gestión de catálogos
+- `AdminRolesPage.tsx` — Roles y permisos
+- `AdminBitacoraPage.tsx` — Bitácora de accesos
+- `AdminConfiguracionPage.tsx` — Configuración del sistema
+- `NotFoundPage.tsx` — Página 404
+
+### Frontend Components (`Fronted/src/components/`)
+- `Sidebar.tsx` — Menú lateral colapsable
+- `Topbar.tsx` — Barra superior con breadcrumb
+- `DashboardLayout.tsx` — Layout del dashboard
+- `RequirePermiso.tsx` — HOC para protección por permisos
+- `SessionWarning.tsx` — Modal de advertencia de inactividad
+- `Recaptcha.tsx` — Componente reCAPTCHA v2
+- `QrScanner.tsx` — Lector de código QR
+- `CameraCapture.tsx` — Captura de foto desde cámara
+- `PasswordForm.tsx` — Formulario de contraseña
+- `PreferenciasNotificacion.tsx` — Preferencias de notificación
+- `MiCredencial.tsx` — Vista de credencial
+- `VistaPreviaCarnet.tsx` — Vista previa del carnet
+- `AvatarCredencial.tsx` — Avatar para credencial
+- `EditorFotoCredencial.tsx` — Editor de foto para credencial
+- `DireccionCompraFields.tsx` — Campos de dirección
+- `CompraAcciones.tsx` — Acciones de compra
+- `EstadoConstancia.tsx` — Estado de constancia
+- `NuevaCategoriaModal.tsx` — Modal para nueva categoría
+
+### Frontend Modules (`Fronted/src/modules/biometria/`)
+- `AccesoFacialPage.tsx` — Página de login facial
+- `EnrolamientoFacial.tsx` — Componente de enrolamiento facial
+- `api.ts` — Cliente API para biometría
+
+### Frontend API (`Fronted/src/api/famkon.ts`)
+- Cliente API completo con JWT + refresh automático
+- 865+ líneas con todas las interfaces y funciones para cada módulo
 
 ### Base de Datos
-- `BD/01 scrip/pkg/04_PACKAGES_TIENDA_ORACLE.sql` — Todos los packages PL/SQL + vista VW_GESTOR_USUARIOS (gestor de usuarios)
-- `BD/01 scrip/inserts_rol_permiso.sql` — Enrolamiento de permisos por rol (ADMIN, SUPERVISOR, REPARTIDOR, COMPRADOR)
+- `BD/01 scrip/pkg/04_PACKAGES_TIENDA_ORACLE.sql` — Todos los packages PL/SQL + vista VW_GESTOR_USUARIOS
+- `BD/01 scrip/inserts_rol_permiso.sql` — Enrolamiento de permisos por rol
 
 ### Vista VW_GESTOR_USUARIOS
 

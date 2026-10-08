@@ -56,9 +56,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-4">
-      <div className="grid w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl md:grid-cols-2">
-        <div className="hidden flex-col items-center justify-center gap-6 bg-linear-to-br from-white to-amber-50 p-10 md:flex">
+    <div className="flex min-h-dvh items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-3 sm:p-4">
+      <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:rounded-3xl lg:grid-cols-2">
+        <div className="hidden min-w-0 flex-col items-center justify-center gap-6 bg-linear-to-br from-white to-amber-50 p-10 lg:flex">
           <img
             src="/images/slogan-famkon.png"
             alt="FamKon"
@@ -69,10 +69,10 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="flex flex-col justify-center gap-6 p-8 sm:p-12">
-          <div className="flex flex-col items-center gap-3 md:items-start">
-            <img src="/images/logo-famkon.png" alt="Logo FamKon" className="h-20 w-20 object-contain" />
-            <h1 className="text-2xl font-bold text-slate-900">Iniciar sesion</h1>
+        <div className="flex min-w-0 flex-col justify-center gap-5 p-5 sm:gap-6 sm:p-8 lg:p-12">
+          <div className="flex flex-col items-center gap-2 sm:gap-3 lg:items-start">
+            <img src="/images/logo-famkon.png" alt="Logo FamKon" className="h-14 w-14 object-contain sm:h-20 sm:w-20" />
+            <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Iniciar sesion</h1>
             <p className="text-sm text-slate-500">Accede con tu cuenta de FamKon</p>
           </div>
 
@@ -152,17 +152,17 @@ export default function LoginPage() {
             <span className="h-px flex-1 bg-slate-200" />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <button
               onClick={() => navigate("/login/facial")}
-              className="flex flex-col items-center gap-2 rounded-2xl border border-slate-200 px-4 py-4 text-sm font-semibold text-slate-700 transition hover:border-amber-400 hover:bg-amber-50"
+              className="flex min-w-0 flex-col items-center gap-2 rounded-2xl border border-slate-200 px-2 py-3 text-center text-xs font-semibold text-slate-700 transition hover:border-amber-400 hover:bg-amber-50 sm:px-4 sm:py-4 sm:text-sm"
             >
               <ScanFace className="h-6 w-6 text-amber-600" />
               Reconocimiento Facial
             </button>
             <button
               onClick={() => navigate("/login/carnet")}
-              className="flex flex-col items-center gap-2 rounded-2xl border border-slate-200 px-4 py-4 text-sm font-semibold text-slate-700 transition hover:border-amber-400 hover:bg-amber-50"
+              className="flex min-w-0 flex-col items-center gap-2 rounded-2xl border border-slate-200 px-2 py-3 text-center text-xs font-semibold text-slate-700 transition hover:border-amber-400 hover:bg-amber-50 sm:px-4 sm:py-4 sm:text-sm"
             >
               <QrCode className="h-6 w-6 text-amber-600" />
               Por Carnet (QR)

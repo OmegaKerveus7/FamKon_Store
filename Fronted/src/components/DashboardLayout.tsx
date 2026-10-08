@@ -126,11 +126,11 @@ export default function DashboardLayout() {
   if (!usuario || !token) return null;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+    <div className="flex h-dvh w-full min-w-0 overflow-hidden bg-slate-50">
       {movil ? menuMovil && <><button aria-label="Cerrar menú" className="fixed inset-0 z-30 bg-slate-900/40" onClick={() => setMenuMovil(false)} /><div className="fixed inset-y-0 left-0 z-40 flex"><Sidebar colapsado={false} onToggle={() => setMenuMovil(false)} /></div></> : <Sidebar colapsado={colapsado} onToggle={() => setColapsado(v => !v)} />}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar onToggleSidebar={() => movil ? setMenuMovil(v => !v) : setColapsado(v => !v)} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="min-w-0 flex-1 overflow-y-auto p-3 sm:p-6">
           <Outlet />
         </main>
       </div>

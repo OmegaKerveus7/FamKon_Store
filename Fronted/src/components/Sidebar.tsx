@@ -75,7 +75,7 @@ export default function Sidebar({
   // ─── Modo colapsado: solo iconos de GRUPO con tooltip ──────────────────────
   if (colapsado) {
     return (
-      <aside className="flex w-16 flex-col border-r border-slate-200 bg-white">
+      <aside className="flex w-16 shrink-0 flex-col border-r border-slate-200 bg-white">
         <div className="flex h-16 items-center justify-center border-b border-slate-200">
           <button
             onClick={onToggle}
@@ -137,7 +137,7 @@ export default function Sidebar({
 
   // ─── Modo expandido: grupos con subitems colapsables ───────────────────────
   return (
-    <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
+    <aside className="flex w-64 max-w-[85vw] shrink-0 flex-col border-r border-slate-200 bg-white">
       <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-4">
         <img
           src="/images/logo-famkon.png"

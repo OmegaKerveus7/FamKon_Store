@@ -35,8 +35,8 @@ export default function AccesoFacialPage() {
     }
   }
 
-  return <main className="flex min-h-screen items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-4">
-    <section className="w-full max-w-lg space-y-5 rounded-3xl bg-white p-8 shadow-2xl">
+  return <main className="flex min-h-dvh items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-3 sm:p-4">
+    <section className="w-full max-w-lg space-y-5 rounded-2xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-8">
       <Link to="/login" className="inline-flex items-center gap-2 text-sm text-slate-600"><ArrowLeft size={16} /> Volver al inicio de sesión</Link>
       <div><h1 className="text-xl font-bold text-slate-900">Reconocimiento facial</h1><p className="mt-1 text-sm text-slate-600">Mira a la cámara para identificar tu cuenta con el rostro registrado.</p></div>
       <form onSubmit={verificar} className="space-y-4">

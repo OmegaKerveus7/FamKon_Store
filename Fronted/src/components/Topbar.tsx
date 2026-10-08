@@ -53,7 +53,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-200 bg-white/80 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-20 flex h-16 min-w-0 items-center gap-2 border-b border-slate-200 bg-white/80 px-2 backdrop-blur sm:gap-4 sm:px-6">
       <button
         onClick={onToggleSidebar}
         className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
@@ -72,7 +72,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
         )}
       </div>
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-3">
         <button
           onClick={handleRefreshPermisos}
           disabled={refrescando}
@@ -93,7 +93,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
           <Bell size={18} />
         </button>
 
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-1.5">
+        <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-1.5 sm:gap-3 sm:px-3">
           <div
             className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${colorAvatar(usuario?.roles)} text-sm font-bold text-white shadow-sm`}
           >
@@ -106,7 +106,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             <p className="text-[10px] text-slate-500">{usuario?.correo ?? ""}</p>
           </div>
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${rolColor(rolPrincipal)}`}
+            className={`hidden rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider sm:inline-flex ${rolColor(rolPrincipal)}`}
           >
             {rolPrincipal}
           </span>

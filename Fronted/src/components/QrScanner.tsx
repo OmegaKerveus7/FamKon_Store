@@ -30,7 +30,7 @@ export default function QrScanner({
   finally{busy.current=false;}
  }
  return <section className="space-y-3">
-  <div id={id} className="min-h-[220px] w-full overflow-hidden rounded-xl bg-slate-50"/>
+  <div id={id} className="min-h-48 w-full max-w-full overflow-hidden rounded-xl bg-slate-50 sm:min-h-[220px]"/>
   <p className="text-sm text-slate-600">{description}</p>
   <div className="flex flex-wrap gap-3">
    {estado==='camara'?<button type="button" onClick={()=>void detener().then(()=>setEstado('inactivo'))} className="rounded-xl border px-4 py-2">Apagar cámara</button>:<button type="button" disabled={estado==='cargando'} onClick={()=>void activar()} className="rounded-xl bg-amber-500 px-4 py-2 disabled:opacity-50">{estado==='cargando'?'Preparando lector…':'Activar cámara'}</button>}

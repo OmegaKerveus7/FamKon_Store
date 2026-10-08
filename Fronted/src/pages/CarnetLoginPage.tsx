@@ -40,9 +40,9 @@ export default function CarnetLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-4">
-      <div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl">
-        <div className="mb-6 flex items-center gap-3">
+    <div className="flex min-h-dvh items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-3 sm:p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-8">
+        <div className="mb-5 flex min-w-0 items-start gap-3 sm:mb-6 sm:items-center">
           <Link
             to="/login"
             className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-100"
@@ -51,7 +51,7 @@ export default function CarnetLoginPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <img src="/images/logo-famkon.png" alt="Logo FamKon" className="h-12 w-12 object-contain" />
-          <div>
+          <div className="min-w-0">
             <h1 className="text-lg font-bold text-slate-900">Por Carnet (QR)</h1>
             <p className="text-sm text-slate-500">Muestra el QR de tu carnet a la cámara para ingresar</p>
           </div>

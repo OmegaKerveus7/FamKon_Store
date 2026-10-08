@@ -373,9 +373,10 @@ export default function RegistroPage() {
         {paso === "datos" && (
           <form
             onSubmit={irAPaso2}
-            className="grid gap-8 p-6 sm:p-8 md:grid-cols-2"
+            className="space-y-8 p-6 sm:p-8"
           >
-            <section className="space-y-4">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+              <section className="min-w-0 space-y-4">
               <h2 className="text-lg font-semibold text-slate-800">
                 Información personal
               </h2>
@@ -489,7 +490,7 @@ export default function RegistroPage() {
               />
             </section>
 
-            <section className="space-y-4">
+              <section className="min-w-0 space-y-4">
               <h2 className="text-lg font-semibold text-slate-800">Fotografía</h2>
 
               <CameraCapture ref={cameraRef} />
@@ -506,8 +507,6 @@ export default function RegistroPage() {
 
               {segmentando && <p role="status" className="text-sm">Detectando y segmentando tu rostro…</p>}
               {errorRostro && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{errorRostro}</p>}
-              {rostro && <EditorFotoCredencial segmentada original={rostro} onChange={setFotoEditada} />}
-              {fotoEditada && <VistaPreviaCarnet foto={fotoEditada} nickname={nickname} tema={temaCredencial} onTema={setTemaCredencial} />}
               {foto && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-slate-700">
@@ -521,6 +520,27 @@ export default function RegistroPage() {
                 </div>
               )}
 
+              </section>
+            </div>
+
+            {rostro && (
+              <section className="w-full">
+                <EditorFotoCredencial segmentada original={rostro} onChange={setFotoEditada} />
+              </section>
+            )}
+
+            {fotoEditada && (
+              <section className="w-full">
+                <VistaPreviaCarnet
+                  foto={fotoEditada}
+                  nickname={nickname}
+                  tema={temaCredencial}
+                  onTema={setTemaCredencial}
+                />
+              </section>
+            )}
+
+            <section className="space-y-4">
               <div className="rounded-xl bg-slate-50 p-4 text-xs text-slate-600">
                 <p className="font-medium text-slate-700">Canal de verificación</p>
                 <p className="mt-1">

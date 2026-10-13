@@ -28,6 +28,7 @@ Properties/launchSettings.json
 # Configuración con secretos
 appsettings.json
 appsettings.Development.json
+appsettings.Production.json
 .env
 
 # Sistema

@@ -110,6 +110,9 @@ namespace FamKon_store_api.Services
                 using var command = new OracleCommand("PKG_ARCHIVO.SP_OBTENER_ARCHIVO", connection);
                 command.CommandType = CommandType.StoredProcedure;
                 command.BindByName = true;
+                // Recuperar el BLOB completo con la fila evita leerlo en muchos
+                // fragmentos a través de la conexión remota de Oracle.
+                command.InitialLOBFetchSize = -1;
 
                 command.Parameters.Add("P_ID_ARCHIVO", OracleDbType.Int64).Value = idArchivo;
 

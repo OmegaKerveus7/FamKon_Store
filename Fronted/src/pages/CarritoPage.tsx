@@ -77,7 +77,7 @@ export default function CarritoPage() {
   const total = subtotal + cargoEntrega;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-6xl space-y-5">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
           <ShoppingBag className="h-6 w-6 text-amber-600" />
@@ -117,7 +117,7 @@ export default function CarritoPage() {
           </Link>
         </div>
       ) : (
-        <>
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-3">
             {items.map((item) => (
               <div
@@ -174,7 +174,7 @@ export default function CarritoPage() {
             ))}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-4">
             <h2 className="mb-4 text-sm font-bold text-slate-900">Resumen del pedido</h2>
             <div className="space-y-2 text-sm text-slate-600">
               <div className="flex justify-between">
@@ -210,8 +210,9 @@ export default function CarritoPage() {
                 Continuar compra
               </button>
             </div>
+            <Link to="/comprador/catalogo" className="mt-3 block rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50">Seguir comprando</Link>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

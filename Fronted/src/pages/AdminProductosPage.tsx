@@ -4,6 +4,8 @@ import { Boxes, Plus, Pencil, Power, PowerOff, RefreshCw, Search, X } from "luci
 import {
   listarProductosAdmin, listarCategoriasProductoAdmin, crearProductoAdmin,
   actualizarProductoAdmin, cambiarEstadoProductoAdmin,
+  subirImagenProducto,
+  guardarGaleriaProducto,
   type Producto, type Categoria, type ProductoAdminBody,
 } from "../api/famkon";
 
@@ -80,15 +82,32 @@ export default function AdminProductosPage() {
         if (!precio || !Number.isFinite(precioBase) || precioBase < 0 || precioBase > 9999999999.99)
           throw new Error("Ingresa un precio válido mayor o igual a cero.");
         if (!categorias.some(c => c.idCategoria === idCategoria)) throw new Error("Selecciona una categoría.");
+        const imagenes = datos.getAll("imagen").filter((f): f is File => f instanceof File && f.size > 0);
+        const galeria: number[] = [];
+        if (imagenes.length > 8) throw new Error("Se permiten hasta 8 imágenes por producto.");
+        let idArchivoImagen = modal.tipo === "editar" ? modal.producto.idArchivoImagen ?? null : null;
+        for (const imagen of imagenes) {
+          if (!['image/jpeg', 'image/png'].includes(imagen.type) || imagen.size > 5 * 1024 * 1024)
+            throw new Error("Selecciona una imagen JPG o PNG de hasta 5 MB.");
+        }
+        for (const imagen of imagenes) galeria.push(await subirImagenProducto(imagen));
+        if (galeria.length) idArchivoImagen = galeria[0];
         const body: ProductoAdminBody = {
           idCategoria, nombre, precioBase,
           descripcion: String(datos.get("descripcion") || "").trim(),
-          idArchivoImagen: modal.tipo === "editar" ? modal.producto.idArchivoImagen ?? null : null,
+          idArchivoImagen,
           permiteLadoA: datos.has("ladoA") ? "S" : "N",
           permiteLadoB: datos.has("ladoB") ? "S" : "N",
         };
-        if (modal.tipo === "crear") await crearProductoAdmin({ ...body, sku, idSitio: 1 });
-        else await actualizarProductoAdmin(modal.producto.idProducto, body);
+        let idProducto: number;
+        if (modal.tipo === "crear") {
+          const result = await crearProductoAdmin({ ...body, sku, idSitio: 1 });
+          idProducto = result.idProducto!;
+        } else { await actualizarProductoAdmin(modal.producto.idProducto, body); idProducto = modal.producto.idProducto; }
+        if (imagenes.length) {
+          try { await guardarGaleriaProducto(idProducto, galeria.slice(1)); }
+          catch { throw new Error("El producto y su imagen principal se guardaron, pero las imágenes adicionales no pudieron guardarse. Solicita a administración revisar la configuración de imágenes. No crees el producto nuevamente."); }
+        }
         setAviso(modal.tipo === "crear" ? "Producto creado correctamente." : "Producto actualizado correctamente.");
       }
       setModal(null);
@@ -182,6 +201,7 @@ export default function AdminProductosPage() {
               </div>
               <label className="block text-sm font-medium">Nombre <span className="text-red-500">*</span><input name="nombre" required maxLength={150} defaultValue={editado?.nombre || ""} className={inputClass} /></label>
               <label className="block text-sm font-medium">Descripción<textarea name="descripcion" maxLength={1000} rows={3} defaultValue={editado?.descripcion || ""} className={inputClass} /></label>
+              <label className="block text-sm font-medium">Imágenes del producto<input name="imagen" type="file" multiple accept="image/jpeg,image/png" className={inputClass} /><span className="mt-1 block text-xs font-normal text-slate-500">Puedes elegir una o hasta 8 imágenes JPG o PNG, de 5 MB cada una. La primera del listado será la principal y las demás se mostrarán debajo. Una nueva selección reemplaza las imágenes anteriores; sin selección se conservan.</span></label>
               <label className="block text-sm font-medium">Precio base (Q) <span className="text-red-500">*</span><input name="precio" type="number" required min="0" max="9999999999.99" step="0.01" defaultValue={editado?.precioBase ?? ""} className={inputClass} /></label>
               <div className="rounded-xl bg-slate-50 p-4"><p className="mb-3 text-sm font-medium">Personalización permitida</p><div className="flex flex-wrap gap-6">{(["A", "B"] as const).map(lado => <label key={lado} className="flex items-center gap-2 text-sm text-slate-600"><input name={`lado${lado}`} type="checkbox" defaultChecked={!editado || editado[lado === "A" ? "permiteLadoA" : "permiteLadoB"] === "S"} className="h-4 w-4 accent-amber-500" />Lado {lado}</label>)}</div></div>
             </fieldset>}

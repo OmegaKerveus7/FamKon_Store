@@ -6,7 +6,8 @@ export interface CameraCaptureHandle {
   apagar: () => void;
 }
 
-const CameraCapture = forwardRef<CameraCaptureHandle>(function CameraCapture(_props, ref) {
+interface CameraCaptureProps { guiaRostro?: boolean; verificando?: boolean; onLista?: (lista: boolean) => void }
+const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(function CameraCapture({ guiaRostro = false, verificando = false, onLista }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -26,6 +27,7 @@ const CameraCapture = forwardRef<CameraCaptureHandle>(function CameraCapture(_pr
         await videoRef.current.play();
       }
       setEncendida(true);
+      onLista?.(true);
     } catch {
       setError("No se pudo acceder a la cámara. Asegúrate de permitir el permiso.");
     }
@@ -35,6 +37,7 @@ const CameraCapture = forwardRef<CameraCaptureHandle>(function CameraCapture(_pr
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     setEncendida(false);
+    onLista?.(false);
   }
 
   useEffect(() => apagar, []);
@@ -60,8 +63,9 @@ const CameraCapture = forwardRef<CameraCaptureHandle>(function CameraCapture(_pr
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl border-2 border-dashed border-amber-300 bg-slate-950">
-        <video ref={videoRef} muted playsInline className="h-full w-full object-cover" />
+      <div className={`relative w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 ${guiaRostro ? "aspect-[4/3]" : "aspect-video"}`} aria-busy={verificando}>
+        <video ref={videoRef} muted playsInline className="h-full w-full object-contain" />
+        {guiaRostro && encendida && <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true"><div className={`relative h-[76%] w-[48%] overflow-hidden rounded-[50%] border-2 shadow-[0_0_0_999px_rgba(2,6,23,0.35)] ${verificando ? 'border-amber-400' : 'border-white/80'}`}>{verificando && <div className="face-scan-line absolute left-0 right-0 h-0.5 bg-amber-300 shadow-[0_0_18px_5px_rgba(251,191,36,0.5)]" />}</div><span className="absolute bottom-3 rounded-full bg-slate-950/70 px-3 py-1.5 text-xs font-medium text-white">{verificando ? 'Verificando la captura…' : 'Centrá tu rostro dentro del óvalo'}</span></div>}
         {!encendida && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-200">
             {error ? (
@@ -86,14 +90,14 @@ const CameraCapture = forwardRef<CameraCaptureHandle>(function CameraCapture(_pr
             )}
           </div>
         )}
-        {encendida && (
+        {encendida && !verificando && (
           <div className="absolute right-3 top-3 rounded-full bg-emerald-500/90 px-2.5 py-1 text-xs font-semibold text-white">
             Cámara activa
           </div>
         )}
       </div>
       <canvas ref={canvasRef} className="hidden" />
-      {encendida && (
+      {encendida && !verificando && (
         <button
           type="button"
           onClick={apagar}

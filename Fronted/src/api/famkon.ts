@@ -6,6 +6,21 @@ export interface EstadoResponse {
   fecha: string;
 }
 
+export interface EventoAcceso {
+  id: number; fecha: string; usuario: string; metodo: string;
+  resultado: string; ip: string; motivo: string;
+}
+export interface NotificacionCompra { id: number; idPedido: number; numeroPedido: string; estado: string; mensaje: string; fecha: string; leida: boolean }
+export const listarNotificaciones = (signal?: AbortSignal) => request<{ items: NotificacionCompra[]; noLeidas: number }>('/notificaciones', { signal });
+export const leerNotificacion = (id: number) => request<void>(`/notificaciones/${id}/leida`, { method: 'PUT' });
+export function listarBitacora(filtros: { pagina: number; resultado: string; metodo: string; busqueda: string }, signal?: AbortSignal) {
+  const qs = new URLSearchParams({ pagina: String(filtros.pagina) });
+  if (filtros.resultado) qs.set('resultado', filtros.resultado);
+  if (filtros.metodo) qs.set('metodo', filtros.metodo);
+  if (filtros.busqueda.trim()) qs.set('busqueda', filtros.busqueda.trim());
+  return request<{ eventos: EventoAcceso[]; total: number; pagina: number; tamanoPagina: number }>(`/admin/bitacora?${qs}`, { signal });
+}
+
 export interface Usuario {
   idUsuario: number;
   correo: string | null;
@@ -346,6 +361,23 @@ type ApiResponse = Record<string, any>;
 export async function listarCategorias(): Promise<Categoria[]> {
   const res = await request<ApiResponse>("/categorias");
   return (res.categorias as Categoria[]) ?? [];
+}
+
+export interface AreaEntregaCatalogo {
+  idAreaEntrega: number; codigo: string; nombre: string; tipoArea: string;
+  referencia: string; cargoEntrega: number;
+}
+export const actualizarTarifaEntrega = (id: number, cargoEntrega: number) => request(`/admin/entrega-areas/${id}/tarifa`, { method: 'PUT', body: JSON.stringify({ cargoEntrega }) });
+export interface MetodoPagoCatalogo {
+  idMetodoPago: number; codigo: string; nombre: string; requiereProveedor: string;
+}
+export async function listarAreasEntregaCatalogo(): Promise<AreaEntregaCatalogo[]> {
+  const res = await request<ApiResponse>('/entrega-areas');
+  return res.areas ?? [];
+}
+export async function listarMetodosPagoCatalogo(): Promise<MetodoPagoCatalogo[]> {
+  const res = await request<ApiResponse>('/metodos-pago');
+  return res.metodos ?? [];
 }
 
 export async function listarProductos(
@@ -851,6 +883,33 @@ export async function subirEvidenciaEntrega(
 export function urlArchivoEvidencia(idArchivo: number): string {
   return `${BASE_URL}/archivos/${idArchivo}`;
 }
+
+export function urlImagenProducto(idProducto: number): string {
+  return `${BASE_URL}/productos/${idProducto}/imagen`;
+}
+
+export async function subirImagenProducto(archivo: File): Promise<number> {
+  const body = new FormData();
+  body.append('archivo', archivo);
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}/admin/productos/imagen`, {
+    method: 'POST', body, headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('famkon.usuario');
+    window.location.href = '/login';
+    throw new Error('Sesión expirada. Inicia sesión nuevamente.');
+  }
+  const texto = await res.text();
+  let data;
+  try { data = JSON.parse(texto); } catch { throw new Error(`La API de imágenes no devolvió JSON (HTTP ${res.status}). Reinicia el backend actualizado y revisa el proxy de /api.`); }
+  if (!res.ok || !data.idArchivo) throw new Error(data.mensaje || 'No se pudo subir la imagen.');
+  return data.idArchivo;
+}
+
+export const obtenerGaleriaProducto = (id: number) => request<number[]>(`/productos/${id}/galeria`);
+export const guardarGaleriaProducto = (id: number, imagenes: number[]) => request(`/admin/productos/${id}/galeria`, { method: 'PUT', body: JSON.stringify(imagenes) });
 
 export async function listarEntregasDeTodosRepartidores(): Promise<EntregaRepartidor[]> {
   const repartidores = await listarRepartidoresActivos();

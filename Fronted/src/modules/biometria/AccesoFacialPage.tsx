@@ -10,6 +10,7 @@ export default function AccesoFacialPage() {
   const enCurso = useRef(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const [camaraLista, setCamaraLista] = useState(false);
   const { iniciarSesion } = useAuth();
   const navigate = useNavigate();
 
@@ -35,14 +36,16 @@ export default function AccesoFacialPage() {
     }
   }
 
-  return <main className="flex min-h-dvh items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-3 sm:p-4">
-    <section className="w-full max-w-lg space-y-5 rounded-2xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-8">
+  return <main className="flex min-h-dvh items-center justify-center bg-slate-100 p-4 sm:py-6">
+    <section className="w-full max-w-lg space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-xl sm:p-7">
       <Link to="/login" className="inline-flex items-center gap-2 text-sm text-slate-600"><ArrowLeft size={16} /> Volver al inicio de sesión</Link>
-      <div><h1 className="text-xl font-bold text-slate-900">Reconocimiento facial</h1><p className="mt-1 text-sm text-slate-600">Mira a la cámara para identificar tu cuenta con el rostro registrado.</p></div>
+      <div className="flex items-center gap-3"><img src="/images/logo-famkon.png" alt="FamKon" className="h-12 w-12 object-contain" /><div><h1 className="text-xl font-bold text-slate-900">Acceso facial</h1><p className="mt-1 text-sm text-slate-500">Ingresá con tu rostro registrado.</p></div></div>
+      <ol className="grid grid-cols-3 gap-2 text-xs text-slate-500"><li>1. Activá la cámara</li><li>2. Centrá tu rostro</li><li>3. Verificá tu identidad</li></ol>
       <form onSubmit={verificar} className="space-y-4">
-        <CameraCapture ref={camera} />
+        <CameraCapture ref={camera} guiaRostro verificando={cargando} onLista={setCamaraLista} />
+        <p role="status" className="text-center text-sm text-slate-600">{cargando ? 'Comparando la captura con el rostro registrado. Esperá un momento.' : camaraLista ? 'Mirá de frente, con buena luz y sin cubrir tu rostro. Luego pulsá verificar.' : 'Permití el acceso a la cámara para continuar.'}</p>
         {error && <p role="alert" className="break-words rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-        <button disabled={cargando} type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 p-3 text-sm font-semibold disabled:opacity-60">
+        <button disabled={cargando || !camaraLista} type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 p-3 text-sm font-semibold disabled:opacity-60">
           {cargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanFace className="h-4 w-4" />}
           {cargando ? 'Verificando identidad…' : 'Verificar y entrar'}
         </button>

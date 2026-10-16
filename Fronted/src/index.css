@@ -10,3 +10,11 @@ body {
   margin: 0;
   font-family: "Segoe UI", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
+@keyframes face-scan {
+  0%, 100% { top: 12%; }
+  50% { top: 88%; }
+}
+.face-scan-line { animation: face-scan 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .face-scan-line { animation: none; top: 50%; }
+}

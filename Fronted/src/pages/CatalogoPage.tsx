@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, Store, Package } from "lucide-react";
+import ImagenProducto from "../components/ImagenProducto";
 import {
   type Producto,
   type Categoria,
@@ -114,7 +115,7 @@ export default function CatalogoPage() {
               className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="flex aspect-[4/3] items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
-                <Package className="h-16 w-16 text-amber-300 transition group-hover:text-amber-500" />
+                <ImagenProducto key={producto.idArchivoImagen} idProducto={producto.idProducto} idArchivoImagen={producto.idArchivoImagen} nombre={producto.nombre} />
               </div>
               <div className="p-4">
                 <p className="text-xs font-medium text-amber-600">{producto.categoria}</p>

@@ -3,9 +3,13 @@ import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Check } from "lucide-react";
 import {
   type Producto,
+  type Carrito,
+  obtenerCarrito,
   obtenerProducto,
   agregarAlCarritoAPI,
 } from "../api/famkon";
+import CarritoConfirmacion from "../components/CarritoConfirmacion";
+import GaleriaProducto from "../components/GaleriaProducto";
 
 export default function ProductoDetallePage() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +19,8 @@ export default function ProductoDetallePage() {
   const [agregando, setAgregando] = useState(false);
   const [agregado, setAgregado] = useState(false);
   const [cargando, setCargando] = useState(true);
+  const [resumenCarrito, setResumenCarrito] = useState<Carrito | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function cargar() {
@@ -33,15 +39,22 @@ export default function ProductoDetallePage() {
   async function handleAgregar() {
     if (!producto || agregando) return;
     setAgregando(true);
+    setError("");
     try {
       await agregarAlCarritoAPI({
         idProducto: producto.idProducto,
         cantidad,
       });
       setAgregado(true);
+      try {
+        setResumenCarrito(await obtenerCarrito());
+      } catch {
+        setError("El producto se agregó. Podés revisar el total en Mi carrito.");
+      }
       setTimeout(() => setAgregado(false), 2000);
     } catch (err) {
       console.error("Error agregando al carrito:", err);
+      setError(err instanceof Error ? err.message : "No se pudo agregar el producto al carrito.");
     }
     setAgregando(false);
   }
@@ -70,8 +83,8 @@ export default function ProductoDetallePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <header className="flex items-center gap-3">
+    <div className="mx-auto w-full max-w-4xl space-y-4">
+      <div className="flex items-center gap-3">
         <Link
           to="/comprador/catalogo"
           className="rounded-lg border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-50"
@@ -79,23 +92,21 @@ export default function ProductoDetallePage() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <span className="text-sm font-semibold text-slate-900">Detalle del producto</span>
-      </header>
+      </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex aspect-[16/9] items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
-          <Package className="h-24 w-24 text-amber-300" />
-        </div>
+      <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <GaleriaProducto key={producto.idProducto} producto={producto} />
 
-        <div className="space-y-4 p-6">
+        <div className="min-w-0 space-y-3 p-4 sm:p-5">
           <div>
             <p className="text-xs font-medium text-amber-600">{producto.categoria}</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">{producto.nombre}</h1>
+            <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">{producto.nombre}</h1>
             <span className="mt-1 inline-block rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
               SKU: {producto.sku}
             </span>
           </div>
 
-          <p className="text-sm leading-relaxed text-slate-600">{producto.descripcion}</p>
+          {producto.descripcion && <p className="text-sm leading-relaxed text-slate-600">{producto.descripcion}</p>}
 
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold text-amber-600">
@@ -104,7 +115,7 @@ export default function ProductoDetallePage() {
             <span className="text-xs text-slate-400">precio base</span>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
             <p className="font-semibold text-slate-800">Personalizacion</p>
             <p className="mt-1">
               {producto.permiteLadoA === "S" && producto.permiteLadoB === "S"
@@ -136,7 +147,7 @@ export default function ProductoDetallePage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">
                 Subtotal ({cantidad} {cantidad === 1 ? "unidad" : "unidades"})
@@ -147,7 +158,7 @@ export default function ProductoDetallePage() {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Link
               to="/comprador/catalogo"
               className="flex-1 rounded-xl border border-slate-200 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
@@ -156,7 +167,7 @@ export default function ProductoDetallePage() {
             </Link>
             <button
               onClick={handleAgregar}
-              disabled={agregado}
+              disabled={agregado || agregando}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition ${
                 agregado
                   ? "bg-green-500 text-white"
@@ -169,13 +180,15 @@ export default function ProductoDetallePage() {
                 </>
               ) : (
                 <>
-                  <ShoppingCart className="h-4 w-4" /> Agregar al carrito
+                  <ShoppingCart className="h-4 w-4" /> {agregando ? "Agregando…" : "Agregar al carrito"}
                 </>
               )}
             </button>
           </div>
+          {error && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{error} <Link to="/comprador/carrito" className="font-semibold underline">Ver carrito</Link></p>}
         </div>
       </div>
+      {resumenCarrito && <CarritoConfirmacion carrito={resumenCarrito} onClose={() => setResumenCarrito(null)} />}
     </div>
   );
 }

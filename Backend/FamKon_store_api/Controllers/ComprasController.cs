@@ -32,7 +32,12 @@ public class ComprasController(CompraService compras,RecurrenteService pagos,Arc
     private long Actor=>long.Parse(User.FindFirst("sub")!.Value);
     private static bool VistaValida(string vista)=>vista is "cliente" or "admin" or "repartidor";
     [HttpGet("configuracion")]
-    public IActionResult Configuracion()=>Ok(new{direccionTienda=config["Tienda:Direccion"]??"Campus central",horario="Lunes a domingo, 8:00 a. m. a 5:00 p. m.",cargoDomicilio=25,cargoTienda=0,tarjetaDisponible=pagos.Disponible,entorno=pagos.Entorno,recaptchaSiteKey=recaptcha.SiteKey});
+    public async Task<IActionResult> Configuracion([FromServices] CatalogoService catalogo) {
+        var areas = await catalogo.ListarAreasEntregaAsync(1, "S");
+        var tienda = areas.Single(a => a.Codigo == "FK_TIENDA");
+        var domicilio = areas.Single(a => a.Codigo == "FK_DOMICILIO");
+        return Ok(new{direccionTienda=config["Tienda:Direccion"]??tienda.Nombre,horario=tienda.Referencia,cargoDomicilio=domicilio.CargoEntrega,cargoTienda=tienda.CargoEntrega,tarjetaDisponible=pagos.Disponible,entorno=pagos.Entorno,recaptchaSiteKey=recaptcha.SiteKey});
+    }
     [HttpGet]
     public async Task<IActionResult> Listar([FromQuery]string vista="cliente",[FromQuery]int pagina=1,[FromQuery]string? estado=null,[FromQuery]string? busqueda=null) {
         if(!VistaValida(vista))return BadRequest(); if(vista=="admin"&&!await compras.EsAdmin(Actor))return Forbid();

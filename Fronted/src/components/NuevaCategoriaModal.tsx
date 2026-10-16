@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import { crearCategoriaProductoAdmin, type Categoria } from "../api/famkon";
 
-export default function NuevaCategoriaModal({ onClose, onCreated }: {
+export default function NuevaCategoriaModal({ onClose, onCreated, desdeProducto = true }: {
   onClose: () => void;
   onCreated: (categoria: Categoria) => void;
+  desdeProducto?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const enCurso = useRef(false);
@@ -38,7 +39,7 @@ export default function NuevaCategoriaModal({ onClose, onCreated }: {
       <button type="button" aria-label="Cerrar categoría" disabled={guardando} onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
     </div>
     <form onSubmit={guardar} className="space-y-4 p-6">
-      <p className="text-sm text-slate-500">Crea una categoría para organizar tus productos. Al guardarla quedará seleccionada en el producto.</p>
+      <p className="text-sm text-slate-500">Crea una categoría para organizar tus productos. {desdeProducto ? 'Al guardarla quedará seleccionada en el producto.' : 'Podrás seleccionarla al crear o editar productos.'}</p>
       {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <fieldset disabled={guardando} className="space-y-4">
         <label className="block text-sm font-medium">Código *<input name="codigo" required maxLength={30} placeholder="Ej. ANILLOS" className={campo} /></label>

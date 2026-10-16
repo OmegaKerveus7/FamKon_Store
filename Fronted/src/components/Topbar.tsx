@@ -1,8 +1,8 @@
 import AvatarCredencial from './AvatarCredencial';
-import { Menu, Bell, ChevronRight, RefreshCw } from "lucide-react";
+import NotificacionesCompras from './NotificacionesCompras';
+import { Menu, ChevronRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Link, useLocation } from "react-router-dom";
-import { useState } from "react";
 
 function rolColor(roles: string | null | undefined): string {
   const r = (roles ?? "").toUpperCase();
@@ -33,9 +33,8 @@ function iniciales(nickname: string | null | undefined, correo: string | null | 
 }
 
 export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
-  const { usuario, permisos, refrescarPermisos } = useAuth();
+  const { usuario, tienePermiso } = useAuth();
   const location = useLocation();
-  const [refrescando, setRefrescando] = useState(false);
 
   const rolPrincipal = (usuario?.roles ?? "").split(",")[0]?.trim() || "USUARIO";
   const seg = location.pathname.split("/").filter(Boolean);
@@ -43,14 +42,6 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
     ? "Inicio"
     : seg.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(" / ");
 
-  async function handleRefreshPermisos() {
-    setRefrescando(true);
-    try {
-      await refrescarPermisos();
-    } finally {
-      setTimeout(() => setRefrescando(false), 400);
-    }
-  }
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-200 bg-white/80 px-4 backdrop-blur sm:px-6">
@@ -73,27 +64,8 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
       </div>
 
       <div className="ml-auto flex items-center gap-3">
-        <button
-          onClick={handleRefreshPermisos}
-          disabled={refrescando}
-          className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 sm:flex"
-          title="Refrescar mis permisos desde la base de datos"
-        >
-          <RefreshCw
-            size={14}
-            className={refrescando ? "animate-spin" : ""}
-          />
-          <span>{permisos.length} permiso{permisos.length === 1 ? "" : "s"}</span>
-        </button>
-
-        <button
-          className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-          title="Notificaciones"
-        >
-          <Bell size={18} />
-        </button>
-
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-1.5">
+        {tienePermiso('VER_TRACKING') && <NotificacionesCompras key={usuario?.idUsuario} />}
+        <Link to="/perfil" aria-label="Abrir mi perfil" className="flex items-center gap-3 rounded-2xl px-2 py-1.5 transition hover:bg-slate-50">
           <div
             className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${colorAvatar(usuario?.roles)} text-sm font-bold text-white shadow-sm`}
           >
@@ -103,14 +75,13 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
             <p className="text-sm font-semibold text-slate-900">
               {usuario?.nickname ?? "Invitado"}
             </p>
-            <p className="text-[10px] text-slate-500">{usuario?.correo ?? ""}</p>
           </div>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${rolColor(rolPrincipal)}`}
           >
             {rolPrincipal}
           </span>
-        </div>
+        </Link>
       </div>
     </header>
   );

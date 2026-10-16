@@ -323,29 +323,30 @@ export default function RegistroPage() {
     return `${m}:${s}`;
   }
 
-  if (registrado) return <main className="mx-auto max-w-xl space-y-5 p-8"><h1 className="text-2xl font-bold">Tu cuenta está creada</h1><p role="status">{mensaje}</p><p>Revisa tu correo y los medios de notificación seleccionados. El QR del PDF se usa en Acceso con credencial. También puedes verla en Mi perfil.</p><button onClick={()=>navigate('/login/carnet')} className="rounded-lg bg-amber-500 p-3">Acceder con mi credencial</button><button onClick={()=>navigate('/login')} className="ml-3 rounded-lg border p-3">Entrar con contraseña</button></main>;
+  if (registrado) return <main className="flex min-h-dvh items-center justify-center bg-slate-100 p-4"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white p-7 shadow-xl"><img src="/images/slogan-famkon.png" alt="FamKon" className="h-16 max-w-full object-contain" /><div className="rounded-xl bg-emerald-50 p-4"><h1 className="text-2xl font-bold text-slate-900">Tu cuenta está creada</h1><p role="status" className="mt-2 text-sm text-emerald-800">{mensaje}</p></div><p className="text-sm leading-relaxed text-slate-600">Revisá el medio de notificación seleccionado para recibir tu credencial. También podrás consultarla en Mi perfil.</p><button onClick={()=>navigate('/login')} className="w-full rounded-xl bg-amber-500 p-3 text-sm font-semibold">Iniciar sesión con contraseña</button><button onClick={()=>navigate('/login/carnet')} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold">Acceder con mi credencial</button></section></main>;
+
 
   // ─── Render ─────────────────────────────────────────────────────
   return (
-    <main className="min-h-screen bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-4 py-10">
-      <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-        <header className="border-b border-slate-200 p-6 sm:p-8">
+    <main className="min-h-dvh bg-slate-100 p-4 py-6">
+      <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
+        <header className="border-b border-slate-200 p-5 sm:px-7 sm:py-5">
           <div className="flex items-center gap-4">
             <img
               src="/images/logo-famkon.png"
               alt="FamKon"
-              className="h-16 w-16 object-contain"
+              className="h-12 w-12 object-contain"
             />
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Crear cuenta</h1>
               <p className="text-sm text-slate-500">
-                Regístrate como comprador de FamKon
+                Completá tus datos y prepará tu credencial para comprar en FamKon.
               </p>
             </div>
           </div>
 
           {/* Stepper */}
-          <div className="mt-6 flex items-center gap-3 text-sm">
+          <div className="mt-5 flex items-center gap-3 text-sm">
             <div
               className={`flex items-center gap-2 rounded-full px-3 py-1 ${
                 paso === "datos"
@@ -354,7 +355,7 @@ export default function RegistroPage() {
               }`}
             >
               <span className="font-bold">1</span>
-              <span className="font-medium">Datos</span>
+              <span className="font-medium">Datos y fotografía</span>
             </div>
             <div className="h-px flex-1 bg-slate-200" />
             <div
@@ -373,13 +374,15 @@ export default function RegistroPage() {
         {paso === "datos" && (
           <form
             onSubmit={irAPaso2}
-            className="grid gap-8 p-6 sm:p-8 md:grid-cols-2"
+            className="grid items-start gap-5 bg-slate-50/60 p-4 sm:p-6 lg:grid-cols-[1.1fr_0.9fr]"
           >
-            <section className="space-y-4">
+            <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
               <h2 className="text-lg font-semibold text-slate-800">
                 Información personal
               </h2>
 
+              <p className="text-xs leading-relaxed text-slate-500">Usá tus datos personales. Todos los campos de esta sección son obligatorios.</p>
+              <div className="grid gap-4 sm:grid-cols-2">
               <Campo
                 id="nombres"
                 label="Nombres"
@@ -394,6 +397,7 @@ export default function RegistroPage() {
                 onChange={setApellidos}
                 autoComplete="family-name"
               />
+              </div>
               <Campo
                 id="correo"
                 label="Correo electrónico"
@@ -449,6 +453,7 @@ export default function RegistroPage() {
                   {telefono && (telefonoValido ? "El número cumple el formato del país seleccionado." : "Revisa la cantidad de dígitos y el formato para el país seleccionado.")}
                 </p>
               </div>
+              <div className="grid gap-4 sm:grid-cols-2">
               <Campo
                 id="nickname"
                 label="Nombre de usuario"
@@ -463,6 +468,8 @@ export default function RegistroPage() {
                 value={fechaNacimiento}
                 onChange={setFechaNacimiento}
               />
+              </div>
+              <div className="border-t border-slate-100 pt-4"><h3 className="text-sm font-semibold text-slate-800">Protegé tu cuenta</h3><p className="mt-1 text-xs text-slate-500">Elegí una contraseña que no uses en otros sitios.</p></div>
               <Campo
                 id="contrasena"
                 label="Contraseña"
@@ -489,10 +496,10 @@ export default function RegistroPage() {
               />
             </section>
 
-            <section className="space-y-4">
-              <h2 className="text-lg font-semibold text-slate-800">Fotografía</h2>
+            <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+              <h2 className="text-lg font-semibold text-slate-800">Tu foto y credencial</h2><p className="text-xs leading-relaxed text-slate-500">Tomá una foto de frente y con buena iluminación. La usaremos para tu credencial y el acceso facial.</p>
 
-              <CameraCapture ref={cameraRef} />
+              <CameraCapture ref={cameraRef} guiaRostro verificando={segmentando} />
 
               <button
                 type="button"
@@ -509,20 +516,20 @@ export default function RegistroPage() {
               {rostro && <EditorFotoCredencial segmentada original={rostro} onChange={setFotoEditada} />}
               {fotoEditada && <VistaPreviaCarnet foto={fotoEditada} nickname={nickname} tema={temaCredencial} onTema={setTemaCredencial} />}
               {foto && (
-                <div className="space-y-2">
+                <details className="rounded-xl border border-slate-200 p-3"><summary className="cursor-pointer text-xs font-semibold text-slate-600">Ver fotografía original</summary><div className="mt-3 space-y-2">
                   <p className="text-sm font-medium text-slate-700">
                     Fotografía capturada
                   </p>
                   <img
                     src={foto}
                     alt="Fotografía capturada"
-                    className="aspect-video w-full rounded-2xl border border-slate-200 object-cover"
+                    className="max-h-40 w-full rounded-xl object-contain"
                   />
-                </div>
+                </div></details>
               )}
 
               <div className="rounded-xl bg-slate-50 p-4 text-xs text-slate-600">
-                <p className="font-medium text-slate-700">Canal de verificación</p>
+                <p className="font-semibold text-slate-800">¿Dónde querés recibir el código?</p>
                 <p className="mt-1">
                   Te enviaremos un código de 6 dígitos para confirmar tu cuenta. Elige si deseas recibirlo por
                   correo o WhatsApp.
@@ -544,7 +551,7 @@ export default function RegistroPage() {
               </div>
 
               {error && (
-                <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                   {error}
                 </p>
               )}
@@ -570,7 +577,7 @@ export default function RegistroPage() {
         )}
 
         {paso === "verificar" && (
-          <div className="space-y-6 p-6 sm:p-8">
+          <div className="mx-auto max-w-2xl space-y-5 p-5 sm:p-7">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <h2 className="text-base font-semibold text-slate-800">
                 Confirma tus datos
@@ -661,6 +668,7 @@ export default function RegistroPage() {
                 </label>
                 <input
                   id="codigo"
+                  autoComplete="one-time-code"
                   inputMode="numeric"
                   pattern="[0-9]{6}"
                   maxLength={6}
@@ -693,7 +701,7 @@ export default function RegistroPage() {
             </div>
 
             {error && (
-              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                 {error}
               </p>
             )}
@@ -718,7 +726,7 @@ export default function RegistroPage() {
                 type="button"
                 onClick={handleCrearCuenta}
                 disabled={!codigoVerificado || cargando}
-                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {cargando ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -747,9 +755,9 @@ export default function RegistroPage() {
 
             <div className="border-t border-slate-200 pt-3 text-center text-xs text-slate-400">
               <Phone className="mr-1 inline h-3 w-3" />
-              Tu número se usará solo para verificación.
+              Usaremos tus datos para gestionar tu cuenta y tus compras.
               <Smartphone className="ml-2 mr-1 inline h-3 w-3" />
-              Nunca compartiremos tu información.
+              No compartás tu contraseña ni tu código de verificación.
             </div>
           </div>
         )}

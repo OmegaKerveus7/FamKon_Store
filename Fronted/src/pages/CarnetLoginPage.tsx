@@ -40,7 +40,7 @@ export default function CarnetLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-4">
+    <div className="flex min-h-dvh items-center justify-center bg-slate-100 p-4">
       <div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl">
         <div className="mb-6 flex items-center gap-3">
           <Link

@@ -46,21 +46,111 @@ function generarCodigoOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+// ─── Borrador de registro (sobrevive al reciclado de pestañas en móvil) ───
+// En teléfonos el navegador descarta la pestaña al pasar a segundo plano
+// (p. ej. al abrir WhatsApp o el correo para leer el código) y, al volver,
+// la página recarga desde cero perdiendo todo el estado de React.
+// Guardamos un borrador en localStorage para retomar el registro donde quedó.
+const CLAVE_BORRADOR_REGISTRO = "famkon.registro.borrador";
+const VIGENCIA_BORRADOR_MS = 24 * 60 * 60 * 1000;
+
+type BorradorRegistro = {
+  guardadoEn: number;
+  paso: Paso;
+  canal: Exclude<CanalVerificacion, "AMBOS">;
+  nombres: string;
+  apellidos: string;
+  correo: string;
+  telefono: string;
+  paisTelefono: CountryCode;
+  nickname: string;
+  fechaNacimiento: string;
+  temaCredencial: string;
+  foto: string;
+  rostro: string;
+  fotoEditada: string;
+  solicitudRostro: string;
+  codigoEsperado: string;
+  codigoEnviadoEn: number | null;
+  codigoVerificado: boolean;
+  codigoIngresado: string;
+  registrado: boolean;
+  mensaje: string;
+};
+
+function limpiarEstadoCodigoBorrador(datos: Partial<BorradorRegistro>): Partial<BorradorRegistro> {
+  return {
+    ...datos,
+    codigoEsperado: "",
+    codigoEnviadoEn: null,
+    codigoVerificado: false,
+    codigoIngresado: "",
+  };
+}
+
+function cargarBorradorRegistro(): Partial<BorradorRegistro> {
+  try {
+    const crudo = localStorage.getItem(CLAVE_BORRADOR_REGISTRO);
+    if (!crudo) return {};
+    const datos = JSON.parse(crudo) as Partial<BorradorRegistro>;
+    if (!datos || typeof datos !== "object" || typeof datos.guardadoEn !== "number") return {};
+    if (Date.now() - datos.guardadoEn > VIGENCIA_BORRADOR_MS) {
+      localStorage.removeItem(CLAVE_BORRADOR_REGISTRO);
+      return {};
+    }
+    const codigoExpirado =
+      typeof datos.codigoEnviadoEn === "number" &&
+      datos.codigoEnviadoEn + MINUTOS_EXPIRACION * 60 * 1000 <= Date.now();
+    if (codigoExpirado) return limpiarEstadoCodigoBorrador(datos);
+    // Si se perdieron las imagenes (cuota de storage llena), volver al paso 1
+    // para que la persona retome la fotografia con sus datos conservados.
+    if (
+      datos.paso === "verificar" &&
+      !datos.registrado &&
+      (!datos.foto || !datos.fotoEditada || !datos.solicitudRostro)
+    ) {
+      return { ...limpiarEstadoCodigoBorrador(datos), paso: "datos" };
+    }
+    return datos;
+  } catch {
+    return {};
+  }
+}
+
+function guardarBorradorRegistro(datos: Partial<BorradorRegistro>) {
+  const completo = { ...datos, guardadoEn: Date.now() };
+  try {
+    localStorage.setItem(CLAVE_BORRADOR_REGISTRO, JSON.stringify(completo));
+  } catch {
+    // Sin espacio disponible: reintentar sin las imagenes (base64 muy pesado).
+    try {
+      const sinFotos: Partial<BorradorRegistro> = { ...completo };
+      delete sinFotos.foto;
+      delete sinFotos.rostro;
+      delete sinFotos.fotoEditada;
+      localStorage.setItem(CLAVE_BORRADOR_REGISTRO, JSON.stringify(sinFotos));
+    } catch {
+      // Modo privado / cuota agotada: no bloquear el registro por esto.
+    }
+  }
+}
+
 export default function RegistroPage() {
   const navigate = useNavigate();
   const cameraRef = useRef<CameraCaptureHandle>(null);
   const envioEnCursoRef = useRef(false);
+  const [borradorInicial] = useState(cargarBorradorRegistro);
 
   // ─── Estado del wizard ──────────────────────────────────────────
-  const [paso, setPaso] = useState<Paso>("datos");
+  const [paso, setPaso] = useState<Paso>(() => borradorInicial.registrado ? "datos" : borradorInicial.paso === "verificar" ? "verificar" : "datos");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
-  const [mensaje, setMensaje] = useState("");
+  const [mensaje, setMensaje] = useState(() => borradorInicial.registrado ? (borradorInicial.mensaje ?? "") : "");
 
   // ─── Paso 1: datos del usuario ──────────────────────────────────
-  const [nombres, setNombres] = useState("");
-  const [apellidos, setApellidos] = useState("");
-  const [correo, setCorreo] = useState("");
+  const [nombres, setNombres] = useState(() => borradorInicial.nombres ?? "");
+  const [apellidos, setApellidos] = useState(() => borradorInicial.apellidos ?? "");
+  const [correo, setCorreo] = useState(() => borradorInicial.correo ?? "");
   const [consultaCorreo, setConsultaCorreo] = useState<{
     correo: string;
     estado: "consultando" | "disponible" | "registrado" | "error";
@@ -90,51 +180,119 @@ export default function RegistroPage() {
       controller.abort();
     };
   }, [correoNormalizado]);
-  const [telefono, setTelefono] = useState("");
-  const [paisTelefono, setPaisTelefono] = useState<CountryCode>("GT");
+  const [telefono, setTelefono] = useState(() => borradorInicial.telefono ?? "");
+  const [paisTelefono, setPaisTelefono] = useState<CountryCode>(() => borradorInicial.paisTelefono ?? "GT");
   const ejemploTelefono = getExampleNumber(paisTelefono, ejemplosTelefono)?.formatNational();
   const telefonoValido = validarTelefono(telefono, paisTelefono);
   const ayudaTelefono = paisTelefono === "GT"
     ? ""
     : `Ingresa tu número nacional, sin +${getCountryCallingCode(paisTelefono)}.${ejemploTelefono ? ` Ejemplo: ${ejemploTelefono}.` : ""}`;
-  const [nickname, setNickname] = useState("");
+  const [nickname, setNickname] = useState(() => borradorInicial.nickname ?? "");
   const [contrasena, setContrasena] = useState("");
   const [confirmacion, setConfirmacion] = useState("");
-  const [fechaNacimiento, setFechaNacimiento] = useState("");
-  const [rostro, setRostro] = useState("");
-  const [solicitudRostro, setSolicitudRostro] = useState("");
+  const [fechaNacimiento, setFechaNacimiento] = useState(() => borradorInicial.fechaNacimiento ?? "");
+  const [rostro, setRostro] = useState(() => borradorInicial.rostro ?? "");
+  const [solicitudRostro, setSolicitudRostro] = useState(() => borradorInicial.solicitudRostro ?? "");
   const [errorRostro, setErrorRostro] = useState("");
   const [segmentando, setSegmentando] = useState(false);
-  const [temaCredencial, setTemaCredencial] = useState("AZUL");
-  const [registrado, setRegistrado] = useState(false);
-  const [fotoEditada, setFotoEditada] = useState("");
-  const [foto, setFoto] = useState("");
+  const [temaCredencial, setTemaCredencial] = useState(() => borradorInicial.temaCredencial ?? "AZUL");
+  const [registrado, setRegistrado] = useState(() => !!borradorInicial.registrado);
+  const [fotoEditada, setFotoEditada] = useState(() => borradorInicial.fotoEditada ?? "");
+  const [foto, setFoto] = useState(() => borradorInicial.foto ?? "");
 
   // ─── Paso 2: verificación por código ────────────────────────────
-  const [canal, setCanal] = useState<Exclude<CanalVerificacion, "AMBOS">>("EMAIL");
-  const [codigoEsperado, setCodigoEsperado] = useState<string>("");
-  const [codigoIngresado, setCodigoIngresado] = useState("");
-  const [codigoEnviadoEn, setCodigoEnviadoEn] = useState<number | null>(null);
+  const [canal, setCanal] = useState<Exclude<CanalVerificacion, "AMBOS">>(() => borradorInicial.canal === "WHATSAPP" ? "WHATSAPP" : "EMAIL");
+  const [codigoEsperado, setCodigoEsperado] = useState(() => borradorInicial.codigoEsperado ?? "");
+  const [codigoIngresado, setCodigoIngresado] = useState(() => borradorInicial.codigoIngresado ?? "");
+  const [codigoEnviadoEn, setCodigoEnviadoEn] = useState<number | null>(() => borradorInicial.codigoEnviadoEn ?? null);
   const [enviandoCodigo, setEnviandoCodigo] = useState(false);
-  const [segundosRestantes, setSegundosRestantes] = useState(0);
-  const [codigoVerificado, setCodigoVerificado] = useState(false);
+  const [segundosRestantes, setSegundosRestantes] = useState(() => {
+    if (!borradorInicial.codigoEnviadoEn || borradorInicial.codigoVerificado) return 0;
+    const restante = Math.floor((borradorInicial.codigoEnviadoEn + MINUTOS_EXPIRACION * 60 * 1000 - Date.now()) / 1000);
+    return Math.max(0, restante);
+  });
+  const [codigoVerificado, setCodigoVerificado] = useState(() => !!borradorInicial.codigoVerificado);
+
+  // ─── Persistencia del borrador (mobile: la pestaña se recicla) ──
+  const estadoBorradorRef = useRef<Partial<BorradorRegistro>>({});
+  estadoBorradorRef.current = registrado
+    ? {
+        paso,
+        canal,
+        nombres,
+        apellidos,
+        correo,
+        telefono,
+        paisTelefono,
+        nickname,
+        fechaNacimiento,
+        temaCredencial,
+        codigoEsperado: "",
+        codigoEnviadoEn: null,
+        codigoVerificado: true,
+        codigoIngresado: "",
+        registrado: true,
+        mensaje,
+      }
+    : {
+        paso,
+        canal,
+        nombres,
+        apellidos,
+        correo,
+        telefono,
+        paisTelefono,
+        nickname,
+        fechaNacimiento,
+        temaCredencial,
+        foto,
+        rostro,
+        fotoEditada,
+        solicitudRostro,
+        codigoEsperado,
+        codigoEnviadoEn,
+        codigoVerificado,
+        codigoIngresado,
+        registrado: false,
+        mensaje: "",
+      };
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => guardarBorradorRegistro(estadoBorradorRef.current), 250);
+    return () => window.clearTimeout(timer);
+  });
+
+  useEffect(() => {
+    const guardarAhora = () => guardarBorradorRegistro(estadoBorradorRef.current);
+    const alOcultar = () => {
+      if (document.visibilityState === "hidden") guardarAhora();
+    };
+    window.addEventListener("pagehide", guardarAhora);
+    document.addEventListener("visibilitychange", alOcultar);
+    return () => {
+      window.removeEventListener("pagehide", guardarAhora);
+      document.removeEventListener("visibilitychange", alOcultar);
+    };
+  }, []);
 
   // ─── Cronómetro de expiración del código (5 min) ────────────────
   useEffect(() => {
     if (codigoEnviadoEn === null || codigoVerificado) return;
 
-    const intervalo = setInterval(() => {
+    const tick = () => {
       const expiracion = codigoEnviadoEn + MINUTOS_EXPIRACION * 60 * 1000;
       const restante = Math.max(0, Math.floor((expiracion - Date.now()) / 1000));
       setSegundosRestantes(restante);
       if (restante === 0) {
         setCodigoEsperado("");
         setCodigoEnviadoEn(null);
-        setError("El código expiró. Solicita uno nuevo.");
+        setError((prev) => prev || "El código expiró. Solicita uno nuevo.");
         clearInterval(intervalo);
       }
-    }, 1000);
+    };
 
+    tick();
+    const intervalo = setInterval(tick, 1000);
     return () => clearInterval(intervalo);
   }, [codigoEnviadoEn, codigoVerificado]);
 
@@ -281,6 +439,12 @@ export default function RegistroPage() {
       return;
     }
 
+    if (!contrasena || !confirmacion) {
+      setPaso("datos");
+      setError("Por seguridad no guardamos tu contraseña. Tus demás datos y el código verificado se conservan: reingresa la contraseña para continuar.");
+      return;
+    }
+
     setCargando(true);
     try {
       const fotoBase64 = stripBase64Prefix(foto);
@@ -323,7 +487,12 @@ export default function RegistroPage() {
     return `${m}:${s}`;
   }
 
-  if (registrado) return <main className="flex min-h-dvh items-center justify-center bg-slate-100 p-4"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white p-7 shadow-xl"><img src="/images/slogan-famkon.png" alt="FamKon" className="h-16 max-w-full object-contain" /><div className="rounded-xl bg-emerald-50 p-4"><h1 className="text-2xl font-bold text-slate-900">Tu cuenta está creada</h1><p role="status" className="mt-2 text-sm text-emerald-800">{mensaje}</p></div><p className="text-sm leading-relaxed text-slate-600">Revisá el medio de notificación seleccionado para recibir tu credencial. También podrás consultarla en Mi perfil.</p><button onClick={()=>navigate('/login')} className="w-full rounded-xl bg-amber-500 p-3 text-sm font-semibold">Iniciar sesión con contraseña</button><button onClick={()=>navigate('/login/carnet')} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold">Acceder con mi credencial</button></section></main>;
+  function reiniciarBorradorYRecargar() {
+    try { localStorage.removeItem(CLAVE_BORRADOR_REGISTRO); } catch { /* modo privado */ }
+    window.location.assign("/registro");
+  }
+
+  if (registrado) return <main className="flex min-h-dvh items-center justify-center bg-slate-100 p-4"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white p-7 shadow-xl"><img src="/images/slogan-famkon.png" alt="FamKon" className="h-16 max-w-full object-contain" /><div className="rounded-xl bg-emerald-50 p-4"><h1 className="text-2xl font-bold text-slate-900">Tu cuenta está creada</h1><p role="status" className="mt-2 text-sm text-emerald-800">{mensaje}</p></div><p className="text-sm leading-relaxed text-slate-600">Revisá el medio de notificación seleccionado para recibir tu credencial. También podrás consultarla en Mi perfil.</p><button onClick={()=>navigate('/login')} className="w-full rounded-xl bg-amber-500 p-3 text-sm font-semibold">Iniciar sesión con contraseña</button><button onClick={()=>navigate('/login/carnet')} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold">Acceder con mi credencial</button><button onClick={reiniciarBorradorYRecargar} className="w-full text-center text-xs font-medium text-slate-400 hover:text-slate-600">Crear otra cuenta</button></section></main>;
 
 
   // ─── Render ─────────────────────────────────────────────────────

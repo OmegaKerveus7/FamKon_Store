@@ -155,6 +155,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - Si el código coincide → recién entonces se llama a `/api/famkon/registro`
 - Endpoint: `POST /api/famkon/verificacion/enviar-codigo` (`VerificacionController.cs`)
 - Expiración del código: **5 minutos** (validado por timestamp en frontend)
+- **Borrador de registro**: en móvil el navegador recicla la pestaña al pasar a segundo plano (p. ej. al abrir WhatsApp/correo para leer el código), perdiendo todo el estado de React. `RegistroPage` persiste un borrador en `localStorage` (clave `famkon.registro.borrador`, vigencia 24h) con datos, paso, fotos (degradadas si no hay cuota) y estado del código OTP; se guarda con debounce + en `visibilitychange`/`pagehide` y se restaura al montar. La contraseña NO se persiste (seguridad): si falta al crear la cuenta, se vuelve al paso 1 avisando que el resto se conserva.
 
 ### Auth Flow
 1. Login → POST `/api/famkon/login_basic` → `{ token, usuario }`

@@ -37,6 +37,9 @@ builder.Services.AddScoped<IPasswordCodeSender, PasswordCodeSender>();
 builder.Services.AddScoped<PasswordRecoveryService>();
 builder.Services.AddRateLimiter(options =>
 {
+    options.AddPolicy("rastreo", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("password", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));

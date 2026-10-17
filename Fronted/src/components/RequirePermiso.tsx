@@ -1,5 +1,6 @@
+import { rutaPersonalBloqueada } from '../domain/vistasRol';
 import { type ReactNode } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 interface RequirePermisoProps {
@@ -15,10 +16,13 @@ export default function RequirePermiso({
 }: RequirePermisoProps) {
   const { usuario, permisos, tienePermiso, tieneRol, cargarPermisos } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   if (!usuario) {
     return <Navigate to="/login" replace />;
   }
+
+  if (rutaPersonalBloqueada(usuario.roles, location.pathname)) return <Navigate to="/inicio" replace />;
 
   // Si no hay permisos cargados, intentar cargarlos una vez
   if (permisos.length === 0) {

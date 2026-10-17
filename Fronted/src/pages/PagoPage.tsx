@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CreditCard, LockKeyhole } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CircleCheck, CreditCard, LockKeyhole } from 'lucide-react';
 import { detalleCompra, iniciarPago, verificarPago, type DetalleCompra } from '../api/compras';
 import { moneda, puedePagar } from '../domain/compras';
 
@@ -70,6 +70,7 @@ export default function PagoPage() {
     return () => { clearInterval(timer); window.removeEventListener('focus', visible); };
   }, [url, id]);
   const p = detail?.pedido;
+  const pagoConfirmado = p?.estadoPago === 'APROBADO';
   return <div className="mx-auto max-w-5xl">
     <Link to={`/comprador/tracking?pedido=${id}`} className="mb-4 inline-flex items-center gap-2 text-sm text-slate-600"><ArrowLeft size={16} />Volver a mi pedido</Link>
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -78,15 +79,21 @@ export default function PagoPage() {
         <section className="min-w-0 p-4 sm:p-6">
           <div className="mb-3 flex items-center justify-between gap-3"><h1 className="flex items-center gap-2 text-lg font-bold text-slate-900"><CreditCard size={20} className="text-amber-600" />Pago con tarjeta</h1><span className="flex items-center gap-1 text-xs text-slate-500"><LockKeyhole size={13} />Recurrente</span></div>
           {error && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          {detail?.pedido.estadoPago === 'APROBADO' && <Link to={`/comprador/tracking?pedido=${id}`} className="mb-4 inline-block rounded-lg bg-amber-500 px-4 py-3 font-semibold">Ver mi pedido</Link>}
-          {notice && <p role="status" className="mb-3 rounded-lg bg-sky-50 p-3 text-sm text-sky-800">{notice}</p>}
+          {pagoConfirmado && <div role="status" aria-live="polite" className="my-6 flex flex-col items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-10 text-center sm:py-12">
+            <span className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><CircleCheck size={48} strokeWidth={1.8} aria-hidden="true" /></span>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">¡Pago realizado con éxito!</h2>
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-slate-600">Tu pago fue confirmado. Podés ver el detalle de tu pedido y seguir el avance de tu compra.</p>
+            {p?.numeroPedido && <p className="mt-4 max-w-full break-all text-xs font-medium text-emerald-800">Pedido {p.numeroPedido}</p>}
+            <Link to={`/comprador/tracking?pedido=${id}`} className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">Ver pedido<ArrowRight size={18} aria-hidden="true" /></Link>
+          </div>}
+          {notice && !pagoConfirmado && <p role="status" className="mb-3 rounded-lg bg-sky-50 p-3 text-sm text-sky-800">{notice}</p>}
           {loading && <p role="status" className="py-20 text-center text-sm text-slate-500">Preparando el pago seguro…</p>}
-          {url && <iframe ref={frame} src={url} title="Formulario seguro de tarjeta de Recurrente" allow="payment" className="h-[620px] w-full border-0" />}
+          {url && !pagoConfirmado && <iframe ref={frame} src={url} title="Formulario seguro de tarjeta de Recurrente" allow="payment" className="h-[620px] w-full border-0" />}
           {error && !url && <button onClick={() => setAttempt(a => a + 1)} className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold">Reintentar</button>}
-          {url && <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs"><span role="status" className="text-slate-500">{verifying ? 'Consultando confirmación…' : 'El pago se confirma automáticamente.'}</span><a href={url.replace(/([?&])embed=true&?/, '$1').replace(/[?&]$/, '')} className="text-slate-500 underline">Abrir en Recurrente</a></div>}
+          {url && !pagoConfirmado && <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs"><span role="status" className="text-slate-500">{verifying ? 'Consultando confirmación…' : 'El pago se confirma automáticamente.'}</span><a href={url.replace(/([?&])embed=true&?/, '$1').replace(/[?&]$/, '')} className="text-slate-500 underline">Abrir en Recurrente</a></div>}
         </section>
         <aside className="order-first border-b border-slate-200 bg-slate-50 p-5 md:order-last md:border-b-0 md:border-l md:p-6">
-          <p className="text-sm text-slate-500">Total a pagar</p><p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{p ? moneda(p.total) : '—'}</p>
+          <p className="text-sm text-slate-500">{pagoConfirmado ? 'Total pagado' : 'Total a pagar'}</p><p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{p ? moneda(p.total) : '—'}</p>
           <p className="mt-2 break-all text-xs text-slate-500">{p?.numeroPedido}</p>
           <details open className="mt-5 border-t border-slate-200 pt-4"><summary className="cursor-pointer text-sm font-semibold">Detalle del pedido</summary><div className="mt-3 space-y-3 text-sm">{detail?.productos.map((i, n) => <p key={n} className="flex justify-between gap-3"><span>{i.cantidad} × {i.nombreProducto}</span><span className="shrink-0">{moneda(i.subtotal)}</span></p>)}<p className="flex justify-between border-t border-slate-200 pt-3 text-slate-500"><span>{p?.idModalidadEntrega === 1 ? 'Recogida en tienda' : 'Envío a domicilio'}</span><span>{moneda(p?.cargoEntrega || 0)}</span></p></div></details>
           <p className="mt-6 flex items-start gap-2 text-xs leading-relaxed text-slate-500"><LockKeyhole size={16} className="shrink-0" />Tu tarjeta se ingresa directamente en Recurrente. FamKon no guarda sus datos.</p>

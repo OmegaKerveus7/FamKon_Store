@@ -8,17 +8,30 @@ type RespuestaBiometria = {
 };
 
 async function solicitar<T extends RespuestaBiometria>(ruta: string, datos: object, token?: string): Promise<T> {
-  const response = await fetch(`/api/famkon/biometria/${ruta}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify(datos),
-  });
-  if (response.status === 401) throw new Error('Tu sesión expiró. Inicia sesión con tu contraseña nuevamente.');
-  const body = await response.json() as T;
-  if (!response.ok || body.codigoS !== 200) {
-    throw new Error(`${body.mensaje || 'No se pudo completar la operación facial.'}${body.referencia ? ` Referencia: ${body.referencia}` : ''}`);
+  // La identificación dispone de 60 s en el servidor; dar margen a la respuesta.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 75_000);
+  try {
+    const response = await fetch(`/api/famkon/biometria/${ruta}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(datos),
+      signal: controller.signal,
+    });
+    if (response.status === 401) throw new Error('Tu sesión expiró. Inicia sesión con tu contraseña nuevamente.');
+    const body = await response.json() as T;
+    if (!response.ok || body.codigoS !== 200) {
+      throw new Error(`${body.mensaje || 'No se pudo completar la operación facial.'}${body.referencia ? ` Referencia: ${body.referencia}` : ''}`);
+    }
+    return body;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error('La verificación facial tardó demasiado. Intenta de nuevo o inicia sesión con tu contraseña.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-  return body;
 }
 
 export function accederConRostro(imagenCompararBase64: string) {

@@ -9,6 +9,7 @@ namespace FamKon_store_api.Services
     {
         public long IdDetalle { get; set; }
         public long IdProducto { get; set; }
+        public long? IdArchivoImagen { get; set; }
         public string Producto { get; set; } = "";
         public string Sku { get; set; } = "";
         public long? IdPersonalizacion { get; set; }
@@ -104,6 +105,22 @@ namespace FamKon_store_api.Services
                     }
                 }
 
+                await reader.CloseAsync();
+                if (carrito.Detalles.Count > 0)
+                {
+                    using var imagenes = new OracleCommand(@"
+                        SELECT P.ID_PRODUCTO, P.ID_ARCHIVO_IMAGEN
+                        FROM PRODUCTO P
+                        WHERE EXISTS (SELECT 1 FROM CARRITO_DETALLE D
+                                      WHERE D.ID_CARRITO = :id AND D.ID_PRODUCTO = P.ID_PRODUCTO)", connection);
+                    imagenes.Parameters.Add("id", OracleDbType.Int64).Value = idCarrito;
+                    using var fotos = await imagenes.ExecuteReaderAsync();
+                    var porProducto = new Dictionary<long, long?>();
+                    while (await fotos.ReadAsync())
+                        porProducto[fotos.GetInt64(0)] = fotos.IsDBNull(1) ? null : fotos.GetInt64(1);
+                    foreach (var item in carrito.Detalles)
+                        item.IdArchivoImagen = porProducto.GetValueOrDefault(item.IdProducto);
+                }
                 return first ? null : carrito;
             }
             catch (Exception ex)

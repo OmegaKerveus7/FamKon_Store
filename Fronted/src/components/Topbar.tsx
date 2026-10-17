@@ -1,3 +1,5 @@
+import { AdminPedidoBell } from './AdminPedidosPanel';
+import { esAdministrador } from '../domain/vistasRol';
 import AvatarCredencial from './AvatarCredencial';
 import NotificacionesCompras from './NotificacionesCompras';
 import { Menu, ChevronRight } from "lucide-react";
@@ -64,7 +66,7 @@ export default function Topbar({ onToggleSidebar }: { onToggleSidebar: () => voi
       </div>
 
       <div className="ml-auto flex items-center gap-3">
-        {tienePermiso('VER_TRACKING') && <NotificacionesCompras key={usuario?.idUsuario} />}
+        {esAdministrador(usuario?.roles) ? <AdminPedidoBell /> : tienePermiso('VER_TRACKING') && <NotificacionesCompras key={usuario?.idUsuario} />}
         <Link to="/perfil" aria-label="Abrir mi perfil" className="flex items-center gap-3 rounded-2xl px-2 py-1.5 transition hover:bg-slate-50">
           <div
             className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${colorAvatar(usuario?.roles)} text-sm font-bold text-white shadow-sm`}

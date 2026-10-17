@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Store, Package } from "lucide-react";
+import { Search, Store, Package, ShoppingCart } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 import ImagenProducto from "../components/ImagenProducto";
 import {
   type Producto,
@@ -10,6 +11,7 @@ import {
 } from "../api/famkon";
 
 export default function CatalogoPage() {
+  const { tienePermiso } = useAuth();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [filtroCategoria, setFiltroCategoria] = useState<number | null>(null);
@@ -47,22 +49,26 @@ export default function CatalogoPage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-2">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Catalogo</h1>
+          <h1 className="text-2xl font-bold text-slate-900">¿Qué querés comprar hoy?</h1>
           <p className="text-sm text-slate-500">
-            Explora los productos personalizados disponibles.
+            Elegí tus productos favoritos y personalizalos a tu gusto.
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
           {productosFiltrados.length} producto{productosFiltrados.length === 1 ? "" : "s"}
         </span>
-      </header>
+        {tienePermiso('VER_CARRITO') && <Link to="/comprador/carrito" className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-amber-400"><ShoppingCart size={18} />Ver mi carrito</Link>}
+        </div>
+      </div>
 
       <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
         <Search className="h-5 w-5 text-slate-400" />
         <input
           type="text"
+          aria-label="Buscar productos"
           placeholder="Buscar productos..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}

@@ -4,9 +4,18 @@ using Microsoft.AspNetCore.Authorization;
 using Oracle.ManagedDataAccess.Types;
 namespace FamKon_store_api.Controllers;
 [ApiController,Route("api/famkon/constancias"),ServiceFilter(typeof(CompraExceptionFilter))]
-public class ConstanciasController(CompraService compras):ControllerBase {
+public class ConstanciasController(CompraService compras,IConfiguration config):ControllerBase {
  private long Actor=>long.Parse(User.FindFirst("sub")!.Value);
  public record Preferencias(bool Email,bool Whatsapp);
+ [Authorize,HttpGet("{id:long}/pdf")]
+ public async Task<IActionResult> Descargar(long id,[FromQuery]string vista="cliente") {
+  if(vista is not ("cliente" or "admin" or "repartidor"))return BadRequest();
+  var detail=await compras.Detalle(id,Actor,vista);if(detail is null)return NotFound();
+  var json=System.Text.Json.JsonSerializer.SerializeToElement(detail);var p=json.GetProperty("pedido");
+  if(p.GetProperty("estado").ToString() is "CANCELADO" or "REEMBOLSO_PENDIENTE" || (p.GetProperty("metodoPago").ToString()!="EFECTIVO" && p.GetProperty("estadoPago").ToString()!="APROBADO"))return Conflict(new{mensaje="La constancia estará disponible cuando el pago esté confirmado."});
+  var web=config["Constancias:FrontendUrl"];if(!Uri.TryCreate(web,UriKind.Absolute,out _))return StatusCode(503,new{mensaje="El seguimiento de constancias no está configurado."});
+  return File(ConstanciaPdf.Crear(json,web!,config["Tienda:Direccion"]??"Campus central"),"application/pdf",$"constancia-{id}.pdf");
+ }
  [Authorize,HttpGet("preferencias")]
  public async Task<IActionResult> Preferencia() {
   using var c=await compras.Abrir(Actor);using var cmd=CompraService.Comando(c,"SELECT NOTIFICA_EMAIL,NOTIFICA_WHATSAPP FROM USUARIO WHERE ID_USUARIO=:id",("id",Actor));

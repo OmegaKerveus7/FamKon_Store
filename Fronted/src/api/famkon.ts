@@ -301,6 +301,7 @@ export interface Categoria {
 }
 
 export interface CarritoItem {
+  idArchivoImagen?: number | null;
   idDetalle: number;
   idProducto: number;
   producto: string;

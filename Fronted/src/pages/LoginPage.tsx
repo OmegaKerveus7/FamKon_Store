@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ScanFace, QrCode, Loader2, Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
+import { ScanFace, QrCode, Loader2, Eye, EyeOff, Mail, Lock, ArrowRight, PackageSearch } from "lucide-react";
 import { login } from "../api/famkon";
 import { useAuth } from "../context/AuthContext";
 
@@ -8,7 +8,7 @@ function rutaInicialPorRol(roles: string): string {
   const superiores = roles.split(",").map((r) => r.trim().toUpperCase());
   const orden = ["ADMIN", "SUPERVISOR", "REPARTIDOR", "COMPRADOR"];
   for (const r of orden) {
-    if (superiores.includes(r)) return "/inicio";
+    if (superiores.includes(r)) return r === "ADMIN" ? "/admin/pedidos" : "/inicio";
   }
   return "/inicio";
 }
@@ -48,7 +48,7 @@ export default function LoginPage() {
 
       const roles = respuesta.usuario.roles ?? "COMPRADOR";
       const volverA = state?.volverA;
-      navigate(typeof volverA === 'string' && /^\/comprador\/tracking\?pedido=\d+$/.test(volverA) ? volverA : rutaInicialPorRol(roles), { replace: true });
+      navigate(typeof volverA === 'string' && (/^\/comprador\/tracking\?pedido=\d+$/.test(volverA) || /^\/rastreo\?(?:guia=FK-[A-Z0-9]{20,64}|pedido=[1-9]\d*)(?:&detalle=1)?$/.test(volverA)) ? volverA : rutaInicialPorRol(roles), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesión.");
     } finally {
@@ -57,7 +57,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-slate-100 px-4 py-6 sm:px-8">
+    <div className="flex min-h-dvh items-center justify-center bg-slate-100 px-4 pt-32 pb-6 sm:px-8">
       <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl lg:grid-cols-[0.95fr_1.05fr]">
         <aside className="hidden flex-col justify-center border-r border-amber-100 bg-amber-50/60 p-10 lg:flex">
           <img src="/images/slogan-famkon.png" alt="FamKon" className="mx-auto w-full max-w-sm object-contain mix-blend-multiply" />
@@ -167,6 +167,14 @@ export default function LoginPage() {
           <p className="-mt-2 text-center text-xs leading-relaxed text-slate-500">El acceso facial y QR requieren registro previo en tu cuenta.</p>
         </div>
       </div>
+      <Link
+        to="/rastreo"
+        aria-label="Rastrear mi paquete"
+        className="fixed right-4 top-[calc(1rem+env(safe-area-inset-top))] z-40 inline-flex min-h-14 max-w-[calc(100vw-2rem)] items-center gap-3 rounded-full border border-white bg-amber-500 py-3 pr-5 pl-3 text-slate-950 shadow-lg shadow-amber-900/20 transition hover:bg-amber-400 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-600 sm:right-6 sm:top-[calc(1.5rem+env(safe-area-inset-top))] motion-reduce:transition-none"
+      >
+        <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/80"><PackageSearch size={23} /></span>
+        <span><strong className="block text-sm font-bold">Rastrear mi paquete</strong></span>
+      </Link>
     </div>
   );
 }

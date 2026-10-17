@@ -59,7 +59,7 @@ builder.Services.AddSingleton<BD.DBContext>();
 
 ### Autenticación JWT
 - Login retorna `{ token, usuario }` (no el objeto Usuario crudo)
-- Token expira en **10 minutos**
+- Token expira en **60 minutos**
 - Key JWT en `appsettings.json` → `Jwt:SecretKey`
 - Frontend almacena token en `localStorage` key `famkon.token`
 - Frontend auto-renueva token cada 8 minutos via AuthContext (solo si el usuario esta activo)
@@ -67,14 +67,14 @@ builder.Services.AddSingleton<BD.DBContext>();
 - 401 → limpiar storage → redirect `/login`
 
 ### Politica de inactividad de sesion
-- **10 minutos de inactividad** → `cerrarSesion()` automatico (limpia storage y redirige a `/login`).
-- **Aviso a los 9 minutos** → aparece el modal `SessionWarning` con countdown de 60s y dos botones:
+- **60 minutos de inactividad** → `cerrarSesion()` automatico (limpia storage y redirige a `/login`).
+- **Aviso a los 59 minutos** → aparece el modal `SessionWarning` con countdown de 60s y dos botones:
   - **Continuar sesion** → llama a `/api/famkon/refresh-token`, reinicia el contador y cierra el modal.
   - **Cerrar sesion** → logout manual inmediato.
 - La actividad se rastrea en `DashboardLayout` con listeners de `mousedown / keydown / scroll / touchstart / click / mousemove`. Cada evento actualiza `actividadRef` en `AuthContext`.
 - Mientras el usuario esta activo, el JWT se refresca automaticamente cada 8 minutos (siempre que la ultima actividad sea de hace menos de 1 minuto, para no gastar tokens en sesiones abandonadas).
 - Constantes en `Fronted/src/context/AuthContext.tsx`:
-  - `TIMEOUT_INACTIVIDAD_MS = 10 * 60 * 1000`
+  - `TIMEOUT_INACTIVIDAD_MS = 60 * 60 * 1000`
   - `AVISO_INACTIVIDAD_MS = 60 * 1000`
 
 ### PKG_LOGIN (Oracle Package)
@@ -125,7 +125,7 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - `appsettings.Development.json` también excluido
 - `.env` excluido por prevención
 - Passwords hasheados con SHA-256 en la BD (via PKG_SEGURIDAD o PKG_LOGIN)
-- JWT tokens de 10 minutos con auto-refresh cada 8 minutos
+- JWT tokens de 60 minutos con auto-refresh cada 8 minutos
 - Auditoría en BITACORA_ACCESO via PKG_SEGURIDAD
 - reCAPTCHA v2 de Google integrado para protección contra bots
 

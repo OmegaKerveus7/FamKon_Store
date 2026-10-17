@@ -43,6 +43,33 @@ public class ComprasController(CompraService compras,RecurrenteService pagos,Arc
         if(!VistaValida(vista))return BadRequest(); if(vista=="admin"&&!await compras.EsAdmin(Actor))return Forbid();
         return Ok(await compras.Listar(Actor,vista,Math.Clamp(pagina,1,100000),estado,busqueda?.Trim()));
     }
+    [HttpGet("bandeja-admin")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> BandejaAdmin([FromQuery] long desde = 0) {
+        if (!await compras.EsAdmin(Actor)) return Forbid();
+        using var c = await compras.Abrir(Actor);
+        using var resumen = CompraService.Comando(c, """
+            SELECT NVL(MAX(P.ID_PEDIDO),0) ULTIMO,
+              COUNT(CASE WHEN P.ID_PEDIDO>:desde THEN 1 END) NUEVOS,
+              COUNT(CASE WHEN E.CODIGO IN ('GENERADO','PAGO_PENDIENTE','PAGO_CONFIRMADO') THEN 1 END) SIN_ACEPTAR,
+              COUNT(CASE WHEN E.CODIGO='EN_ELABORACION' THEN 1 END) EN_PREPARACION,
+              COUNT(CASE WHEN E.CODIGO='LISTO_ENTREGA' AND NVL(A.ACTIVAS,0)=0 THEN 1 END) SIN_ASIGNAR
+            FROM PEDIDO P JOIN ESTADO_PEDIDO E ON E.ID_ESTADO_PEDIDO=P.ID_ESTADO_PEDIDO
+            LEFT JOIN (SELECT EN.ID_PEDIDO,COUNT(*) ACTIVAS FROM ENTREGA EN
+              JOIN ESTADO_ENTREGA EE ON EE.ID_ESTADO_ENTREGA=EN.ID_ESTADO_ENTREGA
+              WHERE EE.CODIGO IN ('ASIGNADA','EN_RUTA') GROUP BY EN.ID_PEDIDO) A ON A.ID_PEDIDO=P.ID_PEDIDO
+            """, ("desde", Math.Max(0, desde)));
+        var datos = (await CompraService.Leer(resumen)).Single();
+        using var pendientes = CompraService.Comando(c, """
+            SELECT P.ID_PEDIDO,P.NUMERO_PEDIDO,E.CODIGO ESTADO,
+              TO_CHAR(P.FECHA_PEDIDO,'YYYY-MM-DD"T"HH24:MI:SS.FF3TZH:TZM') FECHA_PEDIDO
+            FROM PEDIDO P JOIN ESTADO_PEDIDO E ON E.ID_ESTADO_PEDIDO=P.ID_ESTADO_PEDIDO
+            WHERE E.CODIGO IN ('GENERADO','PAGO_PENDIENTE','PAGO_CONFIRMADO','EN_ELABORACION','LISTO_ENTREGA','COMPRADOR_NO_ENCONTRADO')
+            ORDER BY CASE WHEN E.CODIGO IN ('GENERADO','PAGO_PENDIENTE','PAGO_CONFIRMADO') THEN 0 ELSE 1 END,
+              P.FECHA_PEDIDO,P.ID_PEDIDO FETCH NEXT 8 ROWS ONLY
+            """);
+        return Ok(new { resumen = datos, pendientes = await CompraService.Leer(pendientes) });
+    }
     [HttpGet("repartidores")]
     public async Task<IActionResult> Repartidores() {if(!await compras.EsAdmin(Actor))return Forbid();return Ok(await compras.Repartidores(Actor));}
     [HttpGet("{id:long}")]

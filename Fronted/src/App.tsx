@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import RastreoPage from "./pages/RastreoPage";
 import IndexPage from "./pages/IndexPage";
 import LoginPage from "./pages/LoginPage";
 import RecuperarPasswordPage from "./pages/RecuperarPasswordPage";
@@ -41,6 +42,7 @@ export default function App() {
     <Routes>
       {/* Rutas publicas (sin dashboard) */}
       <Route path="/" element={<IndexPage />} />
+      <Route path="/rastreo" element={<RastreoPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/recuperar-contrasena" element={<RecuperarPasswordPage />} />
       <Route path="/registro" element={<RegistroPage />} />

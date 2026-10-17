@@ -15,6 +15,8 @@ import {
   eliminarDelCarritoAPI,
 } from "../api/famkon";
 
+import ImagenProducto from "../components/ImagenProducto";
+
 export default function CarritoPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<CarritoItem[]>([]);
@@ -124,9 +126,9 @@ export default function CarritoPage() {
                 key={item.idDetalle}
                 className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
               >
-                <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-orange-100">
-                  <Package className="h-8 w-8 text-amber-300" />
-                </div>
+                <Link to={`/comprador/producto/${item.idProducto}`} aria-label={`Ver ${item.producto}`} className="flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-amber-50">
+                  <ImagenProducto key={`${item.idProducto}-${item.idArchivoImagen}`} idProducto={item.idProducto} idArchivoImagen={item.idArchivoImagen} nombre={item.producto} />
+                </Link>
 
                 <div className="flex flex-1 flex-col justify-between">
                   <div>

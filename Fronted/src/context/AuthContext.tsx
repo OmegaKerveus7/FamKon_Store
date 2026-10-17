@@ -21,8 +21,8 @@ const STORAGE_KEY = "famkon.usuario";
 const PERMISOS_KEY = "famkon.permisos";
 export const ACTIVIDAD_KEY = "famkon.ultima_actividad";
 
-// 2 horas de sesión. Aviso un minuto antes del cierre.
-export const TIMEOUT_INACTIVIDAD_MS = 2 * 60 * 60 * 1000;
+// Una hora de inactividad. Aviso un minuto antes del cierre.
+export const TIMEOUT_INACTIVIDAD_MS = 60 * 60 * 1000;
 export const AVISO_INACTIVIDAD_MS = 60 * 1000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -78,8 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (respuesta.codigoS === 200 && respuesta.token) {
         guardarToken(respuesta.token);
         setToken(respuesta.token);
-        actividadRef.current = Date.now();
-        localStorage.setItem(ACTIVIDAD_KEY, String(actividadRef.current));
         return true;
       }
       cerrarSesion();
@@ -144,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     avisoActivoRef.current = false;
   }
 
-  // ─── Timers: auto-refresh cada 8 min + inactividad de 2 horas ─────────────
+  // ─── Timers: auto-refresh cada 8 min + inactividad de una hora ────────────
   useEffect(() => {
     if (!token) return;
 

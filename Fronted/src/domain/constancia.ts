@@ -13,7 +13,9 @@ export async function crearConstancia(d: DetalleCompra, origin: string, tienda: 
   const [{ jsPDF }, { default: QRCode }] = await Promise.all([import('jspdf'), import('qrcode')]);
   const p = d.pedido;
   if (!puedeDescargarConstancia(p)) throw new Error('La constancia estará disponible cuando el pago esté confirmado.');
-  const url = trackingUrl(origin, p.idPedido);
+  const publicUrl = new URL('/rastreo', origin);
+  publicUrl.searchParams.set('guia', p.numeroPedido);
+  const url = publicUrl.href;
   const qr = await QRCode.toDataURL(url, { errorCorrectionLevel: 'M', margin: 2, width: 420 });
   const doc = new jsPDF();
   const money = (n: number) => `Q ${n.toFixed(2)}`;

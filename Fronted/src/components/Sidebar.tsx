@@ -1,3 +1,4 @@
+import { esAdministrador, grupoPermitidoParaAdmin } from '../domain/vistasRol';
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -14,6 +15,7 @@ function grupoHabilitado(
   tieneRol: (rol: string) => boolean,
   esAdmin: boolean,
 ): boolean {
+  if (!grupoPermitidoParaAdmin(grupo.id, esAdmin)) return false;
   if (esAdmin) return true;
   if (!grupo.codigoRol) return true;
   return tieneRol(grupo.codigoRol);
@@ -29,10 +31,11 @@ export default function Sidebar({
   const { usuario, tienePermiso, tieneRol, cerrarSesion } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const esAdmin = tieneRol("ADMIN");
+  const esAdmin = esAdministrador(usuario?.roles);
 
+  const soloComprador = tieneRol("COMPRADOR") && !esAdmin && !tieneRol("SUPERVISOR") && !tieneRol("REPARTIDOR");
   const gruposVisibles = MENU_GROUPS.filter((g) =>
-    grupoHabilitado(g, tieneRol, esAdmin),
+    grupoHabilitado(g, tieneRol, esAdmin) && (!soloComprador || g.id === "compras"),
   );
 
   const gruposConItems = gruposVisibles
@@ -44,7 +47,8 @@ export default function Sidebar({
         return tienePermiso(i.codigo);
       }),
     }))
-    .filter((g) => g.items.length > 0);
+    .filter((g) => g.items.length > 0)
+    .sort((a, b) => esAdmin ? Number(b.id === "administracion") - Number(a.id === "administracion") : 0);
 
   const grupoActivo = gruposConItems.find((g) =>
     g.items.some(

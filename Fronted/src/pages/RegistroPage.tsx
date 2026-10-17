@@ -52,7 +52,11 @@ function generarCodigoOTP(): string {
 // la página recarga desde cero perdiendo todo el estado de React.
 // Guardamos un borrador en localStorage para retomar el registro donde quedó.
 const CLAVE_BORRADOR_REGISTRO = "famkon.registro.borrador";
+const CLAVE_PRUEBA_STORAGE = "famkon.registro.prueba";
 const VIGENCIA_BORRADOR_MS = 24 * 60 * 60 * 1000;
+// El backend invalida el token del rostro a los 15 minutos, así que refrescamos
+// la segmentación si pasó más de este tiempo (sin pedir otra foto).
+const VIGENCIA_TOKEN_ROSTRO_MS = 10 * 60 * 1000;
 
 type BorradorRegistro = {
   guardadoEn: number;
@@ -67,15 +71,17 @@ type BorradorRegistro = {
   fechaNacimiento: string;
   temaCredencial: string;
   foto: string;
-  rostro: string;
   fotoEditada: string;
   solicitudRostro: string;
+  rostroCapturadoEn: number | null;
   codigoEsperado: string;
   codigoEnviadoEn: number | null;
   codigoVerificado: boolean;
   codigoIngresado: string;
   registrado: boolean;
   mensaje: string;
+  contrasena: string;
+  confirmacion: string;
 };
 
 function limpiarEstadoCodigoBorrador(datos: Partial<BorradorRegistro>): Partial<BorradorRegistro> {
@@ -102,14 +108,14 @@ function cargarBorradorRegistro(): Partial<BorradorRegistro> {
       typeof datos.codigoEnviadoEn === "number" &&
       datos.codigoEnviadoEn + MINUTOS_EXPIRACION * 60 * 1000 <= Date.now();
     if (codigoExpirado) return limpiarEstadoCodigoBorrador(datos);
-    // Si se perdieron las imagenes (cuota de storage llena), volver al paso 1
-    // para que la persona retome la fotografia con sus datos conservados.
+    // Si se perdió la fotografía (cuota de storage llena), volvemos al paso 1
+    // pero conservando TODO lo demás: contraseña y código ya verificado.
     if (
       datos.paso === "verificar" &&
       !datos.registrado &&
-      (!datos.foto || !datos.fotoEditada || !datos.solicitudRostro)
+      (!datos.foto || !datos.fotoEditada)
     ) {
-      return { ...limpiarEstadoCodigoBorrador(datos), paso: "datos" };
+      return { ...datos, paso: "datos" };
     }
     return datos;
   } catch {
@@ -117,20 +123,22 @@ function cargarBorradorRegistro(): Partial<BorradorRegistro> {
   }
 }
 
-function guardarBorradorRegistro(datos: Partial<BorradorRegistro>) {
+function guardarBorradorRegistro(datos: Partial<BorradorRegistro>): boolean {
   const completo = { ...datos, guardadoEn: Date.now() };
   try {
     localStorage.setItem(CLAVE_BORRADOR_REGISTRO, JSON.stringify(completo));
+    return true;
   } catch {
-    // Sin espacio disponible: reintentar sin las imagenes (base64 muy pesado).
+    // Sin espacio disponible: reintentar sin las imágenes (base64 muy pesado).
     try {
       const sinFotos: Partial<BorradorRegistro> = { ...completo };
       delete sinFotos.foto;
-      delete sinFotos.rostro;
       delete sinFotos.fotoEditada;
       localStorage.setItem(CLAVE_BORRADOR_REGISTRO, JSON.stringify(sinFotos));
+      return true;
     } catch {
       // Modo privado / cuota agotada: no bloquear el registro por esto.
+      return false;
     }
   }
 }
@@ -146,6 +154,7 @@ export default function RegistroPage() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState(() => borradorInicial.registrado ? (borradorInicial.mensaje ?? "") : "");
+  const [persistenciaOk, setPersistenciaOk] = useState(true);
 
   // ─── Paso 1: datos del usuario ──────────────────────────────────
   const [nombres, setNombres] = useState(() => borradorInicial.nombres ?? "");
@@ -188,11 +197,12 @@ export default function RegistroPage() {
     ? ""
     : `Ingresa tu número nacional, sin +${getCountryCallingCode(paisTelefono)}.${ejemploTelefono ? ` Ejemplo: ${ejemploTelefono}.` : ""}`;
   const [nickname, setNickname] = useState(() => borradorInicial.nickname ?? "");
-  const [contrasena, setContrasena] = useState("");
-  const [confirmacion, setConfirmacion] = useState("");
+  const [contrasena, setContrasena] = useState(() => borradorInicial.contrasena ?? "");
+  const [confirmacion, setConfirmacion] = useState(() => borradorInicial.confirmacion ?? "");
   const [fechaNacimiento, setFechaNacimiento] = useState(() => borradorInicial.fechaNacimiento ?? "");
-  const [rostro, setRostro] = useState(() => borradorInicial.rostro ?? "");
+  const [rostro, setRostro] = useState("");
   const [solicitudRostro, setSolicitudRostro] = useState(() => borradorInicial.solicitudRostro ?? "");
+  const [rostroCapturadoEn, setRostroCapturadoEn] = useState<number | null>(() => borradorInicial.rostroCapturadoEn ?? null);
   const [errorRostro, setErrorRostro] = useState("");
   const [segmentando, setSegmentando] = useState(false);
   const [temaCredencial, setTemaCredencial] = useState(() => borradorInicial.temaCredencial ?? "AZUL");
@@ -233,6 +243,8 @@ export default function RegistroPage() {
         codigoIngresado: "",
         registrado: true,
         mensaje,
+        contrasena: "",
+        confirmacion: "",
       }
     : {
         paso,
@@ -246,15 +258,17 @@ export default function RegistroPage() {
         fechaNacimiento,
         temaCredencial,
         foto,
-        rostro,
         fotoEditada,
         solicitudRostro,
+        rostroCapturadoEn,
         codigoEsperado,
         codigoEnviadoEn,
         codigoVerificado,
         codigoIngresado,
         registrado: false,
         mensaje: "",
+        contrasena,
+        confirmacion,
       };
 
   useEffect(() => {
@@ -274,6 +288,49 @@ export default function RegistroPage() {
       document.removeEventListener("visibilitychange", alOcultar);
     };
   }, []);
+
+  // Avisamos si el navegador bloqueó el almacenamiento (modo privado, cuota,
+  // navegador interno de otra app): en ese caso no se puede conservar nada.
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLAVE_PRUEBA_STORAGE, "1");
+      localStorage.removeItem(CLAVE_PRUEBA_STORAGE);
+      setPersistenciaOk(true);
+    } catch {
+      setPersistenciaOk(false);
+    }
+  }, []);
+
+  // Al volver del reciclado de pestaña (móvil) se recupera la fotografía
+  // guardada: se vuelve a segmentar sin pedir otra captura y así se regeneran
+  // el token y la credencial. También refresca el token si está por vencer.
+  const recuperacionFotoHechaRef = useRef(false);
+  useEffect(() => {
+    if (recuperacionFotoHechaRef.current || registrado) return;
+    recuperacionFotoHechaRef.current = true;
+    const tokenViejo = !rostroCapturadoEn || Date.now() - rostroCapturadoEn > VIGENCIA_TOKEN_ROSTRO_MS;
+    if (foto && (tokenViejo || !solicitudRostro || !rostro)) void recuperarRostro();
+  }, []);
+
+  // Si cambian los datos a los que se envió el código, el código anterior deja
+  // de ser válido (pero no se pierde nada más al volver al paso 1).
+  const datosCodigoRef = useRef({ correo: correoNormalizado, telefono, paisTelefono, canal });
+  useEffect(() => {
+    const previo = datosCodigoRef.current;
+    if (
+      previo.correo === correoNormalizado &&
+      previo.telefono === telefono &&
+      previo.paisTelefono === paisTelefono &&
+      previo.canal === canal
+    ) return;
+    datosCodigoRef.current = { correo: correoNormalizado, telefono, paisTelefono, canal };
+    if (!codigoEsperado && !codigoVerificado) return;
+    setCodigoEsperado("");
+    setCodigoEnviadoEn(null);
+    setCodigoVerificado(false);
+    setCodigoIngresado("");
+    setSegundosRestantes(0);
+  }, [correoNormalizado, telefono, paisTelefono, canal, codigoEsperado, codigoVerificado]);
 
   // ─── Cronómetro de expiración del código (5 min) ────────────────
   useEffect(() => {
@@ -297,12 +354,30 @@ export default function RegistroPage() {
   }, [codigoEnviadoEn, codigoVerificado]);
 
   // ─── Paso 1: handlers ───────────────────────────────────────────
+  async function segmentarRostro(imagen: string): Promise<string> {
+    const r = await comprasRequest<{ solicitudRostro: string; rostroBase64: string; mime: string }>('/registro/rostro', {method:'POST',body:JSON.stringify({fotoOriginalBase64:stripBase64Prefix(imagen)}),signal:AbortSignal.timeout(30000)});
+    setSolicitudRostro(r.solicitudRostro); setRostro(`data:${r.mime};base64,${r.rostroBase64}`); setRostroCapturadoEn(Date.now());
+    return r.solicitudRostro;
+  }
+  function mensajeErrorSegmentacion(e: unknown): string {
+    const detalle = (e as Error).message;
+    return (e as Error).name === 'TimeoutError' ? 'No pudimos preparar la foto a tiempo. Toma otra fotografía para volver a intentarlo.'
+      : detalle === 'Pedido no disponible.' ? 'El backend no tiene disponible la preparación de fotos. Reinicia el backend actualizado y toma otra fotografía.'
+      : `No pudimos preparar tu foto: ${detalle}`;
+  }
+  // Tras un reinicio de página: recupera la segmentación de la foto guardada
+  // sin descartar la credencial ni pedir otra captura.
+  async function recuperarRostro() {
+    setErrorRostro(""); setSegmentando(true);
+    try { await segmentarRostro(foto); }
+    catch(e) { setErrorRostro(mensajeErrorSegmentacion(e)); }
+    finally { setSegmentando(false); }
+  }
   async function prepararRostro(imagen: string) {
-    setFoto(imagen); setRostro(""); setFotoEditada(""); setSolicitudRostro(""); setError(""); setErrorRostro(""); setSegmentando(true);
+    setFoto(imagen); setRostro(""); setFotoEditada(""); setSolicitudRostro(""); setRostroCapturadoEn(null); setError(""); setErrorRostro(""); setSegmentando(true);
     try {
-      const r = await comprasRequest<{ solicitudRostro: string; rostroBase64: string; mime: string }>('/registro/rostro', {method:'POST',body:JSON.stringify({fotoOriginalBase64:stripBase64Prefix(imagen)}),signal:AbortSignal.timeout(30000)});
-      setSolicitudRostro(r.solicitudRostro); setRostro(`data:${r.mime};base64,${r.rostroBase64}`);
-    } catch(e) { const detalle=(e as Error).message; setErrorRostro((e as Error).name === 'TimeoutError' ? 'No pudimos preparar la foto a tiempo. Toma otra fotografía para volver a intentarlo.' : detalle === 'Pedido no disponible.' ? 'El backend no tiene disponible la preparación de fotos. Reinicia el backend actualizado y toma otra fotografía.' : `No pudimos preparar tu foto: ${detalle}`); }
+      await segmentarRostro(imagen);
+    } catch(e) { setErrorRostro(mensajeErrorSegmentacion(e)); }
     finally { setSegmentando(false); }
   }
   function capturarFoto() {
@@ -338,18 +413,17 @@ export default function RegistroPage() {
       return;
     }
     setPaso("verificar");
-    void enviarCodigo();
+    // Solo se envía un código nuevo si no hay uno vigente: así, al volver a
+    // este paso (por ejemplo tras recuperar la foto), no se invalida el código
+    // ya verificado.
+    const codigoVigente = codigoVerificado || (!!codigoEsperado && segundosRestantes > 0);
+    if (!codigoVigente) void enviarCodigo();
   }
 
   function volverAPaso1() {
     setPaso("datos");
     setError("");
     setMensaje("");
-    setCodigoIngresado("");
-    setCodigoVerificado(false);
-    setCodigoEsperado("");
-    setCodigoEnviadoEn(null);
-    setSegundosRestantes(0);
   }
 
   // ─── Paso 2: handlers ───────────────────────────────────────────
@@ -447,9 +521,10 @@ export default function RegistroPage() {
 
     setCargando(true);
     try {
+      if (!foto) throw new Error("Debes tomar una fotografía para crear la cuenta.");
       const fotoBase64 = stripBase64Prefix(foto);
-      const resultado = await registrarComprador({
-        solicitudRostro,
+      const peticion = (solicitud: string) => registrarComprador({
+        solicitudRostro: solicitud,
         temaCredencial,
         nombres: nombres.trim(),
         telefono: normalizarTelefono(telefono, paisTelefono),
@@ -463,6 +538,22 @@ export default function RegistroPage() {
         fotoOriginalBase64: fotoBase64,
         fotoEditadaBase64: stripBase64Prefix(fotoEditada),
       });
+
+      // El backend vence el token del rostro a los 15 min: si pasó más tiempo
+      // (o ya se perdió), se regenera con la foto guardada antes de registrar.
+      let token = solicitudRostro;
+      const tokenVigente = !!token && !!rostroCapturadoEn && Date.now() - rostroCapturadoEn < VIGENCIA_TOKEN_ROSTRO_MS;
+      if (!tokenVigente) token = await segmentarRostro(foto);
+
+      let resultado;
+      try {
+        resultado = await peticion(token);
+      } catch (err) {
+        const detalle = err instanceof Error ? err.message : "";
+        if (!/venci|cambi/i.test(detalle)) throw err;
+        token = await segmentarRostro(foto);
+        resultado = await peticion(token);
+      }
 
       if (resultado.codigoS !== 200) {
         throw new Error(resultado.mensaje || "No fue posible crear la cuenta.");
@@ -513,6 +604,13 @@ export default function RegistroPage() {
               </p>
             </div>
           </div>
+
+          {!persistenciaOk && (
+            <p role="alert" className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-xs font-medium text-amber-800">
+              Tu navegador está bloqueando el guardado automático (modo privado o permisos).
+              No cierres esta pestaña ni salgas de la página hasta terminar el registro.
+            </p>
+          )}
 
           {/* Stepper */}
           <div className="mt-5 flex items-center gap-3 text-sm">

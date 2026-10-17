@@ -345,9 +345,20 @@ namespace FamKon_store_api.Controllers
             var userId = ObtenerUsuarioId();
             if (userId is null) return Ok(new { codigoS = 401, mensaje = "No autorizado." });
 
+            var idPersonalizacion = request.IdPersonalizacion;
+            var comentario = request.Comentario?.Trim();
+            if (!string.IsNullOrEmpty(comentario))
+            {
+                if (comentario.Length > 500)
+                    return BadRequest(new { codigoS = 400, mensaje = "Las indicaciones no pueden superar los 500 caracteres." });
+
+                idPersonalizacion = await _carrito.CrearPersonalizacionAsync(
+                    null, null, comentario, null, null, null);
+            }
+
             var idCarrito = await _carrito.ObtenerOCrearAsync(userId.Value, request.IdSitio);
             var idDetalle = await _carrito.AgregarProductoAsync(
-                idCarrito, request.IdProducto, request.IdPersonalizacion,
+                idCarrito, request.IdProducto, idPersonalizacion,
                 request.Cantidad, request.PrecioPersonaliza ?? 0);
 
             return Ok(new { codigoS = 200, mensaje = "Producto agregado.", idDetalle });
@@ -473,6 +484,7 @@ namespace FamKon_store_api.Controllers
         public long? IdPersonalizacion { get; set; }
         public int Cantidad { get; set; } = 1;
         public decimal? PrecioPersonaliza { get; set; }
+        public string? Comentario { get; set; }
     }
 
     public class ActualizarCantidadRequest

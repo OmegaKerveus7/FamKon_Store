@@ -307,6 +307,7 @@ export interface CarritoItem {
   producto: string;
   sku: string;
   idPersonalizacion: number | null;
+  comentario?: string | null;
   cantidad: number;
   precioUnitario: number;
   precioPersonaliza: number;
@@ -352,6 +353,7 @@ export interface PedidoDetalle {
   precioUnitario: number;
   precioPersonaliza: number;
   subtotal: number;
+  indicaciones?: string | null;
 }
 
 // ─── Funciones de la Tienda ─────────────────────────────────────────────────
@@ -420,6 +422,7 @@ export async function agregarAlCarritoAPI(data: {
   idSitio?: number;
   idPersonalizacion?: number | null;
   precioPersonaliza?: number;
+  comentario?: string;
 }): Promise<{ idDetalle: number }> {
   const res = await request<ApiResponse>("/carrito/productos", {
     method: "POST",
@@ -429,6 +432,7 @@ export async function agregarAlCarritoAPI(data: {
       idSitio: data.idSitio ?? 1,
       idPersonalizacion: data.idPersonalizacion ?? null,
       precioPersonaliza: data.precioPersonaliza ?? 0,
+      comentario: data.comentario?.trim() || null,
     }),
   });
   return { idDetalle: res.idDetalle as number };

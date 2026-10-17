@@ -18,7 +18,7 @@ export interface EntregaCompra {
 }
 export interface DetalleCompra {
   pedido: Compra;
-  productos: { idProducto: number; nombreProducto: string; skuProducto: string; cantidad: number; precioUnitario: number; precioPersonaliza: number; subtotal: number }[];
+  productos: { idProducto: number; nombreProducto: string; skuProducto: string; cantidad: number; precioUnitario: number; precioPersonaliza: number; subtotal: number; indicaciones?: string | null }[];
   historial: { idHistorial: number; estado: string; nombre: string; comentario: string | null; fecha: string; actor: string | null }[];
   entregas: EntregaCompra[];
   auditoria: { motivo: string; actor: string; fecha: string }[];

@@ -64,7 +64,7 @@ public class CompraService(DBContext db) {
         if(!await PuedeVer(id,actor,vista)) return null;
         using var c=await Abrir(actor); var pedido=await Resumen(id,c);
         async Task<List<Dictionary<string,object?>>> Q(string sql) { using var cmd=Comando(c,sql,("id",id)); return await Leer(cmd); }
-        var productos=await Q("SELECT ID_PRODUCTO,NOMBRE_PRODUCTO,SKU_PRODUCTO,CANTIDAD,PRECIO_UNITARIO,PRECIO_PERSONALIZA,SUBTOTAL FROM PEDIDO_DETALLE WHERE ID_PEDIDO=:id ORDER BY NUMERO_LINEA");
+        var productos=await Q("SELECT D.ID_PRODUCTO,D.NOMBRE_PRODUCTO,D.SKU_PRODUCTO,D.CANTIDAD,D.PRECIO_UNITARIO,D.PRECIO_PERSONALIZA,D.SUBTOTAL,PR.MENSAJE_LADO_A INDICACIONES FROM PEDIDO_DETALLE D LEFT JOIN PERSONALIZACION PR ON PR.ID_PERSONALIZACION=D.ID_PERSONALIZACION WHERE D.ID_PEDIDO=:id ORDER BY D.NUMERO_LINEA");
         var historial=await Q("""
           SELECT H.ID_HISTORIAL,E.CODIGO ESTADO,E.NOMBRE,H.COMENTARIO,
           TO_CHAR(H.FECHA_ESTADO,'YYYY-MM-DD"T"HH24:MI:SS.FF3TZH:TZM') FECHA,U.NICKNAME ACTOR

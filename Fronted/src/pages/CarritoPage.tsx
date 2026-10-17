@@ -137,6 +137,11 @@ export default function CarritoPage() {
                     <p className="mt-1 text-sm font-semibold text-amber-600">
                       Q{item.precioUnitario.toFixed(2)}
                     </p>
+                    {item.comentario && (
+                      <p className="mt-1 rounded-lg bg-slate-50 px-2 py-1 text-xs text-slate-600">
+                        <span className="font-semibold">Indicaciones:</span> {item.comentario}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between">

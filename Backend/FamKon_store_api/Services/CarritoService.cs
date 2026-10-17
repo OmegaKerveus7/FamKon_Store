@@ -13,6 +13,7 @@ namespace FamKon_store_api.Services
         public string Producto { get; set; } = "";
         public string Sku { get; set; } = "";
         public long? IdPersonalizacion { get; set; }
+        public string? Comentario { get; set; }
         public int Cantidad { get; set; }
         public decimal PrecioUnitario { get; set; }
         public decimal PrecioPersonaliza { get; set; }
@@ -120,6 +121,26 @@ namespace FamKon_store_api.Services
                         porProducto[fotos.GetInt64(0)] = fotos.IsDBNull(1) ? null : fotos.GetInt64(1);
                     foreach (var item in carrito.Detalles)
                         item.IdArchivoImagen = porProducto.GetValueOrDefault(item.IdProducto);
+
+                    using var notas = new OracleCommand(@"
+                        SELECT D.ID_PERSONALIZACION, PR.MENSAJE_LADO_A, PR.MENSAJE_LADO_B
+                        FROM CARRITO_DETALLE D
+                        JOIN PERSONALIZACION PR ON PR.ID_PERSONALIZACION = D.ID_PERSONALIZACION
+                        WHERE D.ID_CARRITO = :id", connection);
+                    notas.Parameters.Add("id", OracleDbType.Int64).Value = idCarrito;
+                    using var mensajes = await notas.ExecuteReaderAsync();
+                    var porPersonalizacion = new Dictionary<long, string>();
+                    while (await mensajes.ReadAsync())
+                    {
+                        var ladoA = mensajes.IsDBNull(1) ? null : mensajes.GetString(1);
+                        var ladoB = mensajes.IsDBNull(2) ? null : mensajes.GetString(2);
+                        var texto = string.IsNullOrWhiteSpace(ladoA) ? ladoB : ladoA;
+                        if (!string.IsNullOrWhiteSpace(texto))
+                            porPersonalizacion[mensajes.GetInt64(0)] = texto;
+                    }
+                    foreach (var item in carrito.Detalles)
+                        if (item.IdPersonalizacion is long idPersonalizacion)
+                            item.Comentario = porPersonalizacion.GetValueOrDefault(idPersonalizacion);
                 }
                 return first ? null : carrito;
             }

@@ -16,6 +16,7 @@ export default function ProductoDetallePage() {
 
   const [producto, setProducto] = useState<Producto | null>(null);
   const [cantidad, setCantidad] = useState(1);
+  const [indicaciones, setIndicaciones] = useState("");
   const [agregando, setAgregando] = useState(false);
   const [agregado, setAgregado] = useState(false);
   const [cargando, setCargando] = useState(true);
@@ -44,8 +45,10 @@ export default function ProductoDetallePage() {
       await agregarAlCarritoAPI({
         idProducto: producto.idProducto,
         cantidad,
+        comentario: indicaciones.trim() || undefined,
       });
       setAgregado(true);
+      setIndicaciones("");
       try {
         setResumenCarrito(await obtenerCarrito());
       } catch {
@@ -124,6 +127,28 @@ export default function ProductoDetallePage() {
                   ? "Este producto permite personalizar el lado A."
                   : "Este producto no admite personalizacion."}
             </p>
+          </div>
+
+          <div>
+            <label htmlFor="indicaciones" className="block text-sm font-semibold text-slate-700">
+              Indicaciones para la personalizacion{" "}
+              <span className="font-normal text-slate-400">(opcional)</span>
+            </label>
+            <textarea
+              id="indicaciones"
+              value={indicaciones}
+              onChange={(e) => setIndicaciones(e.target.value.slice(0, 500))}
+              maxLength={500}
+              rows={3}
+              placeholder="Ej.: quiero que mi tarjeta NFC abra https://mi-negocio.com"
+              className="mt-1 w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-700 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Contanos que queres poner en el producto (texto, la URL que debe abrir el NFC,
+              colores). Si necesitas algo distinto por unidad, escribilo aca. Si lo dejas
+              vacio, te contactamos para coordinar.
+            </p>
+            <p className="mt-1 text-right text-[10px] text-slate-400">{indicaciones.length}/500</p>
           </div>
 
           <div className="flex items-center gap-4">

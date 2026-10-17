@@ -108,7 +108,13 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.IgnoreObsoleteActions();
+    options.IgnoreObsoleteProperties();
+    // Evita colisiones cuando distintos controladores tienen DTO con el mismo nombre.
+    options.CustomSchemaIds(type => type.FullName!.Replace('+', '.'));
+});
 
 var app = builder.Build();
 

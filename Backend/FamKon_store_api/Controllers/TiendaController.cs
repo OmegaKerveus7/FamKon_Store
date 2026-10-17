@@ -113,8 +113,8 @@ namespace FamKon_store_api.Controllers
             return Ok(new { mensaje = "Tarifa actualizada. Aplica a pedidos nuevos." });
         }
 
-        [Authorize, HttpPost("admin/productos/imagen"), RequestSizeLimit(6 * 1024 * 1024)]
-        public async Task<ActionResult> SubirImagenProducto([FromForm] IFormFile archivo, [FromServices] ArchivoService archivos)
+        [Authorize, HttpPost("admin/productos/imagen"), Consumes("multipart/form-data"), RequestSizeLimit(6 * 1024 * 1024)]
+        public async Task<ActionResult> SubirImagenProducto(IFormFile archivo, [FromServices] ArchivoService archivos)
         {
             if (!await PuedeGestionarProductos()) return Forbid();
             if (archivo.Length == 0 || archivo.Length > 5 * 1024 * 1024)

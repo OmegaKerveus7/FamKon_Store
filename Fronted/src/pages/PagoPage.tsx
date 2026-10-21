@@ -3,6 +3,17 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CircleCheck, CreditCard, LockKeyhole } from 'lucide-react';
 import { detalleCompra, iniciarPago, verificarPago, type DetalleCompra } from '../api/compras';
 import { moneda, puedePagar } from '../domain/compras';
+import ImagenArchivo from '../components/ImagenArchivo';
+
+function urlDeConfig(config?: string | null): string | null {
+  if (!config) return null;
+  try {
+    const datos = JSON.parse(config) as { url?: unknown };
+    return typeof datos.url === 'string' ? datos.url : null;
+  } catch {
+    return null;
+  }
+}
 
 // Protocolo embed del SDK oficial recurrente-checkout 0.0.5.
 // El wrapper controla su propio ciclo de vida y valida origen + ventana emisora.
@@ -95,7 +106,49 @@ export default function PagoPage() {
         <aside className="order-first border-b border-slate-200 bg-slate-50 p-5 md:order-last md:border-b-0 md:border-l md:p-6">
           <p className="text-sm text-slate-500">{pagoConfirmado ? 'Total pagado' : 'Total a pagar'}</p><p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">{p ? moneda(p.total) : '—'}</p>
           <p className="mt-2 break-all text-xs text-slate-500">{p?.numeroPedido}</p>
-          <details open className="mt-5 border-t border-slate-200 pt-4"><summary className="cursor-pointer text-sm font-semibold">Detalle del pedido</summary><div className="mt-3 space-y-3 text-sm">{detail?.productos.map((i, n) => <div key={n}><p className="flex justify-between gap-3"><span>{i.cantidad} × {i.nombreProducto}</span><span className="shrink-0">{moneda(i.subtotal)}</span></p>{i.indicaciones && <p className="mt-1 text-xs text-amber-800"><span className="font-semibold">Indicaciones:</span> {i.indicaciones}</p>}</div>)}<p className="flex justify-between border-t border-slate-200 pt-3 text-slate-500"><span>{p?.idModalidadEntrega === 1 ? 'Recogida en tienda' : 'Envío a domicilio'}</span><span>{moneda(p?.cargoEntrega || 0)}</span></p></div></details>
+          <details open className="mt-5 border-t border-slate-200 pt-4">
+            <summary className="cursor-pointer text-sm font-semibold">Detalle del pedido</summary>
+            <div className="mt-3 space-y-3 text-sm">
+              {detail?.productos.map((i, n) => (
+                <div key={n}>
+                  <p className="flex justify-between gap-3"><span>{i.cantidad} × {i.nombreProducto}</span><span className="shrink-0">{moneda(i.subtotal)}</span></p>
+                  {(i.idArchivoLadoA || i.idArchivoLadoB) && (
+                    <div className="mt-2 flex gap-2">
+                      {i.idArchivoLadoA && (
+                        <div>
+                          <ImagenArchivo id={i.idArchivoLadoA} alt="Diseño lado A" className="h-14 w-14 rounded-md border border-slate-200 object-cover" />
+                          <span className="mt-0.5 block text-center text-[9px] text-slate-500">Lado A</span>
+                        </div>
+                      )}
+                      {i.idArchivoLadoB && (
+                        <div>
+                          <ImagenArchivo id={i.idArchivoLadoB} alt="Diseño lado B" className="h-14 w-14 rounded-md border border-slate-200 object-cover" />
+                          <span className="mt-0.5 block text-center text-[9px] text-slate-500">Lado B</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {i.mensajeLadoA && <p className="mt-1 text-xs text-amber-800"><span className="font-semibold">Lado A:</span> {i.mensajeLadoA}</p>}
+                  {i.mensajeLadoB && <p className="mt-1 text-xs text-amber-800"><span className="font-semibold">Lado B:</span> {i.mensajeLadoB}</p>}
+                  {(() => {
+                    const urlA = urlDeConfig(i.configLadoA);
+                    const urlB = urlDeConfig(i.configLadoB);
+                    if (urlA && urlB && urlA === urlB) {
+                      return <p className="mt-1 text-xs text-slate-600"><span className="font-semibold">URL NFC:</span> {urlA}</p>;
+                    }
+                    return (
+                      <>
+                        {urlA && <p className="mt-1 text-xs text-slate-600"><span className="font-semibold">URL A:</span> {urlA}</p>}
+                        {urlB && <p className="mt-1 text-xs text-slate-600"><span className="font-semibold">URL B:</span> {urlB}</p>}
+                      </>
+                    );
+                  })()}
+                  {i.indicaciones && !i.mensajeLadoA && !i.mensajeLadoB && <p className="mt-1 text-xs text-amber-800"><span className="font-semibold">Indicaciones:</span> {i.indicaciones}</p>}
+                </div>
+              ))}
+              <p className="flex justify-between border-t border-slate-200 pt-3 text-slate-500"><span>{p?.idModalidadEntrega === 1 ? 'Recogida en tienda' : 'Envío a domicilio'}</span><span>{moneda(p?.cargoEntrega || 0)}</span></p>
+            </div>
+          </details>
           <p className="mt-6 flex items-start gap-2 text-xs leading-relaxed text-slate-500"><LockKeyhole size={16} className="shrink-0" />Tu tarjeta se ingresa directamente en Recurrente. FamKon no guarda sus datos.</p>
         </aside>
       </div>

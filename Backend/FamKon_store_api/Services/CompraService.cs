@@ -25,7 +25,9 @@ public class CompraService(DBContext db) {
             for(var i=0;i<r.FieldCount;i++) {
                 var parts=r.GetName(i).ToLowerInvariant().Split('_');
                 var key=parts[0]+string.Concat(parts.Skip(1).Select(s=>char.ToUpperInvariant(s[0])+s[1..]));
-                row[key]=r.IsDBNull(i)?null:r.GetValue(i);
+                object? value=r.IsDBNull(i)?null:r.GetValue(i);
+                if(value is OracleClob clob) { using(clob) value=clob.IsNull?null:clob.Value; }
+                row[key]=value;
             }
             rows.Add(row);
         }
@@ -64,7 +66,7 @@ public class CompraService(DBContext db) {
         if(!await PuedeVer(id,actor,vista)) return null;
         using var c=await Abrir(actor); var pedido=await Resumen(id,c);
         async Task<List<Dictionary<string,object?>>> Q(string sql) { using var cmd=Comando(c,sql,("id",id)); return await Leer(cmd); }
-        var productos=await Q("SELECT D.ID_PRODUCTO,D.NOMBRE_PRODUCTO,D.SKU_PRODUCTO,D.CANTIDAD,D.PRECIO_UNITARIO,D.PRECIO_PERSONALIZA,D.SUBTOTAL,PR.MENSAJE_LADO_A INDICACIONES FROM PEDIDO_DETALLE D LEFT JOIN PERSONALIZACION PR ON PR.ID_PERSONALIZACION=D.ID_PERSONALIZACION WHERE D.ID_PEDIDO=:id ORDER BY D.NUMERO_LINEA");
+        var productos=await Q("SELECT D.ID_PRODUCTO,D.NOMBRE_PRODUCTO,D.SKU_PRODUCTO,D.CANTIDAD,D.PRECIO_UNITARIO,D.PRECIO_PERSONALIZA,D.SUBTOTAL,PR.MENSAJE_LADO_A INDICACIONES,PR.MENSAJE_LADO_A MENSAJE_LADO_A,PR.ID_ARCHIVO_LADO_A,PR.ID_ARCHIVO_LADO_B,PR.MENSAJE_LADO_B,PR.CONFIG_LADO_A,PR.CONFIG_LADO_B,PR.BLOQUEADA FROM PEDIDO_DETALLE D LEFT JOIN PERSONALIZACION PR ON PR.ID_PERSONALIZACION=D.ID_PERSONALIZACION WHERE D.ID_PEDIDO=:id ORDER BY D.NUMERO_LINEA");
         var historial=await Q("""
           SELECT H.ID_HISTORIAL,E.CODIGO ESTADO,E.NOMBRE,H.COMENTARIO,
           TO_CHAR(H.FECHA_ESTADO,'YYYY-MM-DD"T"HH24:MI:SS.FF3TZH:TZM') FECHA,U.NICKNAME ACTOR
@@ -108,7 +110,8 @@ public class CompraService(DBContext db) {
         using var cmd=Comando(c,"""
          SELECT COUNT(*) FROM ARCHIVO A WHERE A.ID_ARCHIVO=:archivo AND A.ACTIVO='S' AND
          (A.ID_USUARIO_CARGA=:actor OR PKG_COMPRA.ES_ADMIN(:actor)=1 OR
-          A.TIPO_ARCHIVO='IMAGEN_PRODUCTO' OR EXISTS(SELECT 1 FROM ENTREGA E JOIN PEDIDO P ON P.ID_PEDIDO=E.ID_PEDIDO WHERE E.ID_ARCHIVO_EVIDENCIA=A.ID_ARCHIVO AND (P.ID_USUARIO=:actor OR E.ID_REPARTIDOR=:actor)))
+          A.TIPO_ARCHIVO='IMAGEN_PRODUCTO' OR EXISTS(SELECT 1 FROM ENTREGA E JOIN PEDIDO P ON P.ID_PEDIDO=E.ID_PEDIDO WHERE E.ID_ARCHIVO_EVIDENCIA=A.ID_ARCHIVO AND (P.ID_USUARIO=:actor OR E.ID_REPARTIDOR=:actor)) OR
+          (A.TIPO_ARCHIVO='DISENO_PERSONALIZACION' AND EXISTS(SELECT 1 FROM PERSONALIZACION PR JOIN PEDIDO_DETALLE D ON D.ID_PERSONALIZACION=PR.ID_PERSONALIZACION JOIN ENTREGA E ON E.ID_PEDIDO=D.ID_PEDIDO WHERE (PR.ID_ARCHIVO_LADO_A=A.ID_ARCHIVO OR PR.ID_ARCHIVO_LADO_B=A.ID_ARCHIVO) AND E.ID_REPARTIDOR=:actor)))
          """,("archivo",archivo),("actor",actor));return Convert.ToInt32(await cmd.ExecuteScalarAsync())>0;
     }
 }

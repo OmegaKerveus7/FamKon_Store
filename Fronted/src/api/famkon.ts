@@ -307,11 +307,37 @@ export interface CarritoItem {
   producto: string;
   sku: string;
   idPersonalizacion: number | null;
+  idArchivoLadoA?: number | null;
+  idArchivoLadoB?: number | null;
+  mensajeLadoA?: string | null;
+  mensajeLadoB?: string | null;
+  configLadoA?: string | null;
+  configLadoB?: string | null;
+  bloqueada?: string;
   comentario?: string | null;
   cantidad: number;
   precioUnitario: number;
   precioPersonaliza: number;
   subtotal: number;
+}
+
+export interface PersonalizacionContenido {
+  idArchivoLadoA?: number | null;
+  idArchivoLadoB?: number | null;
+  mensajeLadoA?: string | null;
+  mensajeLadoB?: string | null;
+  configLadoA?: string | null;
+  configLadoB?: string | null;
+}
+
+export interface Personalizacion extends PersonalizacionContenido {
+  idPersonalizacion: number;
+  idUsuario: number | null;
+  idProducto: number | null;
+  bloqueada: string;
+  producto?: string | null;
+  skuProducto?: string | null;
+  fechaCreacion?: string | null;
 }
 
 export interface Carrito {
@@ -421,7 +447,7 @@ export async function agregarAlCarritoAPI(data: {
   cantidad: number;
   idSitio?: number;
   idPersonalizacion?: number | null;
-  precioPersonaliza?: number;
+  personalizacion?: PersonalizacionContenido | null;
   comentario?: string;
 }): Promise<{ idDetalle: number }> {
   const res = await request<ApiResponse>("/carrito/productos", {
@@ -431,11 +457,67 @@ export async function agregarAlCarritoAPI(data: {
       cantidad: data.cantidad,
       idSitio: data.idSitio ?? 1,
       idPersonalizacion: data.idPersonalizacion ?? null,
-      precioPersonaliza: data.precioPersonaliza ?? 0,
+      personalizacion: data.personalizacion ?? null,
       comentario: data.comentario?.trim() || null,
     }),
   });
   return { idDetalle: res.idDetalle as number };
+}
+
+export async function subirImagenPersonalizacionAPI(
+  archivo: File,
+  lado: "A" | "B",
+): Promise<number> {
+  const body = new FormData();
+  body.append("archivo", archivo);
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}/personalizaciones/imagen?lado=${lado}`, {
+    method: "POST",
+    body,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("famkon.usuario");
+    window.location.href = "/login";
+    throw new Error("Sesión expirada. Inicia sesión nuevamente.");
+  }
+  const texto = await res.text();
+  let data: { mensaje?: string; idArchivo?: number };
+  try {
+    data = JSON.parse(texto) as { mensaje?: string; idArchivo?: number };
+  } catch {
+    throw new Error(`No se pudo subir la imagen (HTTP ${res.status}).`);
+  }
+  if (!res.ok || !data.idArchivo) throw new Error(data.mensaje || "No se pudo subir la imagen.");
+  return data.idArchivo;
+}
+
+export async function crearPersonalizacionAPI(
+  idProducto: number,
+  contenido: PersonalizacionContenido,
+): Promise<number> {
+  const res = await request<ApiResponse>("/personalizaciones", {
+    method: "POST",
+    body: JSON.stringify({ idProducto, ...contenido }),
+  });
+  return res.idPersonalizacion as number;
+}
+
+export async function actualizarPersonalizacionAPI(
+  id: number,
+  contenido: PersonalizacionContenido,
+): Promise<Personalizacion> {
+  const res = await request<ApiResponse>(`/personalizaciones/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(contenido),
+  });
+  return res.personalizacion as Personalizacion;
+}
+
+export async function obtenerPersonalizacionAPI(id: number): Promise<Personalizacion | null> {
+  const res = await request<ApiResponse>(`/personalizaciones/${id}`);
+  return (res.personalizacion as Personalizacion) ?? null;
 }
 
 export async function actualizarCantidadCarritoAPI(

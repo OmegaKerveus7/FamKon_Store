@@ -24,7 +24,7 @@ Tienda_Online_FamKon/
 │       ├── pages/              # Componentes de página (30+ páginas)
 │       └── components/         # Componentes reutilizables (20+ componentes)
 └── BD/                         # Scripts SQL Oracle
-    └── 01 scrip/pkg/           # Paquetes PL/SQL (04_PACKAGES_TIENDA_ORACLE.sql)
+    └── 01 scrip/pkg/           # Paquetes PL/SQL (04_PACKAGES_TIENDA_ORACLE.sql, migraciones 15_*.sql)
 ```
 
 ## Comandos de Desarrollo
@@ -107,6 +107,7 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - **PKG_USUARIO**: CRUD de usuarios (leer, actualizar, password, imágenes, roles) + `SP_LISTAR_USUARIOS` + `SP_LISTAR_ROLES`
 - **PKG_CATALOGO**: Productos, categorías, áreas de entrega, métodos de pago
 - **PKG_CARRITO**: Carrito de compras, personalización, detalles
+- **PKG_PERSONALIZACION**: Crear/actualizar/obtener personalizaciones con propietario y producto, contenido por lado A/B
 - **PKG_PEDIDO**: Crear pedidos desde carrito, cambio de estado, tracking
 - **PKG_PAGO_ENTREGA**: Pagos y entregas
 - **PKG_ARCHIVO**: Gestión de archivos (imágenes)
@@ -117,7 +118,7 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - **Port**: 5626
 - **Service**: XEPDB1
 - **User**: TIENDA_APP (NO usar system)
-- **Tablas principales**: USUARIO, ROL, USUARIO_ROL, PERMISO, ROL_PERMISO, BITACORA_ACCESO, ARCHIVO, SITIO, TOKEN_RECUPERACION, PRODUCTO, CATEGORIA_PRODUCTO, CARRITO, CARRITO_DETALLE, PEDIDO, PEDIDO_DETALLE, PAGO, ENTREGA
+- **Tablas principales**: USUARIO, ROL, USUARIO_ROL, PERMISO, ROL_PERMISO, BITACORA_ACCESO, ARCHIVO, SITIO, TOKEN_RECUPERACION, PRODUCTO, CATEGORIA_PRODUCTO, CARRITO, CARRITO_DETALLE, PERSONALIZACION, PEDIDO, PEDIDO_DETALLE, PAGO, ENTREGA
 
 ## Seguridad
 
@@ -228,6 +229,30 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - Estados de pedido: PENDIENTE → PAGO_CONFIRMADO → LISTO_ENTREGA → ENVIADO → ENTREGADO
 - Soporte para pago en efectivo (monto recibido del repartidor)
 
+### Pasarela de Pagos Recurrente
+- **Backend**: `RecurrenteService` + `ComprasController`
+- **Frontend**: `PagoPage`, `CheckoutPage`, `api/compras.ts`
+- Variables en `appsettings.json` → `Recurrente:Environment` (`sandbox`/`production`), `SecretKey` (`sk_test_`/`sk_live_`), `WebhookSecret` (`whsec_`), `FrontendUrl`.
+- El backend crea el checkout, recibe el webhook firmado y confirma el pago del pedido.
+- No commitear `appsettings*.json`: contienen credenciales reales.
+
+### Módulo de Personalización de Productos
+- **Backend**: `PersonalizacionController` + `PersonalizacionService` + `PKG_PERSONALIZACION`
+- **Frontend**: `EditorPersonalizacion`, `ProductoDetallePage`, `CarritoPage`, `PedidosPage`
+- **Sin costo extra**: el precio del producto no cambia por personalizar; `PRECIO_PERSONALIZA` se guarda en 0.
+- Contenido por lado A/B: imagen (`ARCHIVO.TIPO_ARCHIVO='DISENO_PERSONALIZACION'`), mensaje (máx. 500) y configuración JSON (`CONFIG_LADO_A/B`).
+- Para tarjetas NFC se detecta el producto por nombre/SKU con `NFC`; el modal pide **una sola URL** (se guarda igual en `CONFIG_LADO_A/B`) con valor por defecto `https://famkon.site`; el backend valida que sea `http/https` y máximo 500 caracteres.
+- La UI usa una tarjeta compacta con botón **Personalizar** que abre un modal con pestañas Lado A/B y una vista previa 3D CSS de la tarjeta.
+- `PRODUCTO.PERMITE_LADO_A/B` define qué lados se pueden personalizar.
+- Endpoints:
+  - `POST /api/famkon/personalizaciones` → Crear (requiere JWT)
+  - `PUT /api/famkon/personalizaciones/{id}` → Actualizar (solo dueño, no bloqueada)
+  - `GET /api/famkon/personalizaciones/{id}` → Obtener (dueño, admin o repartidor asignado)
+  - `POST /api/famkon/personalizaciones/imagen?lado=A|B` → Subir imagen
+- `POST /api/famkon/carrito/productos` acepta `personalizacion` con el contenido A/B; si se envía `idPersonalizacion`, valida dueño/producto y que no esté bloqueada.
+- Al crear el pedido, `PKG_COMPRA` copia la personalización a `PEDIDO_DETALLE` y la marca `BLOQUEADA='S'`; el admin y el repartidor asignado pueden ver las imágenes en el detalle del pedido.
+- Migración: ejecutar `BD/01 scrip/pkg/15_PERSONALIZACION_PRODUCTO.sql` (agrega `ID_USUARIO`/`ID_PRODUCTO` a `PERSONALIZACION` y crea el paquete).
+
 ### Módulo de Credenciales
 - **Backend**: `CredencialController` + `CredencialService` + `CredencialPdf`
 - **Frontend**: `MiCredencial`, `VistaPreviaCarnet`, `AvatarCredencial`, `EditorFotoCredencial`
@@ -251,7 +276,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 ### Módulo de Archivos
 - **Backend**: `ArchivoService`
 - **Tabla**: `ARCHIVO` en Oracle
-- Tipos: EVIDENCIA_ENTREGA, FOTO_USUARIO, CREDENCIAL_PDF, etc.
+- Tipos: EVIDENCIA_ENTREGA, FOTO_USUARIO, CREDENCIAL_PDF, DISENO_PERSONALIZACION, etc.
 
 ## Estado Actual del Proyecto
 
@@ -273,6 +298,8 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - **RepartidorService** conectado a `PKG_PEDIDO` + `PKG_PAGO_ENTREGA`
 - **UsuarioAdminService** conectado a `PKG_USUARIO` + `PKG_SEGURIDAD`
 - **ArchivoService** conectado a `PKG_ARCHIVO` para subir/descargar archivos
+- **PersonalizacionService** conectado a `PKG_PERSONALIZACION` (contenido A/B, imágenes y URL NFC)
+- **RecurrenteService** integrado con checkout y webhook firmado
 - **CredencialPdf** + **ConstanciaPdf** para generación de documentos
 - **reCAPTCHA v2** integrado para protección
 
@@ -283,6 +310,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - ✅ Dashboard del comprador (HomePage)
 - ✅ Catálogo de productos con filtros y búsqueda
 - ✅ Detalle de producto con agregar al carrito
+- ✅ Personalización de producto con imágenes/texto A/B y URL para NFC
 - ✅ Carrito de compras
 - ✅ Checkout y formulario de pago
 - ✅ Tracking de envío con timeline
@@ -317,6 +345,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - `RegistroRostroController.cs` — Segmentación y registro de rostro
 - `PasswordController.cs` — Recuperación de contraseña
 - `TiendaController.cs` — Catálogo, carrito, productos
+- `PersonalizacionController.cs` — Personalizaciones A/B, imágenes y configuración
 - `RepartidorController.cs` — Gestión de entregas y evidencias
 - `ComprasController.cs` — Pedidos y pagos
 - `CredencialController.cs` — Generación de credenciales PDF
@@ -337,6 +366,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - `RepartidorService.cs` — Gestión de entregas
 - `CatalogoService.cs` — Productos, categorías, áreas de entrega, métodos de pago
 - `CarritoService.cs` — Carrito de compras vía PKG_CARRITO
+- `PersonalizacionService.cs` — Personalizaciones vía PKG_PERSONALIZACION
 - `PedidoService.cs` — Pedidos y tracking vía PKG_PEDIDO
 - `CompraService.cs` — Lógica de compra/pago
 - `ArchivoService.cs` — Gestión de archivos/imágenes
@@ -397,6 +427,8 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - `CompraAcciones.tsx` — Acciones de compra
 - `EstadoConstancia.tsx` — Estado de constancia
 - `NuevaCategoriaModal.tsx` — Modal para nueva categoría
+- `EditorPersonalizacion.tsx` — Tarjeta compacta + modal de personalización; URL NFC compartida A/B y vista previa 3D CSS
+- `ImagenArchivo.tsx` — Carga imágenes protegidas con JWT y crea blob URLs
 
 ### Frontend Modules (`Fronted/src/modules/biometria/`)
 - `AccesoFacialPage.tsx` — Página de login facial
@@ -409,6 +441,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 
 ### Base de Datos
 - `BD/01 scrip/pkg/04_PACKAGES_TIENDA_ORACLE.sql` — Todos los packages PL/SQL + vista VW_GESTOR_USUARIOS
+- `BD/01 scrip/pkg/15_PERSONALIZACION_PRODUCTO.sql` — Migración de personalización (propietario/producto, `PKG_PERSONALIZACION`)
 - `BD/01 scrip/inserts_rol_permiso.sql` — Enrolamiento de permisos por rol
 
 ### Vista VW_GESTOR_USUARIOS

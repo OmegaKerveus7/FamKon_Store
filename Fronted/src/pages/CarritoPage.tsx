@@ -16,6 +16,17 @@ import {
 } from "../api/famkon";
 
 import ImagenProducto from "../components/ImagenProducto";
+import ImagenArchivo from "../components/ImagenArchivo";
+
+function urlDeConfig(config?: string | null): string | null {
+  if (!config) return null;
+  try {
+    const datos = JSON.parse(config) as { url?: unknown };
+    return typeof datos.url === "string" ? datos.url : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function CarritoPage() {
   const navigate = useNavigate();
@@ -137,10 +148,42 @@ export default function CarritoPage() {
                     <p className="mt-1 text-sm font-semibold text-amber-600">
                       Q{item.precioUnitario.toFixed(2)}
                     </p>
-                    {item.comentario && (
-                      <p className="mt-1 rounded-lg bg-slate-50 px-2 py-1 text-xs text-slate-600">
-                        <span className="font-semibold">Indicaciones:</span> {item.comentario}
-                      </p>
+                    {(item.idArchivoLadoA || item.idArchivoLadoB || item.mensajeLadoA || item.mensajeLadoB || item.configLadoA || item.configLadoB || item.comentario) && (
+                      <div className="mt-2 space-y-1 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
+                        <p className="font-semibold text-slate-700">Personalización</p>
+                        {(item.idArchivoLadoA || item.idArchivoLadoB) && (
+                          <div className="flex gap-2 py-1">
+                            {item.idArchivoLadoA && (
+                              <div>
+                                <ImagenArchivo id={item.idArchivoLadoA} alt="Diseño lado A" className="h-14 w-14 rounded-md border border-slate-200 object-cover" />
+                                <span className="mt-0.5 block text-center text-[9px] text-slate-400">Lado A</span>
+                              </div>
+                            )}
+                            {item.idArchivoLadoB && (
+                              <div>
+                                <ImagenArchivo id={item.idArchivoLadoB} alt="Diseño lado B" className="h-14 w-14 rounded-md border border-slate-200 object-cover" />
+                                <span className="mt-0.5 block text-center text-[9px] text-slate-400">Lado B</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {item.mensajeLadoA && <p><span className="font-semibold">Lado A:</span> {item.mensajeLadoA}</p>}
+                        {item.mensajeLadoB && <p><span className="font-semibold">Lado B:</span> {item.mensajeLadoB}</p>}
+                        {(() => {
+                          const urlA = urlDeConfig(item.configLadoA);
+                          const urlB = urlDeConfig(item.configLadoB);
+                          if (urlA && urlB && urlA === urlB) {
+                            return <p><span className="font-semibold">URL NFC:</span> {urlA}</p>;
+                          }
+                          return (
+                            <>
+                              {urlA && <p><span className="font-semibold">URL A:</span> {urlA}</p>}
+                              {urlB && <p><span className="font-semibold">URL B:</span> {urlB}</p>}
+                            </>
+                          );
+                        })()}
+                        {!item.mensajeLadoA && !item.mensajeLadoB && item.comentario && <p><span className="font-semibold">Indicaciones:</span> {item.comentario}</p>}
+                      </div>
                     )}
                   </div>
 

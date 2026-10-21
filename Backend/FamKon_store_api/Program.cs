@@ -62,6 +62,7 @@ builder.Services.AddScoped<PedidoService>();
 builder.Services.AddScoped<RepartidorService>();
 builder.Services.AddScoped<ArchivoService>();
 builder.Services.AddScoped<CompraService>();
+builder.Services.AddScoped<PersonalizacionService>();
 builder.Services.AddScoped<ConstanciaEnvio>();
 builder.Services.AddScoped<CredencialService>();
 builder.Services.AddSingleton<RegistroRostroService>();

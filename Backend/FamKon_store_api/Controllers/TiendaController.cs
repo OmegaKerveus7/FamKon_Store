@@ -13,6 +13,7 @@ namespace FamKon_store_api.Controllers
         private readonly PermisoService _permisos;
         private readonly CarritoService _carrito;
         private readonly PedidoService _pedido;
+        private readonly PersonalizacionService _personalizacion;
         private readonly ILogger<TiendaController> _logger;
 
         public TiendaController(
@@ -20,12 +21,14 @@ namespace FamKon_store_api.Controllers
             PermisoService permisos,
             CarritoService carrito,
             PedidoService pedido,
+            PersonalizacionService personalizacion,
             ILogger<TiendaController> logger)
         {
             _catalogo = catalogo;
             _permisos = permisos;
             _carrito = carrito;
             _pedido = pedido;
+            _personalizacion = personalizacion;
             _logger = logger;
         }
 
@@ -346,20 +349,44 @@ namespace FamKon_store_api.Controllers
             if (userId is null) return Ok(new { codigoS = 401, mensaje = "No autorizado." });
 
             var idPersonalizacion = request.IdPersonalizacion;
-            var comentario = request.Comentario?.Trim();
-            if (!string.IsNullOrEmpty(comentario))
+            try
             {
-                if (comentario.Length > 500)
-                    return BadRequest(new { codigoS = 400, mensaje = "Las indicaciones no pueden superar los 500 caracteres." });
+                if (request.Personalizacion is not null)
+                {
+                    idPersonalizacion = await _personalizacion.CrearAsync(
+                        userId.Value, request.IdProducto, request.Personalizacion);
+                }
+                else if (idPersonalizacion is long existente)
+                {
+                    if (!await _personalizacion.PuedeUsarEnCarritoAsync(userId.Value, existente, request.IdProducto))
+                        return BadRequest(new { codigoS = 400, mensaje = "La personalización no pertenece al usuario o al producto." });
+                }
+                else
+                {
+                    var comentario = request.Comentario?.Trim();
+                    if (!string.IsNullOrEmpty(comentario))
+                    {
+                        if (comentario.Length > 500)
+                            return BadRequest(new { codigoS = 400, mensaje = "Las indicaciones no pueden superar los 500 caracteres." });
 
-                idPersonalizacion = await _carrito.CrearPersonalizacionAsync(
-                    null, null, comentario, null, null, null);
+                        idPersonalizacion = await _personalizacion.CrearAsync(
+                            userId.Value, request.IdProducto,
+                            new PersonalizacionContenido { MensajeLadoA = comentario });
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is OracleException or InvalidOperationException)
+            {
+                var mensaje = ex is InvalidOperationException
+                    ? ex.Message
+                    : ex.Message.Split('\n')[0].Split(':', 2).Last().Trim();
+                return BadRequest(new { codigoS = 400, mensaje });
             }
 
             var idCarrito = await _carrito.ObtenerOCrearAsync(userId.Value, request.IdSitio);
             var idDetalle = await _carrito.AgregarProductoAsync(
                 idCarrito, request.IdProducto, idPersonalizacion,
-                request.Cantidad, request.PrecioPersonaliza ?? 0);
+                request.Cantidad, 0);
 
             return Ok(new { codigoS = 200, mensaje = "Producto agregado.", idDetalle });
         }
@@ -482,8 +509,8 @@ namespace FamKon_store_api.Controllers
         public long IdSitio { get; set; } = 1;
         public long IdProducto { get; set; }
         public long? IdPersonalizacion { get; set; }
+        public PersonalizacionContenido? Personalizacion { get; set; }
         public int Cantidad { get; set; } = 1;
-        public decimal? PrecioPersonaliza { get; set; }
         public string? Comentario { get; set; }
     }
 

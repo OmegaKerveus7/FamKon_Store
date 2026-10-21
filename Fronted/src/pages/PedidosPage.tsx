@@ -10,8 +10,19 @@ import { ArrowLeft, ArrowRight, Check, Clock3, Download, MapPin, Package, Phone,
 import { comprasRequest, configCompra, descargarCompra, detalleCompra, fotoCompra, listarCompras, verificarPago, type Compra, type ConfigCompra, type DetalleCompra, type VistaCompra } from '../api/compras';
 import { ESTADOS_COMPRA, ESTADOS_PAGO, fechaCompra, moneda, puedePagar } from '../domain/compras';
 import CompraAcciones, { botonSecundario } from '../components/CompraAcciones';
+import ImagenArchivo from '../components/ImagenArchivo';
 import { campoCompra } from '../components/DireccionCompraFields';
 import QrScanner from '../components/QrScanner';
+
+function urlDeConfig(config?: string | null): string | null {
+  if (!config) return null;
+  try {
+    const datos = JSON.parse(config) as { url?: unknown };
+    return typeof datos.url === 'string' ? datos.url : null;
+  } catch {
+    return null;
+  }
+}
 
 const PASOS_DOMICILIO = [
   { estados: ['GENERADO', 'PAGO_PENDIENTE', 'PAGO_CONFIRMADO'], etiqueta: 'Confirmado' },
@@ -134,7 +145,51 @@ export default function PedidosPage({ vista = 'cliente' }: { vista?: VistaCompra
           <aside className="space-y-5">
             {vista === "cliente" && <EstadoConstancia key={p.idPedido} id={p.idPedido} />}
             <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="mb-3 flex items-center gap-2 font-bold"><MapPin size={18} className="text-amber-600" />{p.idModalidadEntrega === 1 ? 'Punto de recogida' : 'Destino'}</h2><p className="text-sm">{p.idModalidadEntrega === 1 ? config?.direccionTienda || 'Campus central' : p.direccionEntrega}</p><p className="mt-2 text-xs text-slate-500">{p.idModalidadEntrega === 1 ? config?.horario || 'Lunes a domingo, 8:00 a. m. a 5:00 p. m.' : [p.municipio, p.departamento].filter(Boolean).join(', ')}</p>{p.referenciaEntrega && <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{p.referenciaEntrega}</p>}<div className="mt-4 space-y-2">{[p.telefonoContacto, p.telefonoAlterno].filter(Boolean).map((t, i) => <a key={i} href={`tel:${t!.replace(/[^+\d]/g, '')}`} className="flex items-center gap-2 text-sm text-amber-700"><Phone size={15} />{t}{i === 1 ? ' (alterno)' : ''}</a>)}</div></section>
-            <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="mb-3 font-bold">Resumen de compra</h2>{detail.productos.map((item, i) => <div key={i} className="border-b border-slate-100 py-3 text-sm"><div className="flex justify-between gap-3"><span>{item.cantidad} × {item.nombreProducto}</span><strong className="shrink-0">{moneda(item.subtotal)}</strong></div>{item.indicaciones && <p className="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-900"><span className="font-semibold">Indicaciones:</span> {item.indicaciones}</p>}</div>)}<p className="mt-4 flex justify-between text-sm text-slate-500"><span>Envío</span><span>{moneda(p.cargoEntrega)}</span></p><p className="mt-3 flex justify-between font-bold"><span>Total</span><span>{moneda(p.total)}</span></p></section>
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 font-bold">Resumen de compra</h2>
+              {detail.productos.map((item, i) => (
+                <div key={i} className="border-b border-slate-100 py-3 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <span>{item.cantidad} × {item.nombreProducto}</span>
+                    <strong className="shrink-0">{moneda(item.subtotal)}</strong>
+                  </div>
+                  {(item.idArchivoLadoA || item.idArchivoLadoB) && (
+                    <div className="mt-2 flex gap-2">
+                      {item.idArchivoLadoA && (
+                        <div>
+                          <ImagenArchivo id={item.idArchivoLadoA} alt="Diseño lado A" className="h-20 w-20 rounded-lg border border-slate-200 object-cover" />
+                          <span className="mt-1 block text-center text-[10px] text-slate-500">Lado A</span>
+                        </div>
+                      )}
+                      {item.idArchivoLadoB && (
+                        <div>
+                          <ImagenArchivo id={item.idArchivoLadoB} alt="Diseño lado B" className="h-20 w-20 rounded-lg border border-slate-200 object-cover" />
+                          <span className="mt-1 block text-center text-[10px] text-slate-500">Lado B</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {item.mensajeLadoA && <p className="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-900"><span className="font-semibold">Lado A:</span> {item.mensajeLadoA}</p>}
+                  {item.mensajeLadoB && <p className="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-900"><span className="font-semibold">Lado B:</span> {item.mensajeLadoB}</p>}
+                  {(() => {
+                    const urlA = urlDeConfig(item.configLadoA);
+                    const urlB = urlDeConfig(item.configLadoB);
+                    if (urlA && urlB && urlA === urlB) {
+                      return <p className="mt-1 text-xs text-slate-600"><span className="font-semibold">URL NFC:</span> {urlA}</p>;
+                    }
+                    return (
+                      <>
+                        {urlA && <p className="mt-1 text-xs text-slate-600"><span className="font-semibold">URL A:</span> {urlA}</p>}
+                        {urlB && <p className="mt-1 text-xs text-slate-600"><span className="font-semibold">URL B:</span> {urlB}</p>}
+                      </>
+                    );
+                  })()}
+                  {!item.mensajeLadoA && !item.mensajeLadoB && item.indicaciones && <p className="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-900"><span className="font-semibold">Indicaciones:</span> {item.indicaciones}</p>}
+                </div>
+              ))}
+              <p className="mt-4 flex justify-between text-sm text-slate-500"><span>Envío</span><span>{moneda(p.cargoEntrega)}</span></p>
+              <p className="mt-3 flex justify-between font-bold"><span>Total</span><span>{moneda(p.total)}</span></p>
+            </section>
             {puedeDescargarConstancia(p) && <button disabled={generandoPdf} onClick={descargarPdf} className={`${botonSecundario} flex w-full items-center justify-center gap-2`}><Download size={16} />{generandoPdf ? 'Generando PDF…' : 'Constancia PDF con QR'}</button>}
             {['ENTREGADO', 'RECOGIDO'].includes(p.estado) && <button onClick={() => descargar(`/compras/${p.idPedido}/comprobante?vista=${vista}`, `comprobante-${p.numeroPedido}.html`)} className={`${botonSecundario} flex w-full items-center justify-center gap-2`}><Download size={16} />Comprobante imprimible</button>}
           </aside>

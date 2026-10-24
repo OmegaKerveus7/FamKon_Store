@@ -24,7 +24,7 @@ Tienda_Online_FamKon/
 │       ├── pages/              # Componentes de página (30+ páginas)
 │       └── components/         # Componentes reutilizables (20+ componentes)
 └── BD/                         # Scripts SQL Oracle
-    └── 01 scrip/pkg/           # Paquetes PL/SQL (04_PACKAGES_TIENDA_ORACLE.sql, migraciones 15_*.sql)
+    └── 01 scrip/pkg/           # Paquetes PL/SQL (04_PACKAGES_TIENDA_ORACLE.sql, migraciones 15–19)
 ```
 
 ## Comandos de Desarrollo
@@ -118,7 +118,9 @@ La base de datos Oracle ya tiene paquetes PL/SQL configurados para la tienda:
 - **Port**: 5626
 - **Service**: XEPDB1
 - **User**: TIENDA_APP (NO usar system)
-- **Tablas principales**: USUARIO, ROL, USUARIO_ROL, PERMISO, ROL_PERMISO, BITACORA_ACCESO, ARCHIVO, SITIO, TOKEN_RECUPERACION, PRODUCTO, CATEGORIA_PRODUCTO, CARRITO, CARRITO_DETALLE, PERSONALIZACION, PEDIDO, PEDIDO_DETALLE, PAGO, ENTREGA
+- **Tablas principales**: USUARIO, ROL, USUARIO_ROL, PERMISO, ROL_PERMISO, BITACORA_ACCESO, ARCHIVO, SITIO, TOKEN_RECUPERACION, PRODUCTO (con `ANCHO_CM`, `ALTO_CM`, `EXISTENCIA`), CATEGORIA_PRODUCTO, CARRITO, CARRITO_DETALLE, PERSONALIZACION, PEDIDO, PEDIDO_DETALLE (con `PERSONALIZACION_PREPARADA`), PEDIDO_ESTADO_HISTORIAL, PEDIDO_DATO_HISTORIAL, PAGO, PAGO_ESTADO_HISTORIAL, PAGO_EVENTO_PROVEEDOR, ENTREGA, ESTADO_PEDIDO, ESTADO_PAGO, ESTADO_ENTREGA, NOTIFICACION_LECTURA
+- **Triggers de inventario**: `TRG_PEDIDO_DETALLE_STOCK` (descuenta al vender) y `TRG_PEDIDO_CANCELADO_STOCK` (devuelve al cancelar)
+- **Nota**: `PRODUCTO_IMAGEN` se usa en el código (galería) pero **no existe** en esta base; los endpoints lo toleran (`ORA-00942`) y la imagen principal sale de `PRODUCTO.ID_ARCHIVO_IMAGEN`.
 
 ## Seguridad
 
@@ -201,6 +203,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - Conectado a `PKG_CARRITO` via `CarritoService.cs` + `TiendaController.cs`
 - Frontend usa `obtenerCarrito()`, `agregarAlCarritoAPI()`, `actualizarCantidadCarritoAPI()`, `eliminarDelCarritoAPI()`
 - Compatibilidad con localStorage: `obtenerCarritoLocal()`, `guardarCarritoLocal()`, `vaciarCarrito()`
+- **Existencias**: al agregar o cambiar la cantidad se valida contra `PRODUCTO.EXISTENCIA` (sumando lo que ya está en el carrito); si no alcanza devuelve `400` con el mensaje y el carrito lo muestra.
 
 ## Módulos Implementados
 
@@ -228,7 +231,8 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 ### Módulo de Compras/Pedidos
 - **Backend**: `ComprasController` + `CompraService`
 - **Frontend**: `PagoPage`, `CheckoutPage`, `TrackingPage`
-- Estados de pedido: PENDIENTE → PAGO_CONFIRMADO → LISTO_ENTREGA → ENVIADO → ENTREGADO
+- Estados de pedido (según `ESTADO_PEDIDO.ORDEN_VISUAL`): `GENERADO → PAGO_PENDIENTE → PAGO_CONFIRMADO → EN_ELABORACION → LISTO_ENTREGA / LISTO_RECOGER → EN_RUTA → ENTREGADO / RECOGIDO`; además `COMPRADOR_NO_ENCONTRADO` y `CANCELADO` (finales: `ENTREGADO`, `RECOGIDO`, `CANCELADO`).
+- La preparación de personalizaciones puede adelantar el pedido a `LISTO_ENTREGA`/`LISTO_RECOGER` (ver módulo de preparación).
 - Soporte para pago en efectivo (monto recibido del repartidor)
 
 ### Pasarela de Pagos Recurrente
@@ -243,10 +247,10 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - **Frontend**: `EditorPersonalizacion`, `ProductoDetallePage`, `CarritoPage`, `PedidosPage`
 - **Sin costo extra**: el precio del producto no cambia por personalizar; `PRECIO_PERSONALIZA` se guarda en 0.
 - Contenido por lado A/B: imagen (`ARCHIVO.TIPO_ARCHIVO='DISENO_PERSONALIZACION'`), mensaje (máx. 500) y configuración JSON (`CONFIG_LADO_A/B`).
-- Para tarjetas NFC se detecta el producto por nombre/SKU con `NFC`; el modal pide **una sola URL** (se guarda igual en `CONFIG_LADO_A/B`) con valor por defecto `https://famkon.site`; el backend valida que sea `http/https` y máximo 500 caracteres.
+- Para tarjetas NFC se detecta el producto por nombre, SKU **o categoría** (`nfc`); el modal pide **una sola URL** (se guarda igual en `CONFIG_LADO_A/B`) con valor por defecto `https://famkon.site`; el backend valida que sea `http/https` y máximo 500 caracteres.
 - La UI usa una tarjeta mínima (solo el título "¿Quieres personalizar…?" y el botón **Personalizar**) que abre un modal con pestañas Lado A/B y una vista previa 3D CSS de la tarjeta.
 - En móvil el modal se compacta y el editor y las vistas previas se apilan en vertical (Lado A arriba, Lado B abajo).
-- Cada imagen se ajusta en el navegador con un control de encuadre (arrastrar, zoom 100–400 %, girar 90° y centrar). Al agregar al carrito se envía la imagen **ya recortada y redimensionada** (1012×640 px para tarjetas NFC y 1000×840 px para el resto), de modo que en `ARCHIVO` queda guardada la imagen final.
+- Cada imagen se ajusta en el navegador con un control de encuadre (arrastrar, zoom 100–400 %, girar 90° y centrar). Al agregar al carrito se envía la imagen **ya recortada y redimensionada**, de modo que en `ARCHIVO` queda guardada la imagen final. Tamaños por defecto: 1012×640 px (NFC) y 1000×840 px (resto); si el producto define `ANCHO_CM`/`ALTO_CM` se usa esa proporción (ver siguiente punto).
 - Si el producto define `ANCHO_CM`/`ALTO_CM` (migración 17), el lienzo del editor usa esa proporción (≈120 px por cm) y guarda la imagen ya recortada a ese aspecto, para que coincida con lo que se imprime. La detección de NFC revisa nombre, SKU **y categoría**.
 - `PRODUCTO.PERMITE_LADO_A/B` define qué lados se pueden personalizar.
 - Endpoints:
@@ -275,7 +279,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
   - Tarjeta NFC / Anillos: 8,5 × 5,5 cm → imagen 8,0 × 5,0 cm.
   - Llavero: 3,1 × 4,5 cm → imagen 2,6 × 4,0 cm.
 - **Productos**: `PRODUCTO.ANCHO_CM`/`ALTO_CM` definen el tamaño de impresión. `LLA-001` “Llavero de acrílico personalizable” (categoría `LLAVEROS`, foto `llaveros_de-acrilico.jpg`) es personalizable A/B y **no** lleva NFC. En el editor se muestra con una **vista 3D propia**: ficha rectangular curveada en los lados izquierdo, derecho e inferior, con anillo metálico arriba y giro frente/reverso (`Vista3dLlavero`). La detección por nombre/SKU/categoría elige la vista: `nfc` → tarjeta 3D, `llavero` → llavero 3D, resto → vista plana.
-- **Catálogo**: solo se venden **Tarjetas NFC** (`TAR-NFC-01`) y **Llaveros de acrílico** (`LLA-001`). El anillo `ANI001` quedó `ACTIVO='N'` (tiene historial de pedidos, no se borra) y la categoría `ANILLOS` se muestra como “Tarjetas NFC”. `GET /api/famkon/productos/{id}` devuelve 404 para productos inactivos salvo que el usuario gestione productos.
+- **Catálogo**: solo se venden **Tarjetas NFC** (`TAR-NFC-01`, foto `tarjetas-nfc-en-pvc-blancas-1k.jpg`) y **Llaveros de acrílico** (`LLA-001`, foto `llaveros_de-acrilico.jpg`). El anillo `ANI001` quedó `ACTIVO='N'` (tiene historial de pedidos, no se borra) y la categoría `ANILLOS` se muestra como “Tarjetas NFC”. `GET /api/famkon/productos/{id}` devuelve 404 para productos inactivos salvo que el usuario gestione productos.
 - **UI**: tarjetas de resumen, pestañas Pendientes/Todas, búsqueda, enlace “Ver tracking” por pedido y refresco cada 45 s. El sidebar muestra las unidades pendientes (refresco cada 60 s).
 - **Migraciones**: `BD/16_PERSONALIZACION_PREPARACION.sql` (columnas de preparación), `BD/17_PRODUCTO_IMPRESION_LLAVERO.sql` (medidas de impresión + categoría y producto llavero) y `BD/18_CATALOGO_TARJETAS_LLAVEROS.sql` (deja solo tarjetas y llaveros).
 
@@ -312,7 +316,8 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 ### Módulo de Archivos
 - **Backend**: `ArchivoService`
 - **Tabla**: `ARCHIVO` en Oracle
-- Tipos: EVIDENCIA_ENTREGA, FOTO_USUARIO, CREDENCIAL_PDF, DISENO_PERSONALIZACION, etc.
+- Tipos: EVIDENCIA_ENTREGA, FOTO_USUARIO, CREDENCIAL_PDF, DISENO_PERSONALIZACION, IMAGEN_PRODUCTO, etc.
+- Imágenes de producto (`IMAGEN_PRODUCTO`): la principal se referencia desde `PRODUCTO.ID_ARCHIVO_IMAGEN`; se sirve en `GET /api/famkon/productos/{id}/imagen`. Las fotos del catálogo están en `Fronted/public/images/` (`tarjetas-nfc-en-pvc-blancas-1k.jpg`, `llaveros_de-acrilico.jpg`).
 
 ## Estado Actual del Proyecto
 
@@ -335,6 +340,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - **UsuarioAdminService** conectado a `PKG_USUARIO` + `PKG_SEGURIDAD`
 - **ArchivoService** conectado a `PKG_ARCHIVO` para subir/descargar archivos
 - **PersonalizacionService** conectado a `PKG_PERSONALIZACION` (contenido A/B, imágenes y URL NFC) + worklist de preparación (`ListarPreparacionesAsync`, `MarcarPreparadaAsync`)
+- **Inventario**: `ProductoDto.Existencia`, `CatalogoService.ActualizarExistenciaAsync` y `PUT /api/famkon/admin/productos/{id}/existencia`; descuento/devolución en triggers de Oracle
 - **NotificacionesController** con fallback: si falta la tabla `NOTIFICACION_LECTURA` (ORA-00942) devuelve los avisos sin estado de lectura en vez de fallar
 - **RepartidorController** activo (sin `[NonController]`): expone `/api/famkon/repartidor/*`
 - **RecurrenteService** integrado con checkout y webhook firmado
@@ -350,6 +356,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - ✅ Detalle de producto con agregar al carrito
 - ✅ Personalización de producto con imágenes/texto A/B y URL para NFC
 - ✅ Worklist de personalizaciones por preparar (supervisor/admin) con conteo, impresión de los dos lados al tamaño real, URL NFC y badge en el menú
+- ✅ Existencias: stock visible en catálogo y detalle (“N disponibles”/“Agotado”), límite de cantidad y control desde el gestor de productos
 - ✅ Carrito de compras
 - ✅ Checkout y formulario de pago
 - ✅ Tracking de envío con timeline
@@ -387,10 +394,12 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - `PersonalizacionController.cs` — Personalizaciones A/B, imágenes y configuración
 - `RepartidorController.cs` — Gestión de entregas y evidencias
 - `ComprasController.cs` — Pedidos y pagos
+- `RastreoController.cs` — Consulta pública/por QR del tracking
 - `CredencialController.cs` — Generación de credenciales PDF
 - `ConstanciasController.cs` — Generación de constancias PDF
 - `EstadoController.cs` — Estados del sistema
 - `UsuariosAdminController.cs` — Gestor de usuarios (`/api/famkon/admin/usuarios`)
+- `NotificacionesController.cs` — Avisos del pedido (tolera que falte `NOTIFICACION_LECTURA`)
 - `TestController.cs` — Endpoints de prueba
 
 ### Backend Services (`Backend/FamKon_store_api/Services/`)
@@ -403,8 +412,8 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - `BiometricService.cs` — Cliente para servicio de reconocimiento facial
 - `RegistroRostroService.cs` — Guardado de rostro segmentado
 - `RepartidorService.cs` — Gestión de entregas
-- `CatalogoService.cs` — Productos, categorías, áreas de entrega, métodos de pago
-- `CarritoService.cs` — Carrito de compras vía PKG_CARRITO
+- `CatalogoService.cs` — Productos, categorías, áreas de entrega, métodos de pago; completa medidas (`ANCHO_CM`/`ALTO_CM`) y `EXISTENCIA`
+- `CarritoService.cs` — Carrito de compras vía PKG_CARRITO + validación de existencias
 - `PersonalizacionService.cs` — Personalizaciones vía PKG_PERSONALIZACION
 - `PedidoService.cs` — Pedidos y tracking vía PKG_PEDIDO
 - `CompraService.cs` — Lógica de compra/pago
@@ -441,7 +450,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - `SupervisorPage.tsx` — Dashboard supervisor
 - `AdminPage.tsx` — Dashboard admin
 - `UsuariosAdminPage.tsx` — Gestor de usuarios
-- `AdminProductosPage.tsx` — Gestor de productos
+- `AdminProductosPage.tsx` — Gestor de productos (incluye existencia y su ajuste)
 - `AdminCatalogosPage.tsx` — Gestión de catálogos
 - `AdminRolesPage.tsx` — Roles y permisos
 - `AdminBitacoraPage.tsx` — Bitácora de accesos
@@ -469,6 +478,8 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - `NuevaCategoriaModal.tsx` — Modal para nueva categoría
 - `EditorPersonalizacion.tsx` — Título + botón **Personalizar**; modal compacto y apilado en móvil; control de encuadre de imagen (arrastrar/zoom/giro) que genera la imagen final antes de subirla; URL NFC compartida A/B, vista previa 3D de la tarjeta NFC y **vista 3D del llavero** (rectangular curveado en 3 lados + anillo, con giro frente/reverso)
 - `ImagenArchivo.tsx` — Carga imágenes protegidas con JWT y crea blob URLs
+- `GaleriaProducto.tsx` — Galería del producto (imagen principal + adicionales vía `/productos/{id}/imagen`)
+- `CarritoConfirmacion.tsx` — Resumen flotante al agregar al carrito
 
 ### Frontend Modules (`Fronted/src/modules/biometria/`)
 - `AccesoFacialPage.tsx` — Página de login facial
@@ -477,16 +488,16 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 
 ### Frontend API (`Fronted/src/api/famkon.ts`)
 - Cliente API completo con JWT + refresh automático
-- 865+ líneas con todas las interfaces y funciones para cada módulo
+- ~1.086 líneas con todas las interfaces y funciones para cada módulo (incluye `Producto.existencia`, `actualizarExistenciaProducto`, preparaciones y personalizaciones)
 
 ### Base de Datos
 - `BD/01 scrip/pkg/04_PACKAGES_TIENDA_ORACLE.sql` — Todos los packages PL/SQL + vista VW_GESTOR_USUARIOS
+- `BD/14_NOTIFICACIONES_LECTURA.sql` — Tabla `NOTIFICACION_LECTURA` (estado leído/no leído de los avisos)
 - `BD/01 scrip/pkg/15_PERSONALIZACION_PRODUCTO.sql` — Migración de personalización (propietario/producto, `PKG_PERSONALIZACION`)
 - `BD/16_PERSONALIZACION_PREPARACION.sql` — Columnas de preparación en `PEDIDO_DETALLE` (`PERSONALIZACION_PREPARADA`, `FECHA_PREPARACION`, `ID_USUARIO_PREPARA`)
 - `BD/17_PRODUCTO_IMPRESION_LLAVERO.sql` — Medidas de impresión `PRODUCTO.ANCHO_CM/ALTO_CM`, categoría `LLAVEROS` y producto `LLA-001` (llavero de acrílico personalizable sin NFC; la foto se carga desde el admin)
 - `BD/18_CATALOGO_TARJETAS_LLAVEROS.sql` — Deja el catálogo con tarjetas y llaveros: desactiva el anillo `ANI001` (conserva historial) y renombra la categoría `ANILLOS` a “Tarjetas NFC”
 - `BD/19_PRODUCTO_EXISTENCIA.sql` — `PRODUCTO.EXISTENCIA` + triggers de descuento al vender y devolución al cancelar
-- `BD/14_NOTIFICACIONES_LECTURA.sql` — Tabla `NOTIFICACION_LECTURA` (estado leído/no leído de los avisos)
 - `BD/01 scrip/inserts_rol_permiso.sql` — Enrolamiento de permisos por rol
 
 ### Vista VW_GESTOR_USUARIOS

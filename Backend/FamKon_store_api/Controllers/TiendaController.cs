@@ -61,7 +61,8 @@ namespace FamKon_store_api.Controllers
         public async Task<ActionResult> ObtenerProducto(long id)
         {
             var producto = await _catalogo.ObtenerProductoAsync(id);
-            if (producto is null)
+            // Los productos inactivos no se muestran al comprador (solo a quien gestiona productos).
+            if (producto is null || (producto.Activo != "S" && !await PuedeGestionarProductos()))
                 return Ok(new { codigoS = 404, mensaje = "Producto no encontrado." });
             return Ok(new { codigoS = 200, producto });
         }
@@ -282,6 +283,8 @@ namespace FamKon_store_api.Controllers
                     request.IdSitio, request.IdCategoria, request.IdArchivoImagen,
                     request.Sku.Trim(), request.Nombre.Trim(), request.Descripcion ?? "",
                     request.PrecioBase, request.PermiteLadoA ?? "S", request.PermiteLadoB ?? "S");
+                if (request.Existencia is int existenciaInicial)
+                    await _catalogo.ActualizarExistenciaAsync(id, existenciaInicial);
                 return Ok(new { codigoS = 200, mensaje = "Producto creado.", idProducto = id });
             }
             catch (Exception ex) { return ErrorProducto(ex); }
@@ -302,7 +305,26 @@ namespace FamKon_store_api.Controllers
                     id, request.IdCategoria, request.IdArchivoImagen,
                     request.Nombre.Trim(), request.Descripcion ?? "", request.PrecioBase,
                     request.PermiteLadoA, request.PermiteLadoB);
+                if (request.Existencia is int existencia)
+                    await _catalogo.ActualizarExistenciaAsync(id, existencia);
                 return Ok(new { codigoS = 200, mensaje = "Producto actualizado." });
+            }
+            catch (Exception ex) { return ErrorProducto(ex); }
+        }
+
+        [Authorize]
+        [HttpPut("admin/productos/{id}/existencia")]
+        public async Task<ActionResult> ActualizarExistenciaProducto(long id, [FromBody] ActualizarExistenciaRequest request)
+        {
+            if (!await PuedeGestionarProductos())
+                return StatusCode(403, new { mensaje = "No tienes permiso para gestionar productos." });
+            if (id <= 0 || request.Existencia < 0 || request.Existencia > 1_000_000)
+                return BadRequest(new { mensaje = "Ingresa una existencia entre 0 y 1.000.000." });
+            try
+            {
+                return await _catalogo.ActualizarExistenciaAsync(id, request.Existencia)
+                    ? Ok(new { codigoS = 200, mensaje = "Existencia actualizada.", existencia = request.Existencia })
+                    : NotFound(new { codigoS = 404, mensaje = "Producto no encontrado." });
             }
             catch (Exception ex) { return ErrorProducto(ex); }
         }
@@ -384,6 +406,17 @@ namespace FamKon_store_api.Controllers
             }
 
             var idCarrito = await _carrito.ObtenerOCrearAsync(userId.Value, request.IdSitio);
+
+            var producto = await _catalogo.ObtenerProductoAsync(request.IdProducto);
+            if (producto is null || producto.Activo != "S")
+                return BadRequest(new { codigoS = 400, mensaje = "El producto ya no está disponible." });
+            if (request.Cantidad <= 0)
+                return BadRequest(new { codigoS = 400, mensaje = "La cantidad debe ser mayor a cero." });
+            var carritoActual = await _carrito.ObtenerCarritoAsync(idCarrito);
+            var enCarrito = carritoActual?.Detalles.Where(d => d.IdProducto == request.IdProducto).Sum(d => d.Cantidad) ?? 0;
+            if (enCarrito + request.Cantidad > producto.Existencia)
+                return BadRequest(new { codigoS = 400, mensaje = $"Solo hay {producto.Existencia} disponibles de {producto.Nombre}." });
+
             var idDetalle = await _carrito.AgregarProductoAsync(
                 idCarrito, request.IdProducto, idPersonalizacion,
                 request.Cantidad, 0);
@@ -395,6 +428,17 @@ namespace FamKon_store_api.Controllers
         [HttpPut("carrito/detalle/{idDetalle}")]
         public async Task<ActionResult> ActualizarCantidadCarrito(long idDetalle, [FromBody] ActualizarCantidadRequest request)
         {
+            if (request.Cantidad <= 0)
+                return BadRequest(new { codigoS = 400, mensaje = "La cantidad debe ser mayor a cero." });
+
+            var idProducto = await _carrito.ObtenerProductoDeDetalleAsync(idDetalle);
+            if (idProducto is null)
+                return NotFound(new { codigoS = 404, mensaje = "El producto del carrito no existe." });
+
+            var producto = await _catalogo.ObtenerProductoAsync(idProducto.Value);
+            if (producto is not null && request.Cantidad > producto.Existencia)
+                return BadRequest(new { codigoS = 400, mensaje = $"Solo hay {producto.Existencia} disponibles de {producto.Nombre}." });
+
             await _carrito.ActualizarCantidadAsync(idDetalle, request.Cantidad);
             return Ok(new { codigoS = 200, mensaje = "Cantidad actualizada." });
         }
@@ -486,6 +530,7 @@ namespace FamKon_store_api.Controllers
         public decimal PrecioBase { get; set; }
         public string? PermiteLadoA { get; set; }
         public string? PermiteLadoB { get; set; }
+        public int? Existencia { get; set; }
     }
 
     public class ActualizarProductoRequest
@@ -497,6 +542,12 @@ namespace FamKon_store_api.Controllers
         public decimal PrecioBase { get; set; }
         public string PermiteLadoA { get; set; } = "S";
         public string PermiteLadoB { get; set; } = "S";
+        public int? Existencia { get; set; }
+    }
+
+    public class ActualizarExistenciaRequest
+    {
+        public int Existencia { get; set; }
     }
 
     public class CambiarEstadoRequest

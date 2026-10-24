@@ -81,6 +81,9 @@ export default function AdminProductosPage() {
         if (!nombre || (modal.tipo === "crear" && !sku)) throw new Error("Completa el nombre y el SKU.");
         if (!precio || !Number.isFinite(precioBase) || precioBase < 0 || precioBase > 9999999999.99)
           throw new Error("Ingresa un precio válido mayor o igual a cero.");
+        const existencia = Number(datos.get("existencia"));
+        if (!Number.isInteger(existencia) || existencia < 0 || existencia > 1000000)
+          throw new Error("Ingresa una existencia válida entre 0 y 1.000.000.");
         if (!categorias.some(c => c.idCategoria === idCategoria)) throw new Error("Selecciona una categoría.");
         const imagenes = datos.getAll("imagen").filter((f): f is File => f instanceof File && f.size > 0);
         const galeria: number[] = [];
@@ -98,6 +101,7 @@ export default function AdminProductosPage() {
           idArchivoImagen,
           permiteLadoA: datos.has("ladoA") ? "S" : "N",
           permiteLadoB: datos.has("ladoB") ? "S" : "N",
+          existencia,
         };
         let idProducto: number;
         if (modal.tipo === "crear") {
@@ -159,18 +163,23 @@ export default function AdminProductosPage() {
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm" aria-busy={cargando}>
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <tr>{["SKU", "Nombre", "Categoría", "Precio base", "Estado", "Acciones"].map(t => <th key={t} className={`px-4 py-3 ${t === "Acciones" ? "text-right" : ""}`}>{t}</th>)}</tr>
+            <tr>{["SKU", "Nombre", "Categoría", "Precio base", "Existencia", "Estado", "Acciones"].map(t => <th key={t} className={`px-4 py-3 ${t === "Acciones" ? "text-right" : ""}`}>{t}</th>)}</tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {cargando ? <tr><td colSpan={6} className="p-10 text-center text-slate-500">Cargando productos…</td></tr> : error ?
-              <tr><td colSpan={6} className="p-10 text-center text-slate-500">Pulsa Actualizar para reintentar.</td></tr> : visibles.length === 0 ?
-              <tr><td colSpan={6} className="p-10 text-center text-slate-500">{productos.length ? "No hay productos que coincidan con los filtros." : categorias.length ? "Todavía no hay productos. Crea el primero con Nuevo producto." : "Todavía no hay productos. Crea una categoría para comenzar."}</td></tr> :
+            {cargando ? <tr><td colSpan={7} className="p-10 text-center text-slate-500">Cargando productos…</td></tr> : error ?
+              <tr><td colSpan={7} className="p-10 text-center text-slate-500">Pulsa Actualizar para reintentar.</td></tr> : visibles.length === 0 ?
+              <tr><td colSpan={7} className="p-10 text-center text-slate-500">{productos.length ? "No hay productos que coincidan con los filtros." : categorias.length ? "Todavía no hay productos. Crea el primero con Nuevo producto." : "Todavía no hay productos. Crea una categoría para comenzar."}</td></tr> :
               visibles.map(p => (
                 <tr key={p.idProducto} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.sku}</td>
                   <td className="px-4 py-3 font-semibold text-slate-800">{p.nombre}</td>
                   <td className="px-4 py-3 text-slate-600">{p.categoria}</td>
                   <td className="whitespace-nowrap px-4 py-3 font-semibold text-amber-600">Q{p.precioBase.toFixed(2)}</td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${(p.existencia ?? 0) > 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                      {p.existencia ?? 0}
+                    </span>
+                  </td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${p.activo === "S" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>{p.activo === "S" ? "Activo" : "Inactivo"}</span></td>
                   <td className="px-4 py-3"><div className="flex justify-end gap-2">
                     <button onClick={() => abrir({ tipo: "editar", producto: p })} aria-label={`Editar ${p.nombre}`} title="Editar" className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-100"><Pencil className="h-4 w-4" /></button>
@@ -203,6 +212,7 @@ export default function AdminProductosPage() {
               <label className="block text-sm font-medium">Descripción<textarea name="descripcion" maxLength={1000} rows={3} defaultValue={editado?.descripcion || ""} className={inputClass} /></label>
               <label className="block text-sm font-medium">Imágenes del producto<input name="imagen" type="file" multiple accept="image/jpeg,image/png" className={inputClass} /><span className="mt-1 block text-xs font-normal text-slate-500">Puedes elegir una o hasta 8 imágenes JPG o PNG, de 5 MB cada una. La primera del listado será la principal y las demás se mostrarán debajo. Una nueva selección reemplaza las imágenes anteriores; sin selección se conservan.</span></label>
               <label className="block text-sm font-medium">Precio base (Q) <span className="text-red-500">*</span><input name="precio" type="number" required min="0" max="9999999999.99" step="0.01" defaultValue={editado?.precioBase ?? ""} className={inputClass} /></label>
+              <label className="block text-sm font-medium">Existencia (unidades) <span className="text-red-500">*</span><input name="existencia" type="number" required min="0" max="1000000" step="1" defaultValue={editado?.existencia ?? 0} className={inputClass} /><span className="mt-1 block text-xs font-normal text-slate-500">Se descuenta automáticamente al vender y se devuelve si el pedido se cancela.</span></label>
               <div className="rounded-xl bg-slate-50 p-4"><p className="mb-3 text-sm font-medium">Personalización permitida</p><div className="flex flex-wrap gap-6">{(["A", "B"] as const).map(lado => <label key={lado} className="flex items-center gap-2 text-sm text-slate-600"><input name={`lado${lado}`} type="checkbox" defaultChecked={!editado || editado[lado === "A" ? "permiteLadoA" : "permiteLadoB"] === "S"} className="h-4 w-4 accent-amber-500" />Lado {lado}</label>)}</div></div>
             </fieldset>}
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">

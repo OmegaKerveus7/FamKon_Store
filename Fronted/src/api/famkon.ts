@@ -291,6 +291,11 @@ export interface Producto {
   activo: string;
   imagen?: string;
   idArchivoImagen?: number | null;
+  /** Tamano real de impresion en cm (null = usar el valor por defecto). */
+  anchoCm?: number | null;
+  altoCm?: number | null;
+  /** Unidades disponibles en inventario. */
+  existencia?: number;
 }
 
 export interface Categoria {
@@ -338,6 +343,49 @@ export interface Personalizacion extends PersonalizacionContenido {
   producto?: string | null;
   skuProducto?: string | null;
   fechaCreacion?: string | null;
+}
+
+/** Producto personalizado de un pedido que el repartidor/supervisor debe preparar. */
+export interface PreparacionPersonalizada {
+  idPedidoDetalle: number;
+  idPedido: number;
+  numeroPedido: string;
+  estado: string;
+  estadoNombre: string;
+  comprador: string | null;
+  telefono: string | null;
+  areaEntrega: string | null;
+  direccion: string | null;
+  repartidor: string | null;
+  producto: string;
+  sku: string;
+  cantidad: number;
+  idPersonalizacion: number | null;
+  idArchivoLadoA: number | null;
+  idArchivoLadoB: number | null;
+  mensajeLadoA: string | null;
+  mensajeLadoB: string | null;
+  configLadoA: string | null;
+  configLadoB: string | null;
+  urlNfc: string | null;
+  preparada: boolean;
+  fechaPreparacion: string | null;
+  anchoCm: number | null;
+  altoCm: number | null;
+}
+
+export interface PreparacionesResumen {
+  pedidos: number;
+  lineasPendientes: number;
+  productosPendientes: number;
+  lineasPreparadas: number;
+  totalLineas: number;
+}
+
+export interface PreparacionesPersonalizadas {
+  codigoS: number;
+  resumen: PreparacionesResumen;
+  items: PreparacionPersonalizada[];
 }
 
 export interface Carrito {
@@ -518,6 +566,26 @@ export async function actualizarPersonalizacionAPI(
 export async function obtenerPersonalizacionAPI(id: number): Promise<Personalizacion | null> {
   const res = await request<ApiResponse>(`/personalizaciones/${id}`);
   return (res.personalizacion as Personalizacion) ?? null;
+}
+
+export function listarPreparacionesPersonalizadas(signal?: AbortSignal) {
+  return request<PreparacionesPersonalizadas>("/personalizaciones/pendientes", { signal });
+}
+
+export interface ResultadoPreparacion {
+  codigoS: number;
+  preparada: boolean;
+  idPedido: number;
+  estadoPedido: string | null;
+  avanzado: boolean;
+  motivo: string | null;
+}
+
+export function marcarPersonalizacionPreparada(idPedidoDetalle: number, preparada: boolean) {
+  return request<ResultadoPreparacion>(
+    `/personalizaciones/${idPedidoDetalle}/preparada`,
+    { method: "POST", body: JSON.stringify({ preparada }) },
+  );
 }
 
 export async function actualizarCantidadCarritoAPI(
@@ -766,6 +834,7 @@ export interface ProductoAdminBody {
   precioBase: number;
   permiteLadoA: "S" | "N";
   permiteLadoB: "S" | "N";
+  existencia?: number;
 }
 
 interface ResultadoProducto {
@@ -806,6 +875,12 @@ export async function actualizarProductoAdmin(id: number, body: ProductoAdminBod
 export async function cambiarEstadoProductoAdmin(id: number, activo: "S" | "N") {
   return comprobarResultadoProducto(await request<ResultadoProducto>(`/admin/productos/${id}/estado`, {
     method: "PUT", body: JSON.stringify({ activo }),
+  }));
+}
+
+export async function actualizarExistenciaProducto(id: number, existencia: number) {
+  return comprobarResultadoProducto(await request<ResultadoProducto>(`/admin/productos/${id}/existencia`, {
+    method: "PUT", body: JSON.stringify({ existencia }),
   }));
 }
 

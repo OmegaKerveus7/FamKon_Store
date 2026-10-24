@@ -198,6 +198,18 @@ namespace FamKon_store_api.Services
             return ((OracleDecimal)oId.Value).ToInt64();
         }
 
+        /// <summary>Producto al que pertenece una linea del carrito (para validar existencias).</summary>
+        public async Task<long?> ObtenerProductoDeDetalleAsync(long idDetalle)
+        {
+            using var connection = _dbContext.CreateConnection();
+            await _dbContext.OpenConnectionAsync(connection);
+            using var command = new OracleCommand(
+                "SELECT ID_PRODUCTO FROM CARRITO_DETALLE WHERE ID_CARRITO_DETALLE=:id", connection);
+            command.Parameters.Add("id", OracleDbType.Int64).Value = idDetalle;
+            var valor = await command.ExecuteScalarAsync();
+            return valor is null || valor == DBNull.Value ? null : Convert.ToInt64(valor);
+        }
+
         public async Task ActualizarCantidadAsync(long idDetalle, int cantidad)
         {
             using var connection = _dbContext.CreateConnection();

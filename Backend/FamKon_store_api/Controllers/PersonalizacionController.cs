@@ -11,10 +11,12 @@ namespace FamKon_store_api.Controllers
     public class PersonalizacionController : ControllerBase
     {
         private readonly PersonalizacionService _personalizacion;
+        private readonly PermisoService _permisos;
 
-        public PersonalizacionController(PersonalizacionService personalizacion)
+        public PersonalizacionController(PersonalizacionService personalizacion, PermisoService permisos)
         {
             _personalizacion = personalizacion;
+            _permisos = permisos;
         }
 
         private long? ObtenerUsuarioId()
@@ -94,6 +96,64 @@ namespace FamKon_store_api.Controllers
             }
         }
 
+        // ─── Preparación de productos personalizados (supervisor / admin) ──
+        [HttpGet("pendientes")]
+        public async Task<ActionResult> Pendientes()
+        {
+            var usuario = ObtenerUsuarioId();
+            if (usuario is null) return Ok(new { codigoS = 401, mensaje = "No autorizado." });
+            if (!await PuedePreparar(usuario.Value)) return Forbid();
+
+            try
+            {
+                var datos = await _personalizacion.ListarPreparacionesAsync(usuario.Value);
+                return Ok(new { codigoS = 200, resumen = datos.Resumen, items = datos.Items });
+            }
+            catch (OracleException ex) when (ex.Number is 904 or 942)
+            {
+                return StatusCode(503, new { codigoS = 503, mensaje = "Falta ejecutar las migraciones BD/16_PERSONALIZACION_PREPARACION.sql y BD/17_PRODUCTO_IMPRESION_LLAVERO.sql." });
+            }
+        }
+
+        [HttpPost("{idDetalle:long}/preparada")]
+        public async Task<ActionResult> MarcarPreparada(long idDetalle, [FromBody] MarcarPreparadaRequest request)
+        {
+            var usuario = ObtenerUsuarioId();
+            if (usuario is null) return Ok(new { codigoS = 401, mensaje = "No autorizado." });
+            if (!await PuedePreparar(usuario.Value)) return Forbid();
+
+            try
+            {
+                var resultado = await _personalizacion.MarcarPreparadaAsync(usuario.Value, idDetalle, request.Preparada);
+                return resultado.Actualizado
+                    ? Ok(new
+                    {
+                        codigoS = 200,
+                        preparada = request.Preparada,
+                        idPedido = resultado.IdPedido,
+                        estadoPedido = resultado.EstadoPedido,
+                        avanzado = resultado.Avanzado,
+                        motivo = resultado.Motivo,
+                    })
+                    : NotFound(new { codigoS = 404, mensaje = "Producto personalizado no encontrado." });
+            }
+            catch (OracleException ex) when (ex.Number is 904 or 942)
+            {
+                return StatusCode(503, new { codigoS = 503, mensaje = "Falta ejecutar las migraciones BD/16_PERSONALIZACION_PREPARACION.sql y BD/17_PRODUCTO_IMPRESION_LLAVERO.sql." });
+            }
+        }
+
+        /// <summary>
+        /// La preparacion de personalizaciones es exclusiva de SUPERVISOR y ADMIN:
+        /// el repartidor tambien tiene GESTIONAR_ENTREGAS, por eso se valida el rol.
+        /// </summary>
+        private async Task<bool> PuedePreparar(long usuario)
+        {
+            var permisos = await _permisos.ListarPermisosAsync(usuario);
+            return permisos.Any(p => p.CodigoRol is "SUPERVISOR" or "ADMIN")
+                && permisos.Any(p => p.CodigoPermiso == "GESTIONAR_ENTREGAS");
+        }
+
         private static PersonalizacionContenido AContenido(CrearPersonalizacionRequest request) => new()
         {
             IdArchivoLadoA = request.IdArchivoLadoA,
@@ -128,5 +188,10 @@ namespace FamKon_store_api.Controllers
 
     public class ActualizarPersonalizacionRequest : PersonalizacionContenido
     {
+    }
+
+    public class MarcarPreparadaRequest
+    {
+        public bool Preparada { get; set; } = true;
     }
 }

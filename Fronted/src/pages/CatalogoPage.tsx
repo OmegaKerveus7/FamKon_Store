@@ -139,6 +139,15 @@ export default function CatalogoPage() {
                     {producto.sku}
                   </span>
                 </div>
+                <p
+                  className={`mt-1.5 text-[11px] font-bold uppercase tracking-wide ${
+                    (producto.existencia ?? 0) > 0 ? "text-emerald-600" : "text-red-600"
+                  }`}
+                >
+                  {typeof producto.existencia === "number"
+                    ? producto.existencia > 0 ? `${producto.existencia} disponibles` : "Agotado"
+                    : ""}
+                </p>
               </div>
             </Link>
           ))}

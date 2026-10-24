@@ -27,6 +27,7 @@ import AdminCatalogosPage from "./pages/AdminCatalogosPage";
 import AdminRolesPage from "./pages/AdminRolesPage";
 import AdminBitacoraPage from "./pages/AdminBitacoraPage";
 import AdminConfiguracionPage from "./pages/AdminConfiguracionPage";
+import PreparacionPersonalizacionesPage from "./pages/PreparacionPersonalizacionesPage";
 import RequirePermiso from "./components/RequirePermiso";
 import DashboardLayout from "./components/DashboardLayout";
 
@@ -106,6 +107,8 @@ export default function App() {
         <Route path="/comprador/checkout" element={<RequirePermiso codigoPermiso="CREAR_PEDIDO"><CheckoutPage /></RequirePermiso>} />
         <Route path="/repartidor" element={<Navigate to="/repartidor/asignados" replace />} />
         <Route path="/repartidor/asignados" element={<RequirePermiso codigoPermiso="VER_PEDIDOS_ASIGNADOS"><PedidosPage vista="repartidor" /></RequirePermiso>} />
+        <Route path="/supervisor/personalizaciones" element={<RequirePermiso codigoRol="SUPERVISOR" codigoPermiso="GESTIONAR_ENTREGAS"><PreparacionPersonalizacionesPage vista="supervisor" /></RequirePermiso>} />
+        <Route path="/admin/personalizaciones" element={<RequirePermiso codigoRol="ADMIN" codigoPermiso="GESTIONAR_ENTREGAS"><PreparacionPersonalizacionesPage vista="admin" /></RequirePermiso>} />
         <Route path="/repartidor/registrar" element={<Navigate to="/repartidor/asignados" replace />} />
         <Route path="/repartidor/cambiar-estado" element={<Navigate to="/repartidor/asignados" replace />} />
         <Route path="/admin/pedidos" element={<RequirePermiso codigoPermiso="VER_DASHBOARD"><PedidosPage vista="admin" /></RequirePermiso>} />

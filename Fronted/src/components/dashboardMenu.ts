@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Tag,
   MapPin,
+  Palette,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 
@@ -67,6 +68,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     codigoRol: "SUPERVISOR",
     items: [
       { codigo: "GESTIONAR_ENTREGAS", path: "/entregas/tracking", label: "Tracking General", icon: Truck },
+      { codigo: "GESTIONAR_ENTREGAS", path: "/supervisor/personalizaciones", label: "Personalizaciones", icon: Palette },
     ],
   },
   {
@@ -87,6 +89,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     codigoRol: "ADMIN",
     items: [
       { codigo: "VER_DASHBOARD", path: "/admin/pedidos", label: "Gestión de pedidos", icon: ClipboardList },
+      { codigo: "GESTIONAR_ENTREGAS", path: "/admin/personalizaciones", label: "Personalizaciones", icon: Palette },
       { codigo: "VER_DASHBOARD",         path: "/admin",              label: "Dashboard Admin",    icon: BarChart3 },
       { codigo: "GESTIONAR_USUARIOS",    path: "/admin/usuarios",     label: "Gestor Usuarios",    icon: Users },
       { codigo: "GESTIONAR_CATALOGOS",   path: "/admin/catalogos",    label: "Catalogos",          icon: Boxes },

@@ -39,7 +39,11 @@ export default function ProductoDetallePage() {
   }, [id]);
 
   async function handleAgregar() {
-    if (!producto || agregando) return;
+    if (!producto || agregando || agotado) return;
+    if (existencia !== null && cantidad > existencia) {
+      setError(`Solo hay ${existencia} disponibles.`);
+      return;
+    }
     setAgregando(true);
     setError("");
     try {
@@ -86,6 +90,10 @@ export default function ProductoDetallePage() {
     );
   }
 
+  const existencia = typeof producto.existencia === "number" ? producto.existencia : null;
+  const agotado = existencia !== null && existencia <= 0;
+  const maxCantidad = existencia ?? 99;
+
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4">
       <div className="flex items-center gap-3">
@@ -105,9 +113,20 @@ export default function ProductoDetallePage() {
           <div>
             <p className="text-xs font-medium text-amber-600">{producto.categoria}</p>
             <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">{producto.nombre}</h1>
-            <span className="mt-1 inline-block rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-              SKU: {producto.sku}
-            </span>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <span className="inline-block rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                SKU: {producto.sku}
+              </span>
+              {existencia !== null && (
+                <span
+                  className={`inline-block rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                    agotado ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+                  }`}
+                >
+                  {agotado ? "Agotado" : `${existencia} disponibles`}
+                </span>
+              )}
+            </div>
           </div>
 
           {producto.descripcion && <p className="text-sm leading-relaxed text-slate-600">{producto.descripcion}</p>}
@@ -126,7 +145,8 @@ export default function ProductoDetallePage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCantidad(Math.max(1, cantidad - 1))}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50"
+                disabled={cantidad <= 1 || agotado}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Minus className="h-4 w-4" />
               </button>
@@ -134,12 +154,14 @@ export default function ProductoDetallePage() {
                 {cantidad}
               </span>
               <button
-                onClick={() => setCantidad(cantidad + 1)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50"
+                onClick={() => setCantidad(Math.min(maxCantidad, cantidad + 1))}
+                disabled={agotado || (existencia !== null && cantidad >= existencia)}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Plus className="h-4 w-4" />
               </button>
             </div>
+            {existencia !== null && !agotado && <span className="text-xs text-slate-400">Máximo {existencia}</span>}
           </div>
 
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
@@ -162,14 +184,20 @@ export default function ProductoDetallePage() {
             </Link>
             <button
               onClick={handleAgregar}
-              disabled={agregado || agregando}
+              disabled={agregado || agregando || agotado}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition ${
-                agregado
-                  ? "bg-green-500 text-white"
-                  : "bg-amber-500 text-white hover:bg-amber-400"
+                agotado
+                  ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                  : agregado
+                    ? "bg-green-500 text-white"
+                    : "bg-amber-500 text-white hover:bg-amber-400"
               }`}
             >
-              {agregado ? (
+              {agotado ? (
+                <>
+                  <Package className="h-4 w-4" /> Agotado
+                </>
+              ) : agregado ? (
                 <>
                   <Check className="h-4 w-4" /> Agregado
                 </>

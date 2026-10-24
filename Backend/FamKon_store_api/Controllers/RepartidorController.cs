@@ -6,7 +6,6 @@ namespace FamKon_store_api.Controllers
 {
     [ApiController]
     [Route("api/famkon/repartidor")]
-    [NonController]
     [Authorize]
     public class RepartidorController : ControllerBase
     {

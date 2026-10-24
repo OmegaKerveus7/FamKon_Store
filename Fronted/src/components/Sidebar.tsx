@@ -1,7 +1,8 @@
 import { esAdministrador, grupoPermitidoParaAdmin } from '../domain/vistasRol';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { listarPreparacionesPersonalizadas } from "../api/famkon";
 import {
   MENU_GROUPS,
   LOGOUT_ITEM,
@@ -32,6 +33,31 @@ export default function Sidebar({
   const navigate = useNavigate();
   const location = useLocation();
   const esAdmin = esAdministrador(usuario?.roles);
+  const puedePreparar = esAdmin || tieneRol("SUPERVISOR");
+  const [pendientes, setPendientes] = useState(0);
+
+  useEffect(() => {
+    if (!puedePreparar) {
+      setPendientes(0);
+      return;
+    }
+    let activo = true;
+    const cargar = () => {
+      listarPreparacionesPersonalizadas()
+        .then((datos) => {
+          if (activo) setPendientes(datos.resumen.productosPendientes);
+        })
+        .catch(() => {});
+    };
+    cargar();
+    const temporizador = window.setInterval(() => {
+      if (document.visibilityState === "visible") cargar();
+    }, 60000);
+    return () => {
+      activo = false;
+      window.clearInterval(temporizador);
+    };
+  }, [puedePreparar]);
 
   const soloComprador = tieneRol("COMPRADOR") && !esAdmin && !tieneRol("SUPERVISOR") && !tieneRol("REPARTIDOR");
   const gruposVisibles = MENU_GROUPS.filter((g) =>
@@ -104,7 +130,7 @@ export default function Sidebar({
                       setAbiertos((prev) => ({ ...prev, [g.id]: true }));
                       navigate(g.items[0].path);
                     }}
-                    className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
+                    className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition ${
                       activo
                         ? "bg-amber-100 text-amber-700"
                         : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
@@ -112,6 +138,9 @@ export default function Sidebar({
                     title={g.label}
                   >
                     <GIcon size={20} />
+                    {pendientes > 0 && g.items.some((i) => i.path.endsWith("/personalizaciones")) && (
+                      <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-500" />
+                    )}
                   </button>
 
                   <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-md transition group-hover:opacity-100">
@@ -199,6 +228,11 @@ export default function Sidebar({
                         >
                           <Icon size={16} />
                           <span>{it.label}</span>
+                          {pendientes > 0 && it.path.endsWith("/personalizaciones") && (
+                            <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                              {pendientes > 99 ? "99+" : pendientes}
+                            </span>
+                          )}
                         </NavLink>
                       </li>
                     );

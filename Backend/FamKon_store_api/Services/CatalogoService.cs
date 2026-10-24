@@ -19,6 +19,12 @@ namespace FamKon_store_api.Services
         public string PermiteLadoA { get; set; } = "S";
         public string PermiteLadoB { get; set; } = "S";
         public string Activo { get; set; } = "S";
+        /// <summary>Ancho real de impresion en cm (migracion 17). Null si no esta definido.</summary>
+        public decimal? AnchoCm { get; set; }
+        /// <summary>Alto real de impresion en cm (migracion 17). Null si no esta definido.</summary>
+        public decimal? AltoCm { get; set; }
+        /// <summary>Unidades disponibles (migracion 19).</summary>
+        public int Existencia { get; set; }
     }
 
     public class CategoriaDto
@@ -96,6 +102,7 @@ namespace FamKon_store_api.Services
                         Activo = reader.GetString(reader.GetOrdinal("ACTIVO")),
                     });
                 }
+                await RellenarMedidasAsync(connection, productos);
                 return productos;
             }
             catch (Exception ex)
@@ -103,6 +110,53 @@ namespace FamKon_store_api.Services
                 _logger.LogError(ex, "Error listando productos");
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Completa ANCHO_CM / ALTO_CM (migracion 17) y EXISTENCIA (migracion 19).
+        /// Si la migracion no esta aplicada se ignoran los extras.
+        /// </summary>
+        private static async Task RellenarMedidasAsync(OracleConnection connection, IReadOnlyCollection<ProductoDto> productos)
+        {
+            if (productos.Count == 0) return;
+            try
+            {
+                var ids = string.Join(",", productos.Select(p => p.IdProducto));
+                using var cmd = new OracleCommand(
+                    $"SELECT ID_PRODUCTO, ANCHO_CM, ALTO_CM, EXISTENCIA FROM PRODUCTO WHERE ID_PRODUCTO IN ({ids})", connection);
+                using var reader = await cmd.ExecuteReaderAsync();
+                var medidas = new Dictionary<long, (decimal? Ancho, decimal? Alto, int Existencia)>();
+                while (await reader.ReadAsync())
+                {
+                    medidas[reader.GetInt64(0)] = (
+                        reader.IsDBNull(1) ? null : reader.GetDecimal(1),
+                        reader.IsDBNull(2) ? null : reader.GetDecimal(2),
+                        reader.IsDBNull(3) ? 0 : Convert.ToInt32(reader.GetValue(3)));
+                }
+                foreach (var producto in productos)
+                {
+                    if (!medidas.TryGetValue(producto.IdProducto, out var medida)) continue;
+                    producto.AnchoCm = medida.Ancho;
+                    producto.AltoCm = medida.Alto;
+                    producto.Existencia = medida.Existencia;
+                }
+            }
+            catch (OracleException ex) when (ex.Number is 904 or 942)
+            {
+                // Migracion 17/19 pendiente: se siguen usando los valores por defecto.
+            }
+        }
+
+        /// <summary>Actualiza la existencia de un producto (gestor de productos).</summary>
+        public async Task<bool> ActualizarExistenciaAsync(long idProducto, int existencia)
+        {
+            using var connection = _dbContext.CreateConnection();
+            await _dbContext.OpenConnectionAsync(connection);
+            using var cmd = new OracleCommand(
+                "UPDATE PRODUCTO SET EXISTENCIA=:existencia, FECHA_MODIFICACION=SYSTIMESTAMP WHERE ID_PRODUCTO=:id", connection);
+            cmd.Parameters.Add("existencia", OracleDbType.Int32).Value = existencia;
+            cmd.Parameters.Add("id", OracleDbType.Int64).Value = idProducto;
+            return await cmd.ExecuteNonQueryAsync() > 0;
         }
 
         public async Task<ProductoDto?> ObtenerProductoAsync(long idProducto)
@@ -120,9 +174,10 @@ namespace FamKon_store_api.Services
                 command.Parameters.Add("O_DATOS", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
 
                 using var reader = await command.ExecuteReaderAsync();
+                ProductoDto? producto = null;
                 if (await reader.ReadAsync())
                 {
-                    return new ProductoDto
+                    producto = new ProductoDto
                     {
                         IdProducto = reader.GetInt64(reader.GetOrdinal("ID_PRODUCTO")),
                         IdSitio = reader.GetInt64(reader.GetOrdinal("ID_SITIO")),
@@ -138,7 +193,8 @@ namespace FamKon_store_api.Services
                         Activo = reader.GetString(reader.GetOrdinal("ACTIVO")),
                     };
                 }
-                return null;
+                if (producto is not null) await RellenarMedidasAsync(connection, new[] { producto });
+                return producto;
             }
             catch (Exception ex)
             {

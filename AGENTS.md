@@ -184,6 +184,8 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 | `/comprador/pago/:id` | PagoPage | **Sí** | Formulario de pago |
 | `/comprador/checkout` | CheckoutPage | **Sí** | Confirmar pedido |
 | `/repartidor/asignados` | PedidosPage (vista=repartidor) | **Sí** | Pedidos asignados al repartidor |
+| `/supervisor/personalizaciones` | PreparacionPersonalizacionesPage (vista=supervisor) | **Sí** | Personalizaciones por preparar (SUPERVISOR) |
+| `/admin/personalizaciones` | PreparacionPersonalizacionesPage (vista=admin) | **Sí** | Personalizaciones por preparar (ADMIN) |
 | `/entregas/tracking` | EntregasAdminPage | **Sí** | Tracking general (SUPERVISOR) |
 | `/supervisor` | SupervisorPage | **Sí** | Dashboard supervisor |
 | `/admin` | AdminPage | **Sí** | Dashboard administrador |
@@ -242,16 +244,50 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - **Sin costo extra**: el precio del producto no cambia por personalizar; `PRECIO_PERSONALIZA` se guarda en 0.
 - Contenido por lado A/B: imagen (`ARCHIVO.TIPO_ARCHIVO='DISENO_PERSONALIZACION'`), mensaje (máx. 500) y configuración JSON (`CONFIG_LADO_A/B`).
 - Para tarjetas NFC se detecta el producto por nombre/SKU con `NFC`; el modal pide **una sola URL** (se guarda igual en `CONFIG_LADO_A/B`) con valor por defecto `https://famkon.site`; el backend valida que sea `http/https` y máximo 500 caracteres.
-- La UI usa una tarjeta compacta con botón **Personalizar** que abre un modal con pestañas Lado A/B y una vista previa 3D CSS de la tarjeta.
+- La UI usa una tarjeta mínima (solo el título "¿Quieres personalizar…?" y el botón **Personalizar**) que abre un modal con pestañas Lado A/B y una vista previa 3D CSS de la tarjeta.
+- En móvil el modal se compacta y el editor y las vistas previas se apilan en vertical (Lado A arriba, Lado B abajo).
+- Cada imagen se ajusta en el navegador con un control de encuadre (arrastrar, zoom 100–400 %, girar 90° y centrar). Al agregar al carrito se envía la imagen **ya recortada y redimensionada** (1012×640 px para tarjetas NFC y 1000×840 px para el resto), de modo que en `ARCHIVO` queda guardada la imagen final.
+- Si el producto define `ANCHO_CM`/`ALTO_CM` (migración 17), el lienzo del editor usa esa proporción (≈120 px por cm) y guarda la imagen ya recortada a ese aspecto, para que coincida con lo que se imprime. La detección de NFC revisa nombre, SKU **y categoría**.
 - `PRODUCTO.PERMITE_LADO_A/B` define qué lados se pueden personalizar.
 - Endpoints:
   - `POST /api/famkon/personalizaciones` → Crear (requiere JWT)
   - `PUT /api/famkon/personalizaciones/{id}` → Actualizar (solo dueño, no bloqueada)
-  - `GET /api/famkon/personalizaciones/{id}` → Obtener (dueño, admin o repartidor asignado)
+  - `GET /api/famkon/personalizaciones/{id}` → Obtener (dueño, admin, supervisor o repartidor asignado)
   - `POST /api/famkon/personalizaciones/imagen?lado=A|B` → Subir imagen
+  - `GET /api/famkon/personalizaciones/pendientes` → Worklist de preparación (ver abajo)
+  - `POST /api/famkon/personalizaciones/{idDetalle}/preparada` → Marcar/desmarcar preparado (ver abajo)
 - `POST /api/famkon/carrito/productos` acepta `personalizacion` con el contenido A/B; si se envía `idPersonalizacion`, valida dueño/producto y que no esté bloqueada.
 - Al crear el pedido, `PKG_COMPRA` copia la personalización a `PEDIDO_DETALLE` y la marca `BLOQUEADA='S'`; el admin y el repartidor asignado pueden ver las imágenes en el detalle del pedido.
 - Migración: ejecutar `BD/01 scrip/pkg/15_PERSONALIZACION_PRODUCTO.sql` (agrega `ID_USUARIO`/`ID_PRODUCTO` a `PERSONALIZACION` y crea el paquete).
+
+### Módulo de Preparación de Personalizaciones (supervisor / admin)
+- **Backend**: `PersonalizacionController` (`pendientes`, `{idDetalle}/preparada`) + `PersonalizacionService.ListarPreparacionesAsync` / `MarcarPreparadaAsync`
+- **Frontend**: `PreparacionPersonalizacionesPage` (rutas `/supervisor/personalizaciones`, `/admin/personalizaciones`) + badge de pendientes en `Sidebar`
+- **Objetivo**: que el supervisor vea cuántos productos personalizados faltan preparar, imprima las imágenes A/B al tamaño real, copie/grabe la URL del NFC, marque el producto como preparado y el pedido pase solo a entrega.
+- **Roles**: solo `SUPERVISOR` y `ADMIN`. El repartidor **ya no** tiene la opción (se le quitó del menú, de las rutas y de los endpoints). El gate del backend valida el rol, no solo `GESTIONAR_ENTREGAS`, porque el repartidor también tiene ese permiso.
+- **Alcance**: líneas con `PEDIDO_DETALLE.ID_PERSONALIZACION IS NOT NULL` en pedidos distintos de `ENTREGADO`, `CANCELADO` y `RECOGIDO`.
+- **Estado de preparación**: columnas en `PEDIDO_DETALLE` → `PERSONALIZACION_PREPARADA CHAR(1) DEFAULT 'N'`, `FECHA_PREPARACION TIMESTAMP WITH TIME ZONE`, `ID_USUARIO_PREPARA` (FK a `USUARIO`).
+- **Enlace con tracking (automático)**: al marcar la última línea personalizada como preparada, el pedido pasa a `LISTO_ENTREGA` (domicilio) o `LISTO_RECOGER` (mostrador) llamando a `PKG_PEDIDO.SP_CAMBIAR_ESTADO`, que deja el registro en `PEDIDO_ESTADO_HISTORIAL` (de ahí sale el tracking). Con pago `TARJETA` solo avanza si el pago está `APROBADO`; si no, devuelve `motivo` y el pedido no cambia. Desmarcar no revierte el estado.
+- **Respuesta de `GET /api/famkon/personalizaciones/pendientes`**: `{ codigoS, resumen: { pedidos, lineasPendientes, productosPendientes, lineasPreparadas, totalLineas }, items: [...] }`. Cada item incluye pedido/estado/comprador/dirección/repartidor, producto/SKU/cantidad, `idArchivoLadoA/B`, mensajes A/B, `configLadoA/B`, `urlNfc`, `preparada`, `fechaPreparacion` y `anchoCm`/`altoCm` (medidas de impresión del producto).
+- **`POST /api/famkon/personalizaciones/{idDetalle}/preparada`** con body `{ "preparada": true|false }`; devuelve `{ codigoS, preparada, idPedido, estadoPedido, avanzado, motivo }`. `404` si la línea no existe.
+- **Imágenes**: `GET /api/famkon/archivos/{id}` autoriza `DISENO_PERSONALIZACION` al repartidor asignado y a `ADMIN`/`SUPERVISOR` (`CompraService.PuedeArchivo`).
+- **Impresión (solo las imágenes)**: cada línea genera **dos recuadros** (Lado A y Lado B) en A4, sin textos ni datos. El recuadro usa el tamaño real del producto (`PRODUCTO.ANCHO_CM` × `PRODUCTO.ALTO_CM`), esquinas redondeadas de 0,5 cm y la imagen se imprime **0,5 cm más chica** (centrada) para recortar. Los valores se fuerzan con `@page` y centímetros CSS: hay que imprimir al **100 %** (sin “ajustar a la página”).
+  - Tarjeta NFC / Anillos: 8,5 × 5,5 cm → imagen 8,0 × 5,0 cm.
+  - Llavero: 3,1 × 4,5 cm → imagen 2,6 × 4,0 cm.
+- **Productos**: `PRODUCTO.ANCHO_CM`/`ALTO_CM` definen el tamaño de impresión. `LLA-001` “Llavero de acrílico personalizable” (categoría `LLAVEROS`, foto `llaveros_de-acrilico.jpg`) es personalizable A/B y **no** lleva NFC. En el editor se muestra con una **vista 3D propia**: ficha rectangular curveada en los lados izquierdo, derecho e inferior, con anillo metálico arriba y giro frente/reverso (`Vista3dLlavero`). La detección por nombre/SKU/categoría elige la vista: `nfc` → tarjeta 3D, `llavero` → llavero 3D, resto → vista plana.
+- **Catálogo**: solo se venden **Tarjetas NFC** (`TAR-NFC-01`) y **Llaveros de acrílico** (`LLA-001`). El anillo `ANI001` quedó `ACTIVO='N'` (tiene historial de pedidos, no se borra) y la categoría `ANILLOS` se muestra como “Tarjetas NFC”. `GET /api/famkon/productos/{id}` devuelve 404 para productos inactivos salvo que el usuario gestione productos.
+- **UI**: tarjetas de resumen, pestañas Pendientes/Todas, búsqueda, enlace “Ver tracking” por pedido y refresco cada 45 s. El sidebar muestra las unidades pendientes (refresco cada 60 s).
+- **Migraciones**: `BD/16_PERSONALIZACION_PREPARACION.sql` (columnas de preparación), `BD/17_PRODUCTO_IMPRESION_LLAVERO.sql` (medidas de impresión + categoría y producto llavero) y `BD/18_CATALOGO_TARJETAS_LLAVEROS.sql` (deja solo tarjetas y llaveros).
+
+### Módulo de Existencias (inventario)
+- **Base de datos**: `PRODUCTO.EXISTENCIA NUMBER(10) DEFAULT 0 NOT NULL` con `CK_PRODUCTO_EXISTENCIA (EXISTENCIA >= 0)`. Migración `BD/19_PRODUCTO_EXISTENCIA.sql`.
+- **Descuento automático**: trigger `TRG_PEDIDO_DETALLE_STOCK` (`BEFORE INSERT ON PEDIDO_DETALLE`) bloquea la fila del producto, valida stock y descuenta `CANTIDAD`. Si no alcanza lanza `ORA-20709` → el API responde **409** con “No hay existencias suficientes de … (disponibles: N).”
+- **Devolución**: trigger `TRG_PEDIDO_CANCELADO_STOCK` (`AFTER UPDATE OF ID_ESTADO_PEDIDO ON PEDIDO`) devuelve las unidades de todas las líneas cuando el pedido pasa a `CANCELADO`.
+- **Existencias iniciales**: Tarjeta NFC = 15, Llavero de acrílico = 50 (Anillo inactivo = 0).
+- **Backend**: `ProductoDto.Existencia`; `CatalogoService.ActualizarExistenciaAsync`; `PUT /api/famkon/admin/productos/{id}/existencia` con `{ existencia }` (permiso `GESTIONAR_PRODUCTOS`, rango 0–1.000.000). Crear/actualizar producto aceptan `existencia`.
+- **Validación en carrito**: `POST /carrito/productos` y `PUT /carrito/detalle/{id}` comparan contra la existencia (incluyendo lo ya agregado) y devuelven `400` con el mensaje.
+- **Comprador**: el catálogo y el detalle muestran “N disponibles” o “Agotado”; el detalle limita la cantidad al stock y desactiva “Agregar al carrito” cuando es 0.
+- **Administrador**: el gestor de productos muestra la columna **Existencia** y el campo “Existencia (unidades)” en el alta/edición.
 
 ### Módulo de Credenciales
 - **Backend**: `CredencialController` + `CredencialService` + `CredencialPdf`
@@ -298,7 +334,9 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - **RepartidorService** conectado a `PKG_PEDIDO` + `PKG_PAGO_ENTREGA`
 - **UsuarioAdminService** conectado a `PKG_USUARIO` + `PKG_SEGURIDAD`
 - **ArchivoService** conectado a `PKG_ARCHIVO` para subir/descargar archivos
-- **PersonalizacionService** conectado a `PKG_PERSONALIZACION` (contenido A/B, imágenes y URL NFC)
+- **PersonalizacionService** conectado a `PKG_PERSONALIZACION` (contenido A/B, imágenes y URL NFC) + worklist de preparación (`ListarPreparacionesAsync`, `MarcarPreparadaAsync`)
+- **NotificacionesController** con fallback: si falta la tabla `NOTIFICACION_LECTURA` (ORA-00942) devuelve los avisos sin estado de lectura en vez de fallar
+- **RepartidorController** activo (sin `[NonController]`): expone `/api/famkon/repartidor/*`
 - **RecurrenteService** integrado con checkout y webhook firmado
 - **CredencialPdf** + **ConstanciaPdf** para generación de documentos
 - **reCAPTCHA v2** integrado para protección
@@ -311,6 +349,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - ✅ Catálogo de productos con filtros y búsqueda
 - ✅ Detalle de producto con agregar al carrito
 - ✅ Personalización de producto con imágenes/texto A/B y URL para NFC
+- ✅ Worklist de personalizaciones por preparar (supervisor/admin) con conteo, impresión de los dos lados al tamaño real, URL NFC y badge en el menú
 - ✅ Carrito de compras
 - ✅ Checkout y formulario de pago
 - ✅ Tracking de envío con timeline
@@ -397,6 +436,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - `PagoPage.tsx` — Formulario de pago
 - `CheckoutPage.tsx` — Confirmar pedido
 - `PedidosPage.tsx` — Pedidos (repartidor/admin)
+- `PreparacionPersonalizacionesPage.tsx` — Worklist de productos personalizados por preparar (imprime los dos recuadros al tamaño real; la URL NFC solo se muestra en pantalla)
 - `EntregasAdminPage.tsx` — Tracking general
 - `SupervisorPage.tsx` — Dashboard supervisor
 - `AdminPage.tsx` — Dashboard admin
@@ -409,7 +449,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - `NotFoundPage.tsx` — Página 404
 
 ### Frontend Components (`Fronted/src/components/`)
-- `Sidebar.tsx` — Menú lateral colapsable
+- `Sidebar.tsx` — Menú lateral colapsable (con badge de productos personalizados pendientes)
 - `Topbar.tsx` — Barra superior con breadcrumb
 - `DashboardLayout.tsx` — Layout del dashboard
 - `RequirePermiso.tsx` — HOC para protección por permisos
@@ -427,7 +467,7 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 - `CompraAcciones.tsx` — Acciones de compra
 - `EstadoConstancia.tsx` — Estado de constancia
 - `NuevaCategoriaModal.tsx` — Modal para nueva categoría
-- `EditorPersonalizacion.tsx` — Tarjeta compacta + modal de personalización; URL NFC compartida A/B y vista previa 3D CSS
+- `EditorPersonalizacion.tsx` — Título + botón **Personalizar**; modal compacto y apilado en móvil; control de encuadre de imagen (arrastrar/zoom/giro) que genera la imagen final antes de subirla; URL NFC compartida A/B, vista previa 3D de la tarjeta NFC y **vista 3D del llavero** (rectangular curveado en 3 lados + anillo, con giro frente/reverso)
 - `ImagenArchivo.tsx` — Carga imágenes protegidas con JWT y crea blob URLs
 
 ### Frontend Modules (`Fronted/src/modules/biometria/`)
@@ -442,6 +482,11 @@ Cualquier nueva pagina del dashboard debe ir dentro de `<DashboardLayout>` en `A
 ### Base de Datos
 - `BD/01 scrip/pkg/04_PACKAGES_TIENDA_ORACLE.sql` — Todos los packages PL/SQL + vista VW_GESTOR_USUARIOS
 - `BD/01 scrip/pkg/15_PERSONALIZACION_PRODUCTO.sql` — Migración de personalización (propietario/producto, `PKG_PERSONALIZACION`)
+- `BD/16_PERSONALIZACION_PREPARACION.sql` — Columnas de preparación en `PEDIDO_DETALLE` (`PERSONALIZACION_PREPARADA`, `FECHA_PREPARACION`, `ID_USUARIO_PREPARA`)
+- `BD/17_PRODUCTO_IMPRESION_LLAVERO.sql` — Medidas de impresión `PRODUCTO.ANCHO_CM/ALTO_CM`, categoría `LLAVEROS` y producto `LLA-001` (llavero de acrílico personalizable sin NFC; la foto se carga desde el admin)
+- `BD/18_CATALOGO_TARJETAS_LLAVEROS.sql` — Deja el catálogo con tarjetas y llaveros: desactiva el anillo `ANI001` (conserva historial) y renombra la categoría `ANILLOS` a “Tarjetas NFC”
+- `BD/19_PRODUCTO_EXISTENCIA.sql` — `PRODUCTO.EXISTENCIA` + triggers de descuento al vender y devolución al cancelar
+- `BD/14_NOTIFICACIONES_LECTURA.sql` — Tabla `NOTIFICACION_LECTURA` (estado leído/no leído de los avisos)
 - `BD/01 scrip/inserts_rol_permiso.sql` — Enrolamiento de permisos por rol
 
 ### Vista VW_GESTOR_USUARIOS

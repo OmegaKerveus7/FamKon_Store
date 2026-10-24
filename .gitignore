@@ -33,6 +33,8 @@ appsettings.Production.json
 
 # Sistema
 .DS_Store
-Thumbs.db**/.idea/
+Thumbs.db
 **/.idea/
-**/.idea/
+
+# Documentación local (no se sube al repositorio)
+AGENTS.md

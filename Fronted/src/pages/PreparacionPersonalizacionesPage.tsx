@@ -43,12 +43,16 @@ const RESUMEN_VACIO: PreparacionesResumen = {
 const ESTILOS_IMPRESION = `
   @page { size: A4; margin: 12mm; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #fff; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #fff; color: #0f172a; }
   .ficha {
-    display: flex; align-items: center; justify-content: center; gap: 8mm;
-    page-break-after: always; break-after: page; padding-top: 8mm;
+    display: flex; flex-direction: column; align-items: center; gap: 7mm;
+    padding-top: 6mm; page-break-after: always; break-after: page;
   }
   .ficha:last-child { page-break-after: auto; break-after: auto; }
+  .pareja {
+    display: flex; align-items: center; justify-content: center; gap: 8mm;
+    break-inside: avoid;
+  }
   .recorte {
     position: relative; display: flex; align-items: center; justify-content: center;
     background: #fff; overflow: hidden;
@@ -56,6 +60,17 @@ const ESTILOS_IMPRESION = `
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
   .recorte img { display: block; object-fit: cover; }
+  .ticket {
+    width: 8.5cm; height: 5.5cm; padding: 4mm 4.5mm;
+    display: flex; flex-direction: column; justify-content: center;
+    border: 0.25mm dashed #94a3b8; border-radius: 0.5cm; background: #fff;
+    overflow: hidden; break-inside: avoid;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .ticket-marca { margin: 0; font-size: 2.4mm; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #b45309; }
+  .ticket-numero { margin: 0.6mm 0 1.6mm; font-size: 5.2mm; font-weight: 800; line-height: 1.05; word-break: break-all; }
+  .ticket-linea { margin: 0.5mm 0; font-size: 2.9mm; line-height: 1.25; }
+  .ticket-linea strong { font-weight: 700; }
 `;
 
 function etiquetaEstado(estado: string, nombre: string): string {
@@ -86,6 +101,18 @@ async function archivoComoDataUrl(id: number | null): Promise<string | null> {
   } finally {
     if (url) URL.revokeObjectURL(url);
   }
+}
+
+function escapar(valor: string | null | undefined): string {
+  return (valor ?? "").replace(/[&<>"']/g, (caracter) => {
+    switch (caracter) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      default: return "&#39;";
+    }
+  });
 }
 
 function recorteHtml(imagen: string | null, ancho: number, alto: number): string {
@@ -246,13 +273,33 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
     }
   }
 
-  async function fichaHtml(item: PreparacionPersonalizada): Promise<string> {
-    const [ladoA, ladoB] = await Promise.all([
-      archivoComoDataUrl(item.idArchivoLadoA),
-      archivoComoDataUrl(item.idArchivoLadoB),
-    ]);
+  async function fichaHtml(items: PreparacionPersonalizada[]): Promise<string> {
+    const parejas: string[] = [];
+    for (const item of items) {
+      const [ladoA, ladoB] = await Promise.all([
+        archivoComoDataUrl(item.idArchivoLadoA),
+        archivoComoDataUrl(item.idArchivoLadoB),
+      ]);
+      const { ancho, alto } = medidas(item);
+      parejas.push(`<div class="pareja">${recorteHtml(ladoA, ancho, alto)}${recorteHtml(ladoB, ancho, alto)}</div>`);
+    }
+    return `<article class="ficha">${parejas.join("")}${ticketHtml(items[0])}</article>`;
+  }
+
+  /** Ticket de entrega: mismo tamaño que la tarjeta, con pedido y destinatario. */
+  function ticketHtml(item: PreparacionPersonalizada): string {
+    const entrega = [item.areaEntrega, item.direccion].filter(Boolean).join(" · ");
     const { ancho, alto } = medidas(item);
-    return `<article class="ficha">${recorteHtml(ladoA, ancho, alto)}${recorteHtml(ladoB, ancho, alto)}</article>`;
+    const anchoTicket = Math.max(ancho, ANCHO_POR_DEFECTO_CM);
+    const altoTicket = Math.max(alto, ALTO_POR_DEFECTO_CM);
+    return `<section class="ticket" style="width:${anchoTicket}cm;height:${altoTicket}cm">
+      <p class="ticket-marca">FamKon · Ticket de entrega</p>
+      <p class="ticket-numero">${escapar(item.numeroPedido)}</p>
+      <p class="ticket-linea"><strong>Para:</strong> ${escapar(item.comprador) || "—"}</p>
+      <p class="ticket-linea"><strong>Tel.:</strong> ${escapar(item.telefono) || "—"}</p>
+      <p class="ticket-linea"><strong>Entrega:</strong> ${escapar(entrega) || "—"}</p>
+      <p class="ticket-linea"><strong>Producto:</strong> ${escapar(item.producto)} × ${item.cantidad}</p>
+    </section>`;
   }
 
   async function imprimir(lista: PreparacionPersonalizada[], clave: number | "todas") {
@@ -267,8 +314,16 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
     }
     ventana.document.write("<p style='font-family:sans-serif;padding:24px'>Preparando las imágenes…</p>");
     try {
+      const porPedido = new Map<number, PreparacionPersonalizada[]>();
+      for (const item of lista) {
+        const grupo = porPedido.get(item.idPedido) ?? [];
+        grupo.push(item);
+        porPedido.set(item.idPedido, grupo);
+      }
+
       const fichas: string[] = [];
-      for (const item of lista) fichas.push(await fichaHtml(item));
+      for (const items of porPedido.values()) fichas.push(await fichaHtml(items));
+
       ventana.document.open();
       ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>FamKon · Personalizaciones</title><style>${ESTILOS_IMPRESION}</style></head><body>${fichas.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`);
       ventana.document.close();
@@ -291,7 +346,8 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Personalizaciones por preparar</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-500">
             Revisá cuántos productos personalizados faltan, imprimí las imágenes del frente y del reverso al tamaño real y marcá el producto como
-            preparado. Al completar todas las líneas, el pedido pasa solo a “Listo para entrega” (o “Listo para recoger”).
+            preparado. Al completar todas las líneas, el pedido pasa solo a “Listo para entrega” (o “Listo para recoger”). La impresión incluye un
+            ticket por pedido con el número y el destinatario.
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">

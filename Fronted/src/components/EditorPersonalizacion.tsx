@@ -71,7 +71,7 @@ interface Props {
 
 const URL_NFC_POR_DEFECTO = "https://famkon.site";
 const MAX_IMAGEN = 15 * 1024 * 1024;
-const ZOOM_MIN = 1;
+const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 4;
 
 /** Medida final que se guarda en la base de datos para cada lado. */
@@ -249,6 +249,79 @@ function limitarAjuste(imagen: MedidasImagen, ajuste: AjusteImagen, destino: Des
 }
 
 /**
+ * Dibuja el texto del usuario sobre la imagen final para que quede impreso
+ * en la tarjeta (no solo como dato aparte).
+ */
+function envolverTexto(ctx: CanvasRenderingContext2D, texto: string, maxAncho: number, fuente: string): string[] {
+  ctx.font = fuente;
+  const lineas: string[] = [];
+  for (const parrafo of texto.split(/\r?\n/)) {
+    const palabras = parrafo.trim().split(/\s+/).filter(Boolean);
+    let linea = "";
+    for (const palabra of palabras) {
+      const prueba = linea ? `${linea} ${palabra}` : palabra;
+      if (!linea || ctx.measureText(prueba).width <= maxAncho) linea = prueba;
+      else {
+        lineas.push(linea);
+        linea = palabra;
+      }
+    }
+    if (linea) lineas.push(linea);
+  }
+  return lineas;
+}
+
+function dibujarMensajeSobreImagen(
+  ctx: CanvasRenderingContext2D,
+  mensaje: string,
+  ancho: number,
+  alto: number,
+): void {
+  const texto = mensaje.trim();
+  if (!texto) return;
+
+  const margen = Math.round(ancho * 0.06);
+  const maxAncho = ancho - margen * 2;
+  const fuente = (tamano: number) => `700 ${tamano}px "Segoe UI", Arial, sans-serif`;
+
+  let tamano = Math.max(16, Math.round(alto * 0.065));
+  let lineas = envolverTexto(ctx, texto, maxAncho, fuente(tamano));
+  while (lineas.length > 4 && tamano > 12) {
+    tamano = Math.round(tamano * 0.86);
+    lineas = envolverTexto(ctx, texto, maxAncho, fuente(tamano));
+  }
+
+  const visibles = lineas.slice(0, 4);
+  if (lineas.length > 4) visibles[3] = `${visibles[3]}…`;
+
+  const altoLinea = Math.round(tamano * 1.22);
+  const altoTexto = visibles.length * altoLinea;
+  const altoBanda = altoTexto + margen * 2;
+  const inicio = alto - altoBanda;
+
+  const degradado = ctx.createLinearGradient(0, inicio, 0, alto);
+  degradado.addColorStop(0, "rgba(2,6,23,0)");
+  degradado.addColorStop(0.45, "rgba(2,6,23,0.55)");
+  degradado.addColorStop(1, "rgba(2,6,23,0.82)");
+  ctx.fillStyle = degradado;
+  ctx.fillRect(0, inicio, ancho, altoBanda);
+
+  ctx.font = fuente(tamano);
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = Math.max(2, Math.round(tamano * 0.16));
+  ctx.shadowOffsetY = 1;
+  visibles.forEach((linea, i) => {
+    ctx.fillText(linea, margen, alto - margen + (i + 1 - visibles.length) * altoLinea);
+  });
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+}
+
+/**
  * Genera la imagen ya encuadrada y con el tamaño final, lista para guardarse
  * en la base de datos (ARCHIVO) sin depender de librerías del servidor.
  */
@@ -256,6 +329,7 @@ async function generarImagenAjustada(
   archivo: File,
   ajuste: AjusteImagen,
   destino: Destino,
+  mensaje = "",
 ): Promise<File> {
   const imagen = await cargarImagen(archivo);
   const fijo = limitarAjuste(imagen, ajuste, destino);
@@ -272,6 +346,7 @@ async function generarImagenAjustada(
   contexto.fillRect(0, 0, destino.ancho, destino.alto);
   contexto.imageSmoothingEnabled = true;
   contexto.imageSmoothingQuality = "high";
+  contexto.save();
   contexto.translate(
     destino.ancho / 2 + fijo.x * destino.ancho,
     destino.alto / 2 + fijo.y * destino.alto,
@@ -279,6 +354,9 @@ async function generarImagenAjustada(
   contexto.rotate((fijo.rotacion * Math.PI) / 180);
   contexto.scale(escala, escala);
   contexto.drawImage(imagen.elemento, -imagen.ancho / 2, -imagen.alto / 2, imagen.ancho, imagen.alto);
+  contexto.restore();
+
+  dibujarMensajeSobreImagen(contexto, mensaje, destino.ancho, destino.alto);
 
   const blob = await new Promise<Blob | null>((resolve) => lienzo.toBlob(resolve, "image/jpeg", 0.92));
   if (!blob) throw new Error("No se pudo procesar la imagen.");
@@ -382,7 +460,7 @@ const EditorPersonalizacion = forwardRef<EditorPersonalizacionHandle, Props>(
       async function subirLado(lado: "A" | "B"): Promise<number | null> {
         const datos = lado === "A" ? aplicado!.ladoA : aplicado!.ladoB;
         if (!datos.archivo) return null;
-        const ajustada = await generarImagenAjustada(datos.archivo, datos.ajuste, destino);
+        const ajustada = await generarImagenAjustada(datos.archivo, datos.ajuste, destino, datos.mensaje);
         return subirImagenPersonalizacionAPI(ajustada, lado);
       }
 
@@ -1002,7 +1080,7 @@ function CaraNfc({ lado, datos, url, style }: CaraNfcProps) {
       <ImagenEncuadrada
         archivo={datos.archivo}
         ajuste={datos.ajuste}
-        className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-black"
+        className={`absolute inset-0 ${datos.archivo ? "bg-white" : "bg-gradient-to-br from-slate-800 via-slate-900 to-black"}`}
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
       <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur sm:left-3 sm:top-3 sm:py-1">
@@ -1120,7 +1198,7 @@ function CaraLlavero({ lado, datos, style }: { lado: "A" | "B"; datos: LadoPerso
       className="absolute inset-0 overflow-hidden bg-white shadow-2xl shadow-slate-900/30"
       style={{ ...style, backfaceVisibility: "hidden", clipPath: "url(#famkon-llavero)" }}
     >
-      <ImagenEncuadrada archivo={datos.archivo} ajuste={datos.ajuste} className="absolute inset-0 bg-slate-100" />
+      <ImagenEncuadrada archivo={datos.archivo} ajuste={datos.ajuste} className={`absolute inset-0 ${datos.archivo ? "bg-white" : "bg-slate-100"}`} />
       {/* brillo del acrilico */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent opacity-70" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-transparent" />
@@ -1166,20 +1244,23 @@ function VistaLados({
 }
 
 function PanelLado({ etiqueta, lado, destino }: { etiqueta: string; lado: LadoPersonalizacion; destino: Destino }) {
+  const mensaje = lado.mensaje.trim();
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <div className="relative w-full bg-slate-100" style={{ aspectRatio: `${destino.ancho} / ${destino.alto}` }}>
+      <div className="relative w-full bg-white" style={{ aspectRatio: `${destino.ancho} / ${destino.alto}` }}>
         {lado.archivo ? (
           <ImagenEncuadrada archivo={lado.archivo} ajuste={lado.ajuste} className="absolute inset-0" />
         ) : (
           <ImagePlus className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-slate-400" />
         )}
+        {mensaje && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent p-2 pt-6">
+            <p className="line-clamp-3 text-[10px] font-semibold leading-snug text-white drop-shadow">{mensaje}</p>
+          </div>
+        )}
       </div>
       <div className="p-2">
         <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{etiqueta}</p>
-        <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-700">
-          {lado.mensaje.trim() || "Sin texto"}
-        </p>
       </div>
     </div>
   );

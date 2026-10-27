@@ -1,6 +1,6 @@
 import { rutaPersonalBloqueada } from '../domain/vistasRol';
-import { type ReactNode } from "react";
-import { Navigate, useNavigate, useLocation } from "react-router-dom";
+import { useState, type ReactNode } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 interface RequirePermisoProps {
@@ -15,7 +15,7 @@ export default function RequirePermiso({
   children,
 }: RequirePermisoProps) {
   const { usuario, permisos, tienePermiso, tieneRol, cargarPermisos } = useAuth();
-  const navigate = useNavigate();
+  const [reintentando, setReintentando] = useState(false);
   const location = useLocation();
 
   if (!usuario) {
@@ -32,13 +32,14 @@ export default function RequirePermiso({
           <p className="text-sm font-medium text-slate-600 mb-4">Cargando permisos...</p>
           <button
             onClick={async () => {
+              setReintentando(true);
               await cargarPermisos();
-              // Forzar re-render navegando a la misma ruta
-              navigate(0);
+              setReintentando(false);
             }}
-            className="px-4 py-2 rounded-lg bg-amber-500 text-slate-900 font-medium hover:bg-amber-400"
+            disabled={reintentando}
+            className="px-4 py-2 rounded-lg bg-amber-500 text-slate-900 font-medium hover:bg-amber-400 disabled:opacity-60"
           >
-            Reintentar
+            {reintentando ? "Reintentando…" : "Reintentar"}
           </button>
         </div>
       </div>

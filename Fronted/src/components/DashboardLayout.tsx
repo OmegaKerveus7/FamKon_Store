@@ -1,6 +1,7 @@
 import { AdminPedidosProvider } from '../context/AdminPedidosContext';
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import SessionWarning from "./SessionWarning";
@@ -23,7 +24,7 @@ export default function DashboardLayout() {
     Math.ceil(AVISO_INACTIVIDAD_MS / 1000),
   );
 
-  const { usuario, token, registrarActividad, renovarToken, cerrarSesion, refrescarPermisos } = useAuth();
+  const { usuario, token, registrarActividad, renovarToken, cerrarSesion, refrescarPermisos, renovandoSesion } = useAuth();
   const navigate = useNavigate();
 
   // ─── Aviso de sesion: aparece 60s antes del logout automatico ────────────────
@@ -135,6 +136,15 @@ export default function DashboardLayout() {
           onExtender={handleExtender}
           onCerrarSesion={handleCerrarSesion}
         />
+      )}
+
+      {renovandoSesion && (
+        <div role="status" aria-live="polite" className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm">
+          <div className="flex items-center gap-3 rounded-2xl bg-white px-5 py-4 shadow-xl">
+            <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+            <p className="text-sm font-semibold text-slate-700">Restableciendo sesión…</p>
+          </div>
+        </div>
       )}
     </div></AdminPedidosProvider>
   );

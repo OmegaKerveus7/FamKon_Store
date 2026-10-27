@@ -47,7 +47,8 @@ namespace FamKon_store_api.Services
 
         public ClaimsPrincipal? ValidateToken(string token)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
+            // Sin mapear claims: el token usa "sub" y el endpoint de refresh lo busca así.
+            var tokenHandler = new JwtSecurityTokenHandler { MapInboundClaims = false };
             var key = Encoding.UTF8.GetBytes(_secretKey);
 
             try

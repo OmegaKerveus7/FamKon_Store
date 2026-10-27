@@ -115,27 +115,122 @@ function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+/** Decodifica el payload del JWT (sin validar la firma) para leer el vencimiento. */
+function decodificarPayload(token: string): { exp?: number } | null {
+  try {
+    const parte = token.split(".")[1];
+    if (!parte) return null;
+    const base64 = parte.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`)
+        .join(""),
+    );
+    return JSON.parse(json) as { exp?: number };
+  } catch {
+    return null;
+  }
+}
+
+/** Indica si al token le queda menos del margen indicado (o ya venció). */
+export function tokenPorVencer(token: string, margenMs = 90_000): boolean {
+  const payload = decodificarPayload(token);
+  if (!payload || typeof payload.exp !== "number") return false;
+  return payload.exp * 1000 - Date.now() <= margenMs;
+}
+
+let refrescoEnCurso: Promise<{ token: string | null; invalido: boolean }> | null = null;
+
+/**
+ * Renueva el JWT una sola vez aunque haya varias peticiones en paralelo.
+ * Si no hay red, conserva la sesión (no invalida al usuario).
+ */
+export function renovarSesion(): Promise<{ token: string | null; invalido: boolean }> {
+  const actual = getToken();
+  if (!actual) return Promise.resolve({ token: null, invalido: true });
+  if (refrescoEnCurso) return refrescoEnCurso;
+
+  const promesa = (async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/refresh-token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: actual }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.status === 401 || res.status === 403) return { token: null, invalido: true };
+      if (!res.ok) return { token: actual, invalido: false };
+      const data = (await res.json()) as RefreshTokenResponse;
+      if (data.codigoS === 200 && data.token) {
+        guardarToken(data.token);
+        return { token: data.token, invalido: false };
+      }
+      if (data.codigoS === 401 || data.codigoS === 403) return { token: null, invalido: true };
+      return { token: actual, invalido: false };
+    } catch {
+      // Error de red o timeout: la sesión sigue siendo válida, se reintenta luego.
+      return { token: actual, invalido: false };
+    }
+  })();
+
+  refrescoEnCurso = promesa;
+  promesa.finally(() => {
+    if (refrescoEnCurso === promesa) refrescoEnCurso = null;
+  });
+  return promesa;
+}
+
+function limpiarSesionLocal() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem("famkon.usuario");
+  localStorage.removeItem("famkon.permisos");
+}
+
 async function request<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const token = getToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(init?.headers as Record<string, string> || {}),
-  };
+  let token = getToken();
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers,
-  });
+  // Renovar antes de que venza evita el 401 y el consecuente logout.
+  if (token && tokenPorVencer(token, 90_000)) {
+    const renovado = await renovarSesion();
+    if (renovado.invalido) {
+      limpiarSesionLocal();
+      if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
+      throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+    }
+    token = renovado.token ?? token;
+  }
 
-  if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem("famkon.usuario");
-    window.location.href = "/login";
-    throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+  const enviar = (t: string | null) =>
+    fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(t ? { Authorization: `Bearer ${t}` } : {}),
+        ...((init?.headers as Record<string, string>) || {}),
+      },
+    });
+
+  let res = await enviar(token);
+
+  // Un 401 aislado no debería sacar al usuario: se intenta renovar y repetir.
+  if (res.status === 401 && token) {
+    const renovado = await renovarSesion();
+    if (renovado.invalido || !renovado.token) {
+      limpiarSesionLocal();
+      if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
+      throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+    }
+    token = renovado.token;
+    res = await enviar(token);
+    if (res.status === 401) {
+      limpiarSesionLocal();
+      if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
+      throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+    }
   }
 
   if (!res.ok) {
@@ -268,11 +363,15 @@ export function obtenerToken(): string | null {
   return getToken();
 }
 
-export async function refreshToken(token: string): Promise<RefreshTokenResponse> {
-  return request<RefreshTokenResponse>("/refresh-token", {
-    method: "POST",
-    body: JSON.stringify({ token }),
-  });
+export async function refreshToken(_token: string): Promise<RefreshTokenResponse> {
+  const resultado = await renovarSesion();
+  if (resultado.invalido) {
+    return { codigoS: 401, mensaje: "Token inválido o expirado.", token: null };
+  }
+  if (!resultado.token) {
+    return { codigoS: 500, mensaje: "No se pudo renovar la sesión.", token: null };
+  }
+  return { codigoS: 200, mensaje: "Token renovado.", token: resultado.token };
 }
 
 // ─── Interfaces de la Tienda ────────────────────────────────────────────────

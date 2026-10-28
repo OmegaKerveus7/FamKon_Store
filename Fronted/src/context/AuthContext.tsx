@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import type { Usuario, Permiso } from "../api/famkon";
-import { guardarToken, eliminarToken, obtenerToken, renovarSesion, tokenPorVencer, obtenerPermisos } from "../api/famkon";
+import { guardarToken, eliminarToken, obtenerToken, renovarSesion, tokenPorVencer, sesionActiva, obtenerPermisos } from "../api/famkon";
 
 interface AuthContextValue {
   usuario: Usuario | null;
@@ -29,6 +29,8 @@ export const AVISO_INACTIVIDAD_MS = 60 * 1000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(() => {
+    // Sin un token vigente no hay sesión: el visitante entra como usuario anónimo.
+    if (!sesionActiva()) return null;
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     try {
@@ -38,7 +40,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const [token, setToken] = useState<string | null>(obtenerToken);
+  const [token, setToken] = useState<string | null>(() => {
+    // Un token vencido no cuenta como sesión: se limpia para que la tienda
+    // siga siendo pública y no se expulse al visitante a /login.
+    const guardado = obtenerToken();
+    if (!guardado) return null;
+    if (!sesionActiva()) {
+      eliminarToken();
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PERMISOS_KEY);
+      return null;
+    }
+    return guardado;
+  });
   const [permisos, setPermisos] = useState<Permiso[]>(() => {
     const raw = localStorage.getItem(PERMISOS_KEY);
     if (!raw) return [];

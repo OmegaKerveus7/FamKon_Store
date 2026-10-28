@@ -2,16 +2,9 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ScanFace, QrCode, Loader2, Eye, EyeOff, Mail, Lock, ArrowRight, PackageSearch } from "lucide-react";
 import { login } from "../api/famkon";
+import { fusionarCarritoLocal } from "../api/carritoLocal";
 import { useAuth } from "../context/AuthContext";
-
-function rutaInicialPorRol(roles: string): string {
-  const superiores = roles.split(",").map((r) => r.trim().toUpperCase());
-  const orden = ["ADMIN", "SUPERVISOR", "REPARTIDOR", "COMPRADOR"];
-  for (const r of orden) {
-    if (superiores.includes(r)) return r === "ADMIN" ? "/admin/pedidos" : "/inicio";
-  }
-  return "/inicio";
-}
+import { rutaInicialPorRol, rutaTrasPago } from "../domain/carritoVisitante";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -47,8 +40,20 @@ export default function LoginPage() {
       await cargarPermisos();
 
       const roles = respuesta.usuario.roles ?? "COMPRADOR";
+      // Si el visitante venía con productos en el carrito local, se suben al
+      // carrito real antes de continuar con la compra. Un fallo al subir no
+      // debe impedir iniciar sesión.
+      await fusionarCarritoLocal().catch((err) => {
+        console.error("No se pudo subir el carrito local:", err);
+      });
+
       const volverA = state?.volverA;
-      navigate(typeof volverA === 'string' && (/^\/comprador\/tracking\?pedido=\d+$/.test(volverA) || /^\/rastreo\?(?:guia=FK-[A-Z0-9]{20,64}|pedido=[1-9]\d*)(?:&detalle=1)?$/.test(volverA)) ? volverA : rutaInicialPorRol(roles), { replace: true });
+      navigate(
+        typeof volverA === "string"
+          ? rutaTrasPago(roles, volverA)
+          : rutaInicialPorRol(roles),
+        { replace: true },
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesión.");
     } finally {
@@ -69,6 +74,11 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {state?.passwordUpdated && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">Contraseña actualizada. Ingresa con tu nueva contraseña.</p>}
+            {typeof state?.volverA === "string" && (
+              <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm font-medium text-amber-900">
+                Iniciá sesión para continuar tu compra. Tu carrito quedó guardado en este dispositivo.
+              </p>
+            )}
             <div className="space-y-1">
               <label htmlFor="identificador" className="text-sm font-medium text-slate-700">
                 Correo o usuario
@@ -136,7 +146,7 @@ export default function LoginPage() {
                   ¿Es tu primera visita?{" "}
                  <button
                    type="button"
-                    onClick={() => navigate("/registro")}
+                    onClick={() => navigate("/registro", { state: { volverA: state?.volverA } })}
                     className="font-semibold text-amber-600 hover:text-amber-700 hover:underline"
                   >
                     Crear cuenta

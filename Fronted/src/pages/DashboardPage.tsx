@@ -12,8 +12,8 @@ const textos: Record<string, { titulo: string; descripcion: string; pasos: strin
   administracion: { titulo: 'Organizá el trabajo de la tienda', descripcion: 'Revisá la operación y mantené actualizado el catálogo. Las acciones de cada pedido están en su detalle.', pasos: ['Consultá los pedidos o entregas', 'Revisá su pago y estado', 'Abrí el detalle para continuar'] },
 };
 const descripciones: Record<string, string> = {
-  '/comprador/catalogo': 'Encontrá productos y elegí el que más te guste.',
-  '/comprador/carrito': 'Revisá cantidades y subtotal antes de confirmar.',
+  '/catalogo': 'Encontrá productos y elegí el que más te guste.',
+  '/carrito': 'Revisá cantidades y subtotal antes de confirmar.',
   '/comprador/tracking': 'Consultá el pago y el avance de tus compras.',
   '/comprador/historico': 'Volvé a consultar tus compras anteriores.',
   '/repartidor/asignados': 'Consultá tus pedidos y registrá el avance desde cada entrega.',
@@ -25,7 +25,7 @@ const descripciones: Record<string, string> = {
   '/supervisor': 'Accedé a las herramientas de supervisión.',
 };
 const nombres: Record<string, string> = {
-  '/comprador/catalogo': 'Explorar catálogo', '/comprador/carrito': 'Continuar mi compra',
+  '/catalogo': 'Explorar catálogo', '/carrito': 'Continuar mi compra',
   '/comprador/tracking': 'Mis compras', '/comprador/historico': 'Historial de compras',
   '/repartidor/asignados': 'Entregas asignadas', '/admin/pedidos': 'Gestionar pedidos',
   '/entregas/tracking': 'Seguimiento de entregas', '/admin/productos': 'Gestionar productos',
@@ -63,7 +63,7 @@ export default function DashboardPage() {
       <Link to="/perfil" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><UserCircle size={18} />Mi perfil</Link>
     </div>}
     {areas.length > 1 && <nav aria-label="Áreas de trabajo" className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">{areas.map(area => <button key={area.id} type="button" aria-pressed={activa?.id === area.id} onClick={() => setSeleccion(area.id)} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${activa?.id === area.id ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>{area.nombre}</button>)}</nav>}
-    {activa?.id === 'compras' ? <CatalogoPage /> : activa && texto && principal ? <section aria-labelledby="area-titulo" className="space-y-5">
+    {activa?.id === 'compras' ? <CatalogoPage mostrarCabecera={false} /> : activa && texto && principal ? <section aria-labelledby="area-titulo" className="space-y-5">
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6"><h2 id="area-titulo" className="text-xl font-bold text-slate-900">{texto.titulo}</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">{texto.descripcion}</p><Link to={principal.path} className="mt-4 inline-flex items-center gap-3 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-amber-400">{nombres[principal.path]}<ArrowRight size={17} /></Link></div>
       <div className="grid gap-3 sm:grid-cols-2">{activa.items.map(({ path, icon: Icon }) => <Link key={path} to={path} className="group flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-amber-400 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-amber-500"><span className="rounded-xl bg-slate-50 p-3 text-amber-600"><Icon size={22} /></span><div className="min-w-0 flex-1"><h3 className="font-semibold text-slate-900">{nombres[path]}</h3><p className="mt-1 text-sm leading-relaxed text-slate-500">{descripciones[path]}</p></div><ArrowRight size={18} className="mt-1 shrink-0 text-slate-400 group-hover:text-amber-600" /></Link>)}</div>
       <div className="rounded-2xl border border-slate-200 bg-white p-5"><h3 className="text-sm font-semibold text-slate-800">Cómo continuar</h3><ol className="mt-4 grid gap-4 sm:grid-cols-3">{texto.pasos.map((paso, index) => <li key={paso} className="flex items-start gap-3 text-sm text-slate-600"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-50 text-xs font-bold text-amber-700">{index + 1}</span>{paso}</li>)}</ol></div>

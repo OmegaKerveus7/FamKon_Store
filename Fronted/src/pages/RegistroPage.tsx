@@ -5,7 +5,7 @@ import { getCountries, getCountryCallingCode, getExampleNumber, type CountryCode
 import ejemplosTelefono from "libphonenumber-js/mobile/examples";
 import { REGLA_PASSWORD, validarPassword, validarTelefono, normalizarTelefono } from "../utils/registroValidacion";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Camera,
   ChevronDown,
@@ -145,6 +145,10 @@ function guardarBorradorRegistro(datos: Partial<BorradorRegistro>): boolean {
 
 export default function RegistroPage() {
   const navigate = useNavigate();
+  const { state } = useLocation();
+  // Si el visitante llegó desde el carrito, al terminar el registro vuelve al
+  // login con el destino guardado para continuar la compra.
+  const volverA = typeof state?.volverA === "string" ? state.volverA : undefined;
   const cameraRef = useRef<CameraCaptureHandle>(null);
   const envioEnCursoRef = useRef(false);
   const [borradorInicial] = useState(cargarBorradorRegistro);
@@ -583,7 +587,7 @@ export default function RegistroPage() {
     window.location.assign("/registro");
   }
 
-  if (registrado) return <main className="flex min-h-dvh items-center justify-center bg-slate-100 p-4"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white p-7 shadow-xl"><img src="/images/slogan-famkon.png" alt="FamKon" className="h-16 max-w-full object-contain" /><div className="rounded-xl bg-emerald-50 p-4"><h1 className="text-2xl font-bold text-slate-900">Tu cuenta está creada</h1><p role="status" className="mt-2 text-sm text-emerald-800">{mensaje}</p></div><p className="text-sm leading-relaxed text-slate-600">Revisá el medio de notificación seleccionado para recibir tu credencial. También podrás consultarla en Mi perfil.</p><button onClick={()=>navigate('/login')} className="w-full rounded-xl bg-amber-500 p-3 text-sm font-semibold">Iniciar sesión con contraseña</button><button onClick={()=>navigate('/login/carnet')} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold">Acceder con mi credencial</button><button onClick={reiniciarBorradorYRecargar} className="w-full text-center text-xs font-medium text-slate-400 hover:text-slate-600">Crear otra cuenta</button></section></main>;
+  if (registrado) return <main className="flex min-h-dvh items-center justify-center bg-slate-100 p-4"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white p-7 shadow-xl"><img src="/images/slogan-famkon.png" alt="FamKon" className="h-16 max-w-full object-contain" /><div className="rounded-xl bg-emerald-50 p-4"><h1 className="text-2xl font-bold text-slate-900">Tu cuenta está creada</h1><p role="status" className="mt-2 text-sm text-emerald-800">{mensaje}</p></div><p className="text-sm leading-relaxed text-slate-600">Revisá el medio de notificación seleccionado para recibir tu credencial. También podrás consultarla en Mi perfil.</p>{volverA && <p className="rounded-xl bg-amber-50 p-3 text-sm font-medium text-amber-900">Tu carrito quedó guardado. Iniciá sesión para continuar con la compra.</p>}<button onClick={()=>navigate('/login', { state: { volverA } })} className="w-full rounded-xl bg-amber-500 p-3 text-sm font-semibold">Iniciar sesión con contraseña</button><button onClick={()=>navigate('/login/carnet')} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold">Acceder con mi credencial</button><button onClick={reiniciarBorradorYRecargar} className="w-full text-center text-xs font-medium text-slate-400 hover:text-slate-600">Crear otra cuenta</button></section></main>;
 
 
   // ─── Render ─────────────────────────────────────────────────────
@@ -834,7 +838,7 @@ export default function RegistroPage() {
 
               <button
                 type="button"
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/login", { state: { volverA } })}
                 className="w-full text-sm font-medium text-slate-500 hover:text-slate-800"
               >
                 Ya tengo una cuenta
@@ -1013,7 +1017,7 @@ export default function RegistroPage() {
             {mensaje && codigoVerificado && !error && cargando === false && (
               <button
                 type="button"
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/login", { state: { volverA } })}
                 className="block w-full text-center text-sm font-semibold text-amber-700 underline"
               >
                 Ir a iniciar sesión

@@ -1,8 +1,10 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, ScanFace } from 'lucide-react';
 import CameraCapture, { type CameraCaptureHandle } from '../../components/CameraCapture';
 import { useAuth } from '../../context/AuthContext';
+import { fusionarCarritoLocal } from '../../api/carritoLocal';
+import { rutaTrasIngreso } from '../../domain/carritoVisitante';
 import { accederConRostro } from './api';
 
 export default function AccesoFacialPage() {
@@ -13,6 +15,7 @@ export default function AccesoFacialPage() {
   const [camaraLista, setCamaraLista] = useState(false);
   const { iniciarSesion } = useAuth();
   const navigate = useNavigate();
+  const { state } = useLocation();
 
   async function verificar(event: FormEvent) {
     event.preventDefault();
@@ -27,7 +30,8 @@ export default function AccesoFacialPage() {
       if (!respuesta.token || !respuesta.usuario) throw new Error('No se pudo iniciar la sesión facial.');
       camera.current?.apagar();
       iniciarSesion(respuesta.usuario, respuesta.token);
-      navigate('/inicio', { replace: true });
+      await fusionarCarritoLocal().catch(() => undefined);
+      navigate(rutaTrasIngreso(respuesta.usuario.roles, state?.volverA), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo validar tu rostro.');
     } finally {

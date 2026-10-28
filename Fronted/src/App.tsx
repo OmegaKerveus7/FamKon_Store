@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import RastreoPage from "./pages/RastreoPage";
 import IndexPage from "./pages/IndexPage";
 import LoginPage from "./pages/LoginPage";
@@ -38,6 +38,12 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return children;
 }
 
+/** Las rutas viejas del comprador ahora apuntan a la tienda pública. */
+function RedirigirProducto() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/producto/${id ?? ""}`} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -49,6 +55,16 @@ export default function App() {
       <Route path="/registro" element={<RegistroPage />} />
       <Route path="/login/facial" element={<FacialLoginPage />} />
       <Route path="/login/carnet" element={<CarnetLoginPage />} />
+
+      {/* Tienda pública: se puede ver, armar el carrito y comprar sin sesión */}
+      <Route path="/catalogo" element={<CatalogoPage />} />
+      <Route path="/producto/:id" element={<ProductoDetallePage />} />
+      <Route path="/carrito" element={<CarritoPage />} />
+
+      {/* Rutas viejas del comprador: ahora la tienda es pública */}
+      <Route path="/comprador/catalogo" element={<Navigate to="/catalogo" replace />} />
+      <Route path="/comprador/producto/:id" element={<RedirigirProducto />} />
+      <Route path="/comprador/carrito" element={<Navigate to="/carrito" replace />} />
 
       {/* Dashboard protegido con sidebar + topbar */}
       <Route
@@ -62,30 +78,6 @@ export default function App() {
         <Route path="/perfil" element={<PerfilPage />} />
 
         {/* Rutas del comprador */}
-        <Route
-          path="/comprador/catalogo"
-          element={
-            <RequirePermiso codigoPermiso="VER_CATALOGO">
-              <CatalogoPage />
-            </RequirePermiso>
-          }
-        />
-        <Route
-          path="/comprador/producto/:id"
-          element={
-            <RequirePermiso codigoPermiso="VER_CATALOGO">
-              <ProductoDetallePage />
-            </RequirePermiso>
-          }
-        />
-        <Route
-          path="/comprador/carrito"
-          element={
-            <RequirePermiso codigoPermiso="VER_CARRITO">
-              <CarritoPage />
-            </RequirePermiso>
-          }
-        />
         <Route
           path="/comprador/tracking"
           element={

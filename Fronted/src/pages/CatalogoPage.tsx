@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Store, Package, ShoppingCart } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { Search, Store, Package, ShoppingCart, AlertCircle } from "lucide-react";
 import ImagenProducto from "../components/ImagenProducto";
+import TiendaHeader from "../components/TiendaHeader";
 import {
   type Producto,
   type Categoria,
@@ -10,13 +10,18 @@ import {
   listarCategorias,
 } from "../api/famkon";
 
-export default function CatalogoPage() {
-  const { tienePermiso } = useAuth();
+interface Props {
+  /** false cuando la página se muestra dentro del dashboard (sin cabecera de tienda). */
+  mostrarCabecera?: boolean;
+}
+
+export default function CatalogoPage({ mostrarCabecera = true }: Props) {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [filtroCategoria, setFiltroCategoria] = useState<number | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     cargarDatos();
@@ -24,6 +29,7 @@ export default function CatalogoPage() {
 
   async function cargarDatos() {
     setCargando(true);
+    setError("");
     try {
       const [cats, prods] = await Promise.all([
         listarCategorias(),
@@ -33,6 +39,11 @@ export default function CatalogoPage() {
       setProductos(prods);
     } catch (err) {
       console.error("Error cargando catalogo:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo conectar con la tienda. Intentá nuevamente.",
+      );
     } finally {
       setCargando(false);
     }
@@ -48,7 +59,9 @@ export default function CatalogoPage() {
   });
 
   return (
-    <div className="space-y-5">
+    <div className={mostrarCabecera ? "min-h-dvh bg-slate-50" : undefined}>
+      {mostrarCabecera && <TiendaHeader />}
+      <div className={mostrarCabecera ? "mx-auto max-w-6xl space-y-5 px-4 py-6" : "space-y-5"}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">¿Qué querés comprar hoy?</h1>
@@ -60,7 +73,7 @@ export default function CatalogoPage() {
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
           {productosFiltrados.length} producto{productosFiltrados.length === 1 ? "" : "s"}
         </span>
-        {tienePermiso('VER_CARRITO') && <Link to="/comprador/carrito" className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-amber-400"><ShoppingCart size={18} />Ver mi carrito</Link>}
+        <Link to="/carrito" className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-amber-400"><ShoppingCart size={18} />Ver mi carrito</Link>
         </div>
       </div>
 
@@ -107,6 +120,17 @@ export default function CatalogoPage() {
           <Package className="h-8 w-8 animate-spin text-amber-500" />
           <span className="ml-3 text-sm text-slate-500">Cargando productos...</span>
         </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white py-20">
+          <AlertCircle className="h-12 w-12 text-red-300" />
+          <p className="text-sm text-red-500">{error}</p>
+          <button
+            onClick={cargarDatos}
+            className="rounded-xl bg-amber-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-amber-400"
+          >
+            Reintentar
+          </button>
+        </div>
       ) : productosFiltrados.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white py-20 text-center">
           <Store className="mx-auto h-12 w-12 text-slate-300" />
@@ -117,7 +141,7 @@ export default function CatalogoPage() {
           {productosFiltrados.map((producto) => (
             <Link
               key={producto.idProducto}
-              to={`/comprador/producto/${producto.idProducto}`}
+              to={`/producto/${producto.idProducto}`}
               className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="flex aspect-[4/3] items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
@@ -153,6 +177,7 @@ export default function CatalogoPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

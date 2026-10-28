@@ -140,6 +140,15 @@ export function tokenPorVencer(token: string, margenMs = 90_000): boolean {
   return payload.exp * 1000 - Date.now() <= margenMs;
 }
 
+/** true si hay un token presente que todavía no venció. */
+export function sesionActiva(): boolean {
+  const token = getToken();
+  if (!token) return false;
+  const payload = decodificarPayload(token);
+  if (!payload || typeof payload.exp !== "number") return true;
+  return payload.exp * 1000 > Date.now();
+}
+
 let refrescoEnCurso: Promise<{ token: string | null; invalido: boolean }> | null = null;
 
 /**
@@ -187,21 +196,38 @@ function limpiarSesionLocal() {
   localStorage.removeItem("famkon.permisos");
 }
 
+/**
+ * @param opciones.anonimoPermitido rutas públicas (catálogo, detalle, estado):
+ * si la sesión está vencida se limpia en silencio y se reintenta sin token,
+ * en vez de expulsar al visitante a /login.
+ */
 async function request<T>(
   path: string,
   init?: RequestInit,
+  opciones?: { anonimoPermitido?: boolean },
 ): Promise<T> {
+  const anonimoPermitido = opciones?.anonimoPermitido === true;
   let token = getToken();
+
+  const cerrarSesionLocal = () => {
+    limpiarSesionLocal();
+    if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
+  };
 
   // Renovar antes de que venza evita el 401 y el consecuente logout.
   if (token && tokenPorVencer(token, 90_000)) {
     const renovado = await renovarSesion();
     if (renovado.invalido) {
-      limpiarSesionLocal();
-      if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
-      throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+      if (anonimoPermitido) {
+        token = null;
+        limpiarSesionLocal();
+      } else {
+        cerrarSesionLocal();
+        throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+      }
+    } else {
+      token = renovado.token ?? token;
     }
-    token = renovado.token ?? token;
   }
 
   const enviar = (t: string | null) =>
@@ -220,16 +246,27 @@ async function request<T>(
   if (res.status === 401 && token) {
     const renovado = await renovarSesion();
     if (renovado.invalido || !renovado.token) {
-      limpiarSesionLocal();
-      if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
-      throw new Error("Sesión expirada. Inicie sesión nuevamente.");
-    }
-    token = renovado.token;
-    res = await enviar(token);
-    if (res.status === 401) {
-      limpiarSesionLocal();
-      if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
-      throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+      if (anonimoPermitido) {
+        limpiarSesionLocal();
+        token = null;
+        res = await enviar(null);
+      } else {
+        cerrarSesionLocal();
+        throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+      }
+    } else {
+      token = renovado.token;
+      res = await enviar(token);
+      if (res.status === 401) {
+        if (anonimoPermitido) {
+          limpiarSesionLocal();
+          token = null;
+          res = await enviar(null);
+        } else {
+          cerrarSesionLocal();
+          throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+        }
+      }
     }
   }
 
@@ -254,7 +291,7 @@ async function request<T>(
 
 export async function checkEstado(): Promise<{ ok: boolean; estado: EstadoResponse | null }> {
   try {
-    const estado = await request<EstadoResponse>("/estado");
+    const estado = await request<EstadoResponse>("/estado", undefined, { anonimoPermitido: true });
     return { ok: estado.codigo === 200, estado };
   } catch {
     return { ok: false, estado: null };
@@ -269,7 +306,7 @@ export async function login(
   return request<LoginApiResponse>("/login_basic", {
     method: "POST",
     body: JSON.stringify({ correo, nickname, contrasena }),
-  });
+  }, { anonimoPermitido: true });
 }
 
 export async function comprobarCorreo(correo: string, signal?: AbortSignal) {
@@ -286,7 +323,7 @@ export async function registrarComprador(
   return request<RegistroResponse>("/registro", {
     method: "POST",
     body: JSON.stringify(datos),
-  });
+  }, { anonimoPermitido: true });
 }
 
 export async function enviarCodigoVerificacion(
@@ -535,7 +572,7 @@ export interface PedidoDetalle {
 type ApiResponse = Record<string, any>;
 
 export async function listarCategorias(): Promise<Categoria[]> {
-  const res = await request<ApiResponse>("/categorias");
+  const res = await request<ApiResponse>("/categorias", undefined, { anonimoPermitido: true });
   return (res.categorias as Categoria[]) ?? [];
 }
 
@@ -552,7 +589,7 @@ export async function listarAreasEntregaCatalogo(): Promise<AreaEntregaCatalogo[
   return res.areas ?? [];
 }
 export async function listarMetodosPagoCatalogo(): Promise<MetodoPagoCatalogo[]> {
-  const res = await request<ApiResponse>('/metodos-pago');
+  const res = await request<ApiResponse>('/metodos-pago', undefined, { anonimoPermitido: true });
   return res.metodos ?? [];
 }
 
@@ -564,6 +601,8 @@ export async function listarProductos(
   const qs = params.toString();
   const res = await request<ApiResponse>(
     `/productos${qs ? `?${qs}` : ""}`,
+    undefined,
+    { anonimoPermitido: true },
   );
   return (res.productos as Producto[]) ?? [];
 }
@@ -571,14 +610,15 @@ export async function listarProductos(
 export async function obtenerProducto(
   id: number,
 ): Promise<Producto | null> {
-  const res = await request<ApiResponse>(`/productos/${id}`);
+  const res = await request<ApiResponse>(`/productos/${id}`, undefined, { anonimoPermitido: true });
   return (res.producto as Producto) ?? null;
 }
 
 export async function obtenerCarrito(
   idSitio = 1,
 ): Promise<Carrito> {
-  const res = await request<ApiResponse>(`/carrito?idSitio=${idSitio}`);
+  // Rutas públicas: un 401 (token vencido) no debe expulsar al visitante.
+  const res = await request<ApiResponse>(`/carrito?idSitio=${idSitio}`, undefined, { anonimoPermitido: true });
   return (res.carrito as Carrito) ?? {
     idCarrito: 0,
     idUsuario: 0,
@@ -743,28 +783,6 @@ export async function consultarTracking(
     `/tracking/${encodeURIComponent(tokenHash)}`,
   );
   return (res.pasos as TrackingPaso[]) ?? [];
-}
-
-// ─── Funciones compatibilidad (localStorage) ──────────────────────────────────
-
-const CARRITO_KEY = "famkon.carrito";
-
-export function obtenerCarritoLocal(): CarritoItem[] {
-  const raw = localStorage.getItem(CARRITO_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-export function guardarCarritoLocal(items: CarritoItem[]) {
-  localStorage.setItem(CARRITO_KEY, JSON.stringify(items));
-}
-
-export function vaciarCarrito() {
-  localStorage.removeItem(CARRITO_KEY);
 }
 
 // ─── Gestor de Usuarios (Admin) ──────────────────────────────────────────────

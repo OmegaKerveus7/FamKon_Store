@@ -1,13 +1,16 @@
 import { useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { loginCarnet } from "../api/famkon";
+import { fusionarCarritoLocal } from "../api/carritoLocal";
 import { useAuth } from "../context/AuthContext";
+import { rutaTrasIngreso } from "../domain/carritoVisitante";
 import QrScanner from "../components/QrScanner";
 
 export default function CarnetLoginPage() {
   const enCurso = useRef(false);
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { iniciarSesion } = useAuth();
   const [qrDetectado, setQrDetectado] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -25,7 +28,8 @@ export default function CarnetLoginPage() {
         throw new Error(respuesta.mensaje || "No se pudo reconocer el carnet.");
       }
       iniciarSesion(respuesta.usuario, respuesta.token);
-      navigate("/inicio", { replace: true });
+      await fusionarCarritoLocal().catch(() => undefined);
+      navigate(rutaTrasIngreso(respuesta.usuario.roles, state?.volverA), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo reconocer el carnet.");
     } finally {

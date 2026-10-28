@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Check, Package, Trash2 } from 'lucide-react';
 import { eliminarDelCarritoAPI, type Carrito } from '../api/famkon';
+import { EVENTO_CARRITO } from '../domain/carritoVisitante';
 import { moneda } from '../domain/compras';
 
 export default function CarritoConfirmacion({ carrito, onClose }: { carrito: Carrito; onClose: () => void }) {
@@ -20,6 +21,7 @@ export default function CarritoConfirmacion({ carrito, onClose }: { carrito: Car
       await eliminarDelCarritoAPI(idDetalle);
       setItems(actuales => actuales.filter(item => item.idDetalle !== idDetalle));
       setMensaje('Producto eliminado del carrito');
+      window.dispatchEvent(new Event(EVENTO_CARRITO));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo eliminar el producto. Intentá nuevamente.');
     } finally {
@@ -55,7 +57,7 @@ export default function CarritoConfirmacion({ carrito, onClose }: { carrito: Car
       <div className="space-y-3 border-t border-slate-200 bg-white p-5">
         <p className="flex items-center justify-between font-bold"><span>Subtotal del carrito</span><span className="text-xl text-amber-700">{moneda(subtotal)}</span></p>
         <p className="text-xs text-slate-500">La entrega se elige al finalizar la compra.</p>
-        <Link to="/comprador/carrito" onClick={onClose} className="block rounded-xl bg-amber-500 px-4 py-3 text-center text-sm font-semibold hover:bg-amber-400">Ver mi carrito ({unidades})</Link>
+        <Link to="/carrito" onClick={onClose} className="block rounded-xl bg-amber-500 px-4 py-3 text-center text-sm font-semibold hover:bg-amber-400">Ver mi carrito ({unidades})</Link>
         <button onClick={onClose} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold hover:bg-slate-50">Seguir comprando</button>
       </div>
     </div>

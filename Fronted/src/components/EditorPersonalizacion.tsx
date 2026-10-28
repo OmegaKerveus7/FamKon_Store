@@ -9,6 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
 import {
   Check,
   ChevronRight,
@@ -67,6 +68,11 @@ interface ImagenCargada extends MedidasImagen {
 
 interface Props {
   producto: Producto;
+  /**
+   * false para visitantes sin sesión: pueden escribir texto y usar la URL del NFC,
+   * pero subir imágenes requiere una cuenta (el archivo se guarda en el servidor).
+   */
+  permitirImagenes?: boolean;
 }
 
 const URL_NFC_POR_DEFECTO = "https://famkon.site";
@@ -364,7 +370,7 @@ async function generarImagenAjustada(
 }
 
 const EditorPersonalizacion = forwardRef<EditorPersonalizacionHandle, Props>(
-  function EditorPersonalizacion({ producto }, ref) {
+  function EditorPersonalizacion({ producto, permitirImagenes = true }, ref) {
     const permiteA = producto.permiteLadoA === "S";
     const permiteB = producto.permiteLadoB === "S";
     const esNfc = /nfc/i.test(`${producto.nombre} ${producto.sku} ${producto.categoria ?? ""}`);
@@ -612,6 +618,7 @@ const EditorPersonalizacion = forwardRef<EditorPersonalizacionHandle, Props>(
                       lado="A"
                       valor={borrador.ladoA}
                       destino={destino}
+                      permitirImagenes={permitirImagenes}
                       onImagen={(archivo) => elegirImagen("A", archivo)}
                       onAjuste={(ajuste) => actualizarLado("A", { ajuste })}
                       onMensaje={(mensaje) => actualizarLado("A", { mensaje })}
@@ -624,6 +631,7 @@ const EditorPersonalizacion = forwardRef<EditorPersonalizacionHandle, Props>(
                       lado="B"
                       valor={borrador.ladoB}
                       destino={destino}
+                      permitirImagenes={permitirImagenes}
                       onImagen={(archivo) => elegirImagen("B", archivo)}
                       onAjuste={(ajuste) => actualizarLado("B", { ajuste })}
                       onMensaje={(mensaje) => actualizarLado("B", { mensaje })}
@@ -711,6 +719,7 @@ interface EditorLadoProps {
   lado: "A" | "B";
   valor: LadoPersonalizacion;
   destino: Destino;
+  permitirImagenes: boolean;
   onImagen: (archivo: File) => void;
   onAjuste: (ajuste: AjusteImagen) => void;
   onMensaje: (mensaje: string) => void;
@@ -722,6 +731,7 @@ function EditorLado({
   lado,
   valor,
   destino,
+  permitirImagenes,
   onImagen,
   onAjuste,
   onMensaje,
@@ -742,6 +752,7 @@ function EditorLado({
         archivo={valor.archivo}
         ajuste={valor.ajuste}
         destino={destino}
+        permitirImagenes={permitirImagenes}
         onArchivo={onImagen}
         onAjuste={onAjuste}
         onQuitar={onQuitarImagen}
@@ -773,6 +784,7 @@ interface EditorImagenProps {
   archivo: File | null;
   ajuste: AjusteImagen;
   destino: Destino;
+  permitirImagenes: boolean;
   onArchivo: (archivo: File) => void;
   onAjuste: (ajuste: AjusteImagen) => void;
   onQuitar: () => void;
@@ -784,6 +796,7 @@ function EditorImagen({
   archivo,
   ajuste,
   destino,
+  permitirImagenes,
   onArchivo,
   onAjuste,
   onQuitar,
@@ -861,7 +874,7 @@ function EditorImagen({
       >
         {archivo ? (
           <ImagenEncuadrada archivo={archivo} ajuste={ajuste} medidas={medidas} className="absolute inset-0" />
-        ) : (
+        ) : permitirImagenes ? (
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
@@ -870,6 +883,17 @@ function EditorImagen({
             <ImagePlus className="h-6 w-6" />
             <span className="text-[11px] font-semibold">Subir imagen</span>
           </button>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-3 text-center">
+            <ImagePlus className="h-6 w-6 text-slate-300" />
+            <span className="text-[11px] font-semibold text-slate-500">Subir tu diseño</span>
+            <Link
+              to="/login"
+              className="text-[11px] font-bold text-amber-700 hover:underline"
+            >
+              Iniciá sesión para usarlo
+            </Link>
+          </div>
         )}
         {archivo && (
           <span className="pointer-events-none absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-[9px] font-semibold text-white">

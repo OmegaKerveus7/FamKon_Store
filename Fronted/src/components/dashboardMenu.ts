@@ -46,8 +46,8 @@ export const MENU_GROUPS: MenuGroup[] = [
     icon: Tag,
     codigoRol: "COMPRADOR",
     items: [
-      { codigo: "VER_CATALOGO",  path: "/comprador/catalogo", label: "Catalogo",  icon: Store },
-      { codigo: "VER_CARRITO",   path: "/comprador/carrito",  label: "Mi Carrito", icon: ShoppingCart },
+      { codigo: "VER_CATALOGO",  path: "/catalogo", label: "Catalogo",  icon: Store },
+      { codigo: "VER_CARRITO",   path: "/carrito",  label: "Mi Carrito", icon: ShoppingCart },
       { codigo: "VER_TRACKING",  path: "/comprador/tracking", label: "Mis pedidos", icon: Truck },
       { codigo: "VER_HISTORICO", path: "/comprador/historico", label: "Historico", icon: History },
     ],

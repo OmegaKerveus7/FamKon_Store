@@ -2,17 +2,21 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 import { checkEstado } from "../api/famkon";
+import { useAuth } from "../context/AuthContext";
+import { rutaInicialPorRol } from "../domain/carritoVisitante";
 
 export default function IndexPage() {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
   const [mensaje, setMensaje] = useState("Verificando conexión con el servidor...");
   const [error, setError] = useState(false);
 
   useEffect(() => {
     let activo = true;
+    const destino = usuario ? rutaInicialPorRol(usuario.roles) : "/catalogo";
     const timeoutId = setTimeout(() => {
       if (activo && !error) {
-        navigate("/login", { replace: true });
+        navigate(destino, { replace: true });
       }
     }, 8000);
 
@@ -22,7 +26,7 @@ export default function IndexPage() {
         if (!activo) return;
         clearTimeout(timeoutId);
         if (ok) {
-          navigate("/login", { replace: true });
+          navigate(destino, { replace: true });
         } else {
           setError(true);
           setMensaje("No se puede comunicar con el servidor. Inténtalo más tarde.");
@@ -30,14 +34,14 @@ export default function IndexPage() {
       } catch {
         if (!activo) return;
         clearTimeout(timeoutId);
-        navigate("/login", { replace: true });
+        navigate(destino, { replace: true });
       }
     })();
     return () => {
       activo = false;
       clearTimeout(timeoutId);
     };
-  }, [navigate, error]);
+  }, [navigate, error, usuario]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-4">
@@ -47,10 +51,10 @@ export default function IndexPage() {
           <AlertTriangle className="h-8 w-8 text-red-500" />
           <p className="text-center text-sm font-medium text-red-600">{mensaje}</p>
           <button
-            onClick={() => navigate("/login", { replace: true })}
+            onClick={() => navigate("/catalogo", { replace: true })}
             className="flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-400"
           >
-            Ir al login <ArrowRight className="h-4 w-4" />
+            Ir al catálogo <ArrowRight className="h-4 w-4" />
           </button>
         </>
       ) : (

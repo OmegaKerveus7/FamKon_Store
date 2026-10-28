@@ -1,19 +1,24 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Check } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ShoppingCart, Package, Minus, Plus, Check, LogIn } from "lucide-react";
 import {
   type Producto,
   type Carrito,
   obtenerCarrito,
   obtenerProducto,
-  agregarAlCarritoAPI,
 } from "../api/famkon";
+import { useAuth } from "../context/AuthContext";
+import { useCarritoTienda } from "../hooks/useCarritoTienda";
 import CarritoConfirmacion from "../components/CarritoConfirmacion";
 import GaleriaProducto from "../components/GaleriaProducto";
+import TiendaHeader from "../components/TiendaHeader";
 import EditorPersonalizacion, { type EditorPersonalizacionHandle } from "../components/EditorPersonalizacion";
 
 export default function ProductoDetallePage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const carrito = useCarritoTienda();
 
   const [producto, setProducto] = useState<Producto | null>(null);
   const [cantidad, setCantidad] = useState(1);
@@ -48,16 +53,14 @@ export default function ProductoDetallePage() {
     setError("");
     try {
       const personalizacion = await editorRef.current?.preparar();
-      await agregarAlCarritoAPI({
-        idProducto: producto.idProducto,
-        cantidad,
-        personalizacion,
-      });
+      await carrito.agregar(producto, cantidad, personalizacion);
       setAgregado(true);
-      try {
-        setResumenCarrito(await obtenerCarrito());
-      } catch {
-        setError("El producto se agregó. Podés revisar el total en Mi carrito.");
+      if (usuario) {
+        try {
+          setResumenCarrito(await obtenerCarrito());
+        } catch {
+          setError("El producto se agregó. Podés revisar el total en Mi carrito.");
+        }
       }
       setTimeout(() => setAgregado(false), 2000);
     } catch (err) {
@@ -69,23 +72,29 @@ export default function ProductoDetallePage() {
 
   if (cargando) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Package className="h-8 w-8 animate-spin text-amber-500" />
+      <div className="min-h-dvh bg-slate-50">
+        <TiendaHeader />
+        <div className="flex items-center justify-center py-20">
+          <Package className="h-8 w-8 animate-spin text-amber-500" />
+        </div>
       </div>
     );
   }
 
   if (!producto) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <Package className="h-12 w-12 text-slate-300" />
-        <p className="text-sm text-slate-500">Producto no encontrado.</p>
-        <Link
-          to="/comprador/catalogo"
-          className="text-sm font-semibold text-amber-600 hover:underline"
-        >
-          Volver al catalogo
-        </Link>
+      <div className="min-h-dvh bg-slate-50">
+        <TiendaHeader />
+        <div className="flex flex-col items-center justify-center gap-4 py-20">
+          <Package className="h-12 w-12 text-slate-300" />
+          <p className="text-sm text-slate-500">Producto no encontrado.</p>
+          <Link
+            to="/catalogo"
+            className="text-sm font-semibold text-amber-600 hover:underline"
+          >
+            Volver al catalogo
+          </Link>
+        </div>
       </div>
     );
   }
@@ -95,120 +104,145 @@ export default function ProductoDetallePage() {
   const maxCantidad = existencia ?? 99;
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4">
-      <div className="flex items-center gap-3">
-        <Link
-          to="/comprador/catalogo"
-          className="rounded-lg border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-50"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <span className="text-sm font-semibold text-slate-900">Detalle del producto</span>
-      </div>
+    <div className="min-h-dvh bg-slate-50">
+      <TiendaHeader />
+      <div className="mx-auto w-full max-w-4xl space-y-4 px-4 py-6">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/catalogo"
+            className="rounded-lg border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-50"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <span className="text-sm font-semibold text-slate-900">Detalle del producto</span>
+        </div>
 
-      <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-        <GaleriaProducto key={producto.idProducto} producto={producto} />
+        <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+          <GaleriaProducto key={producto.idProducto} producto={producto} />
 
-        <div className="min-w-0 space-y-3 p-4 sm:p-5">
-          <div>
-            <p className="text-xs font-medium text-amber-600">{producto.categoria}</p>
-            <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">{producto.nombre}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <span className="inline-block rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                SKU: {producto.sku}
-              </span>
-              {existencia !== null && (
-                <span
-                  className={`inline-block rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                    agotado ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
-                  }`}
-                >
-                  {agotado ? "Agotado" : `${existencia} disponibles`}
+          <div className="min-w-0 space-y-3 p-4 sm:p-5">
+            <div>
+              <p className="text-xs font-medium text-amber-600">{producto.categoria}</p>
+              <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">{producto.nombre}</h1>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="inline-block rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                  SKU: {producto.sku}
                 </span>
-              )}
+                {existencia !== null && (
+                  <span
+                    className={`inline-block rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                      agotado ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+                    }`}
+                  >
+                    {agotado ? "Agotado" : `${existencia} disponibles`}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
 
-          {producto.descripcion && <p className="text-sm leading-relaxed text-slate-600">{producto.descripcion}</p>}
+            {producto.descripcion && <p className="text-sm leading-relaxed text-slate-600">{producto.descripcion}</p>}
 
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-amber-600">
-              Q{producto.precioBase.toFixed(2)}
-            </span>
-            <span className="text-xs text-slate-400">precio base</span>
-          </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-amber-600">
+                Q{producto.precioBase.toFixed(2)}
+              </span>
+              <span className="text-xs text-slate-400">precio base</span>
+            </div>
 
-          <EditorPersonalizacion key={producto.idProducto} ref={editorRef} producto={producto} />
+            <EditorPersonalizacion
+              key={producto.idProducto}
+              ref={editorRef}
+              producto={producto}
+              permitirImagenes={!!usuario}
+            />
 
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold text-slate-700">Cantidad:</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCantidad(Math.max(1, cantidad - 1))}
-                disabled={cantidad <= 1 || agotado}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-semibold text-slate-700">Cantidad:</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCantidad(Math.max(1, cantidad - 1))}
+                  disabled={cantidad <= 1 || agotado}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="w-10 text-center text-lg font-bold text-slate-900">
+                  {cantidad}
+                </span>
+                <button
+                  onClick={() => setCantidad(Math.min(maxCantidad, cantidad + 1))}
+                  disabled={agotado || (existencia !== null && cantidad >= existencia)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              {existencia !== null && !agotado && <span className="text-xs text-slate-400">Máximo {existencia}</span>}
+            </div>
+
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">
+                  Subtotal ({cantidad} {cantidad === 1 ? "unidad" : "unidades"})
+                </span>
+                <span className="text-xl font-bold text-amber-700">
+                  Q{(producto.precioBase * cantidad).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Link
+                to="/catalogo"
+                className="flex-1 rounded-xl border border-slate-200 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                <Minus className="h-4 w-4" />
-              </button>
-              <span className="w-10 text-center text-lg font-bold text-slate-900">
-                {cantidad}
-              </span>
+                Seguir comprando
+              </Link>
               <button
-                onClick={() => setCantidad(Math.min(maxCantidad, cantidad + 1))}
-                disabled={agotado || (existencia !== null && cantidad >= existencia)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={handleAgregar}
+                disabled={agregado || agregando || agotado}
+                className={`flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition ${
+                  agotado
+                    ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                    : agregado
+                      ? "flex bg-green-500 text-white"
+                      : "flex bg-amber-500 text-white hover:bg-amber-400"
+                }`}
               >
-                <Plus className="h-4 w-4" />
+                {agotado ? (
+                  <>
+                    <Package className="h-4 w-4" /> Agotado
+                  </>
+                ) : agregado ? (
+                  <>
+                    <Check className="h-4 w-4" /> Agregado
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="h-4 w-4" /> {agregando ? "Agregando…" : "Agregar al carrito"}
+                  </>
+                )}
               </button>
             </div>
-            {existencia !== null && !agotado && <span className="text-xs text-slate-400">Máximo {existencia}</span>}
-          </div>
+            {error && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{error} <Link to="/carrito" className="font-semibold underline">Ver carrito</Link></p>}
 
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">
-                Subtotal ({cantidad} {cantidad === 1 ? "unidad" : "unidades"})
-              </span>
-              <span className="text-xl font-bold text-amber-700">
-                Q{(producto.precioBase * cantidad).toFixed(2)}
-              </span>
-            </div>
+            {!usuario && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                <p>
+                  Podés agregar productos al carrito sin cuenta. Para pagar te pediremos iniciar
+                  sesión o crear una cuenta, y{" "}
+                  <strong className="text-slate-800">tu carrito se conserva</strong>.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate("/login")}
+                  className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-amber-700 hover:underline"
+                >
+                  <LogIn size={16} /> Iniciar sesión
+                </button>
+              </div>
+            )}
           </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Link
-              to="/comprador/catalogo"
-              className="flex-1 rounded-xl border border-slate-200 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Seguir comprando
-            </Link>
-            <button
-              onClick={handleAgregar}
-              disabled={agregado || agregando || agotado}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition ${
-                agotado
-                  ? "cursor-not-allowed bg-slate-200 text-slate-500"
-                  : agregado
-                    ? "bg-green-500 text-white"
-                    : "bg-amber-500 text-white hover:bg-amber-400"
-              }`}
-            >
-              {agotado ? (
-                <>
-                  <Package className="h-4 w-4" /> Agotado
-                </>
-              ) : agregado ? (
-                <>
-                  <Check className="h-4 w-4" /> Agregado
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="h-4 w-4" /> {agregando ? "Agregando…" : "Agregar al carrito"}
-                </>
-              )}
-            </button>
-          </div>
-          {error && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{error} <Link to="/comprador/carrito" className="font-semibold underline">Ver carrito</Link></p>}
         </div>
       </div>
       {resumenCarrito && <CarritoConfirmacion carrito={resumenCarrito} onClose={() => setResumenCarrito(null)} />}

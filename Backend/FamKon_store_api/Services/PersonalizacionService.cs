@@ -204,7 +204,7 @@ namespace FamKon_store_api.Services
 
             using var connection = _dbContext.CreateConnection();
             await _dbContext.OpenConnectionAsync(connection);
-            if (await EsSupervisorAsync(connection, actor)) return true;
+            if (await EsProduccionOSupervisorAsync(connection, actor)) return true;
             using var command = new OracleCommand("""
                 SELECT COUNT(*)
                   FROM PERSONALIZACION PR
@@ -219,8 +219,8 @@ namespace FamKon_store_api.Services
         }
 
         /// <summary>
-        /// Productos personalizados de pedidos activos. Solo lo consumen supervisor
-        /// y admin, por lo que se listan todos los pedidos.
+        /// Productos personalizados de pedidos activos. Solo lo consumen produccion,
+        /// supervisor y admin, por lo que se listan todos los pedidos.
         /// </summary>
         public async Task<PreparacionesDto> ListarPreparacionesAsync(long actor)
         {
@@ -448,7 +448,11 @@ namespace FamKon_store_api.Services
             return (destino, true, null);
         }
 
-        private static async Task<bool> EsSupervisorAsync(OracleConnection connection, long actor)
+        /// <summary>
+        /// Roles que pueden ver y preparar personalizaciones ajenas: produccion y
+        /// supervision (el repartidor solo ve las suyas).
+        /// </summary>
+        private static async Task<bool> EsProduccionOSupervisorAsync(OracleConnection connection, long actor)
         {
             using var cmd = new OracleCommand("""
                 SELECT COUNT(*)
@@ -456,7 +460,7 @@ namespace FamKon_store_api.Services
                   JOIN ROL R ON R.ID_ROL = UR.ID_ROL
                  WHERE UR.ID_USUARIO = :actor
                    AND R.ACTIVO = 'S'
-                   AND R.CODIGO = 'SUPERVISOR'
+                   AND R.CODIGO IN ('PRODUCCION', 'SUPERVISOR')
                 """, connection);
             cmd.Parameters.Add("actor", OracleDbType.Int64).Value = actor;
             return Convert.ToInt32(await cmd.ExecuteScalarAsync()) > 0;

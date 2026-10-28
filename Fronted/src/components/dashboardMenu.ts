@@ -72,6 +72,15 @@ export const MENU_GROUPS: MenuGroup[] = [
     ],
   },
   {
+    id: "produccion",
+    label: "Produccion",
+    icon: Palette,
+    codigoRol: "PRODUCCION",
+    items: [
+      { codigo: "GESTIONAR_ENTREGAS",   path: "/produccion/personalizaciones", label: "Personalizaciones", icon: Palette },
+    ],
+  },
+  {
     id: "supervision",
     label: "Supervision",
     icon: ShieldCheck,

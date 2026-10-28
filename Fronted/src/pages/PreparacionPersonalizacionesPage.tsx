@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import ImagenArchivo from "../components/ImagenArchivo";
 import { fotoCompra } from "../api/compras";
+import { useAuth } from "../context/AuthContext";
 import {
   listarPreparacionesPersonalizadas,
   marcarPersonalizacionPreparada,
@@ -22,15 +23,14 @@ import {
   type PreparacionesResumen,
 } from "../api/famkon";
 import { ESTADOS_COMPRA } from "../domain/compras";
+import { esLlaveroCircular } from "../domain/formaProducto";
+import { recorteHtml } from "../domain/impresion";
 
-type Vista = "supervisor" | "admin";
+type Vista = "supervisor" | "produccion" | "admin";
 
 /** Medidas por defecto cuando el producto no tiene ANCHO_CM/ALTO_CM (migracion 17). */
 const ANCHO_POR_DEFECTO_CM = 8.5;
 const ALTO_POR_DEFECTO_CM = 5.5;
-/** Radio de las esquinas y recorte que se descuenta a la imagen. */
-const RADIO_ESQUINA_CM = 0.5;
-const RECORTE_CM = 0.5;
 
 const RESUMEN_VACIO: PreparacionesResumen = {
   pedidos: 0,
@@ -115,13 +115,6 @@ function escapar(valor: string | null | undefined): string {
   });
 }
 
-function recorteHtml(imagen: string | null, ancho: number, alto: number): string {
-  const contenido = imagen
-    ? `<img src="${imagen}" alt="" style="width:calc(${ancho}cm - ${RECORTE_CM}cm);height:calc(${alto}cm - ${RECORTE_CM}cm);border-radius:${RADIO_ESQUINA_CM}cm">`
-    : "";
-  return `<div class="recorte" style="width:${ancho}cm;height:${alto}cm;border-radius:${RADIO_ESQUINA_CM}cm">${contenido}</div>`;
-}
-
 function LadoVista({
   titulo,
   idArchivo,
@@ -160,6 +153,9 @@ function LadoVista({
 }
 
 export default function PreparacionPersonalizacionesPage({ vista = "supervisor" }: { vista?: Vista }) {
+  const { tienePermiso } = useAuth();
+  // El enlace al pedido solo aplica a quien puede ver el tracking general.
+  const puedeVerPedido = vista === "admin" || tienePermiso("VER_DASHBOARD");
   const [items, setItems] = useState<PreparacionPersonalizada[]>([]);
   const [resumen, setResumen] = useState<PreparacionesResumen>(RESUMEN_VACIO);
   const [cargando, setCargando] = useState(true);
@@ -281,7 +277,8 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
         archivoComoDataUrl(item.idArchivoLadoB),
       ]);
       const { ancho, alto } = medidas(item);
-      parejas.push(`<div class="pareja">${recorteHtml(ladoA, ancho, alto)}${recorteHtml(ladoB, ancho, alto)}</div>`);
+      const circular = esLlaveroCircular(item.producto, item.sku, null);
+      parejas.push(`<div class="pareja">${recorteHtml(ladoA, ancho, alto, circular)}${recorteHtml(ladoB, ancho, alto, circular)}</div>`);
     }
     return `<article class="ficha">${parejas.join("")}${ticketHtml(items[0])}</article>`;
   }
@@ -461,12 +458,14 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
                   {grupo.repartidor && <p className="mt-0.5 text-xs text-slate-400">Repartidor: {grupo.repartidor}</p>}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <Link
-                    to={rutaPedido(grupo.idPedido)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    <ExternalLink size={13} /> Ver tracking
-                  </Link>
+                  {puedeVerPedido && (
+                    <Link
+                      to={rutaPedido(grupo.idPedido)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <ExternalLink size={13} /> Ver tracking
+                    </Link>
+                  )}
                 </div>
               </div>
 

@@ -28,6 +28,7 @@ import {
   type PersonalizacionContenido,
   subirImagenPersonalizacionAPI,
 } from "../api/famkon";
+import { esNfcProducto, formaProducto } from "../domain/formaProducto";
 
 export interface EditorPersonalizacionHandle {
   preparar: () => Promise<PersonalizacionContenido | null>;
@@ -373,15 +374,28 @@ const EditorPersonalizacion = forwardRef<EditorPersonalizacionHandle, Props>(
   function EditorPersonalizacion({ producto, permitirImagenes = true }, ref) {
     const permiteA = producto.permiteLadoA === "S";
     const permiteB = producto.permiteLadoB === "S";
-    const esNfc = /nfc/i.test(`${producto.nombre} ${producto.sku} ${producto.categoria ?? ""}`);
-    const esLlavero = !esNfc && /llavero/i.test(`${producto.nombre} ${producto.sku} ${producto.categoria ?? ""}`);
-    const esTarjeta = esNfc && /tarjeta/i.test(`${producto.nombre} ${producto.sku} ${producto.categoria ?? ""}`);
-    const tipo: "tarjeta" | "anillo" | "llavero" | "producto" = esTarjeta
+    const esNfc = esNfcProducto(producto.nombre, producto.sku, producto.categoria);
+    const forma = formaProducto(producto.nombre, producto.sku, producto.categoria);
+    const esTarjeta = forma === "tarjeta";
+    const esLlavero = forma === "llavero" || forma === "llaveroCircular";
+    const esCircular = forma === "llaveroCircular";
+    const esAnillo = forma === "anillo";
+    const tipo: "tarjeta" | "anillo" | "llavero" | "llaveroCircular" | "producto" = esTarjeta
       ? "tarjeta"
-      : /anillo/i.test(`${producto.nombre} ${producto.sku} ${producto.categoria ?? ""}`)
+      : esAnillo
         ? "anillo"
-        : esLlavero ? "llavero" : "producto";
-    const nombrePieza = { tarjeta: "la tarjeta", anillo: "el anillo", llavero: "el llavero", producto: "el producto" }[tipo];
+        : esCircular
+          ? "llaveroCircular"
+          : esLlavero
+            ? "llavero"
+            : "producto";
+    const nombrePieza = {
+      tarjeta: "la tarjeta",
+      anillo: "el anillo",
+      llavero: "el llavero",
+      llaveroCircular: "el llavero circular",
+      producto: "el producto",
+    }[tipo];
     const destino = producto.anchoCm && producto.altoCm && producto.anchoCm > 0 && producto.altoCm > 0
       ? destinoDesdeMedidas(producto.anchoCm, producto.altoCm)
       : esNfc ? DESTINO_NFC : DESTINO_PRODUCTO;
@@ -501,13 +515,15 @@ const EditorPersonalizacion = forwardRef<EditorPersonalizacionHandle, Props>(
     const titulo = {
       tarjeta: "¿Quieres personalizar tu tarjeta NFC?",
       anillo: "¿Quieres personalizar este anillo?",
-      llavero: "¿Quieres personalizar tu llavero?",
+      llavero: "¿Quieres personalizar tu llavero NFC?",
+      llaveroCircular: "¿Quieres personalizar tu llavero circular?",
       producto: "¿Quieres personalizar este producto?",
     }[tipo];
     const etiquetaBoton = {
       tarjeta: "Personalizar tarjeta NFC",
       anillo: "Personalizar anillo",
-      llavero: "Personalizar llavero",
+      llavero: "Personalizar llavero NFC",
+      llaveroCircular: "Personalizar llavero circular",
       producto: "Personalizar producto",
     }[tipo];
 
@@ -664,6 +680,7 @@ const EditorPersonalizacion = forwardRef<EditorPersonalizacionHandle, Props>(
                       rotacion={rotacion}
                       onRotacion={setRotacion}
                       destino={destino}
+                      circular={esCircular}
                     />
                   ) : (
                     <VistaLados
@@ -1130,14 +1147,18 @@ interface Vista3dLlaveroProps {
   rotacion: number;
   onRotacion: (valor: number) => void;
   destino: Destino;
+  /** true para el llavero circular (ficha redonda). */
+  circular: boolean;
 }
 
 /**
  * Llavero de acrilico: rectangulo con los lados izquierdo, derecho e inferior
  * curveados y el anillo metalico arriba. Gira en 3D como la tarjeta NFC.
+ * En version circular la pieza es un disco con el anillo metalico arriba.
  */
-function Vista3dLlavero({ ladoA, ladoB, rotacion, onRotacion, destino }: Vista3dLlaveroProps) {
+function Vista3dLlavero({ ladoA, ladoB, rotacion, onRotacion, destino, circular }: Vista3dLlaveroProps) {
   const enLadoA = Math.abs(rotacion) < 90;
+  const proporcion = circular ? "1 / 1" : `${destino.ancho} / ${destino.alto}`;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2.5 sm:p-3">
@@ -1145,6 +1166,9 @@ function Vista3dLlavero({ ladoA, ladoB, rotacion, onRotacion, destino }: Vista3d
         <defs>
           <clipPath id="famkon-llavero" clipPathUnits="objectBoundingBox">
             <path d="M0.10,0 L0.90,0 C0.955,0 0.98,0.03 0.98,0.08 C0.996,0.34 0.996,0.66 0.945,0.88 C0.905,0.965 0.72,1 0.5,1 C0.28,1 0.095,0.965 0.055,0.88 C0.004,0.66 0.004,0.34 0.02,0.08 C0.02,0.03 0.045,0 0.10,0 Z" />
+          </clipPath>
+          <clipPath id="famkon-llavero-circular" clipPathUnits="objectBoundingBox">
+            <circle cx="0.5" cy="0.5" r="0.5" />
           </clipPath>
         </defs>
       </svg>
@@ -1154,21 +1178,21 @@ function Vista3dLlavero({ ladoA, ladoB, rotacion, onRotacion, destino }: Vista3d
           <Sparkles className="h-3.5 w-3.5 text-amber-500" /> Vista previa 3D
         </p>
         <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">
-          Llavero
+          {circular ? "Llavero circular" : "Llavero"}
         </span>
       </div>
 
       <div className="flex h-64 items-center justify-center sm:h-80" style={{ perspective: "1200px" }}>
         <div
           className="relative h-44 transition-transform duration-500 sm:h-60"
-          style={{ aspectRatio: `${destino.ancho} / ${destino.alto}`, transformStyle: "preserve-3d", transform: `rotateY(${rotacion}deg)` }}
+          style={{ aspectRatio: proporcion, transformStyle: "preserve-3d", transform: `rotateY(${rotacion}deg)` }}
         >
           {/* anillo metalico */}
           <div className="pointer-events-none absolute -top-[14%] left-1/2 z-10 h-8 w-8 -translate-x-1/2 rounded-full border-[3px] border-slate-300 bg-gradient-to-br from-white via-slate-100 to-slate-300 shadow-md sm:h-9 sm:w-9" />
           <div className="pointer-events-none absolute -top-[3%] left-1/2 z-10 h-3.5 w-[18px] -translate-x-1/2 rounded-sm bg-gradient-to-b from-slate-200 to-slate-400" />
 
-          <CaraLlavero lado="A" datos={ladoA} style={{ transform: "rotateY(0deg)" }} />
-          <CaraLlavero lado="B" datos={ladoB} style={{ transform: "rotateY(180deg)" }} />
+          <CaraLlavero lado="A" datos={ladoA} circular={circular} style={{ transform: "rotateY(0deg)" }} />
+          <CaraLlavero lado="B" datos={ladoB} circular={circular} style={{ transform: "rotateY(180deg)" }} />
         </div>
       </div>
 
@@ -1216,17 +1240,19 @@ function Vista3dLlavero({ ladoA, ladoB, rotacion, onRotacion, destino }: Vista3d
   );
 }
 
-function CaraLlavero({ lado, datos, style }: { lado: "A" | "B"; datos: LadoPersonalizacion; style: CSSProperties }) {
+function CaraLlavero({ lado, datos, circular, style }: { lado: "A" | "B"; datos: LadoPersonalizacion; circular: boolean; style: CSSProperties }) {
   return (
     <div
       className="absolute inset-0 overflow-hidden bg-white shadow-2xl shadow-slate-900/30"
-      style={{ ...style, backfaceVisibility: "hidden", clipPath: "url(#famkon-llavero)" }}
+      style={{ ...style, backfaceVisibility: "hidden", clipPath: circular ? "url(#famkon-llavero-circular)" : "url(#famkon-llavero)" }}
     >
       <ImagenEncuadrada archivo={datos.archivo} ajuste={datos.ajuste} className={`absolute inset-0 ${datos.archivo ? "bg-white" : "bg-slate-100"}`} />
       {/* brillo del acrilico */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent opacity-70" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-transparent" />
-      <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-700 backdrop-blur">
+      <div className={`pointer-events-none absolute flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-700 backdrop-blur ${
+        circular ? "left-1/2 top-[10%] -translate-x-1/2" : "left-2 top-2"
+      }`}>
         Lado {lado}
       </div>
       {datos.mensaje.trim() && (

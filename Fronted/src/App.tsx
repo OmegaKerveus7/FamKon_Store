@@ -100,6 +100,7 @@ export default function App() {
         <Route path="/repartidor" element={<Navigate to="/repartidor/asignados" replace />} />
         <Route path="/repartidor/asignados" element={<RequirePermiso codigoPermiso="VER_PEDIDOS_ASIGNADOS"><PedidosPage vista="repartidor" /></RequirePermiso>} />
         <Route path="/supervisor/personalizaciones" element={<RequirePermiso codigoRol="SUPERVISOR" codigoPermiso="GESTIONAR_ENTREGAS"><PreparacionPersonalizacionesPage vista="supervisor" /></RequirePermiso>} />
+        <Route path="/produccion/personalizaciones" element={<RequirePermiso codigoRol="PRODUCCION" codigoPermiso="GESTIONAR_ENTREGAS"><PreparacionPersonalizacionesPage vista="produccion" /></RequirePermiso>} />
         <Route path="/admin/personalizaciones" element={<RequirePermiso codigoRol="ADMIN" codigoPermiso="GESTIONAR_ENTREGAS"><PreparacionPersonalizacionesPage vista="admin" /></RequirePermiso>} />
         <Route path="/repartidor/registrar" element={<Navigate to="/repartidor/asignados" replace />} />
         <Route path="/repartidor/cambiar-estado" element={<Navigate to="/repartidor/asignados" replace />} />

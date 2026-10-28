@@ -10,6 +10,7 @@ const textos: Record<string, { titulo: string; descripcion: string; pasos: strin
   compras: { titulo: '¿Qué querés comprar hoy?', descripcion: 'Explorá el catálogo, continuá tu compra o consultá el avance de tus pedidos.', pasos: ['Elegí tus productos', 'Revisá tu carrito', 'Confirmá entrega y pago'] },
   entregas: { titulo: 'Tus entregas, paso a paso', descripcion: 'Abrí una entrega asignada para consultar su destino y las acciones disponibles.', pasos: ['Abrí una entrega asignada', 'Revisá los datos del pedido', 'Registrá el resultado y la evidencia'] },
   administracion: { titulo: 'Organizá el trabajo de la tienda', descripcion: 'Revisá la operación y mantené actualizado el catálogo. Las acciones de cada pedido están en su detalle.', pasos: ['Consultá los pedidos o entregas', 'Revisá su pago y estado', 'Abrí el detalle para continuar'] },
+  produccion: { titulo: 'Producción', descripcion: 'Prepará las personalizaciones pendientes de cada pedido: imprimí el frente y el reverso al tamaño real y marcá el producto como preparado.', pasos: ['Imprimí las personalizaciones', 'Revisá el diseño impreso', 'Marcá el producto como preparado'] },
 };
 const descripciones: Record<string, string> = {
   '/catalogo': 'Encontrá productos y elegí el que más te guste.',
@@ -23,6 +24,7 @@ const descripciones: Record<string, string> = {
   '/admin/usuarios': 'Consultá usuarios y administrá sus accesos.',
   '/admin': 'Accedé a las herramientas de administración.',
   '/supervisor': 'Accedé a las herramientas de supervisión.',
+  '/produccion/personalizaciones': 'Imprimí y prepará las personalizaciones pendientes.',
 };
 const nombres: Record<string, string> = {
   '/catalogo': 'Explorar catálogo', '/carrito': 'Continuar mi compra',
@@ -30,6 +32,7 @@ const nombres: Record<string, string> = {
   '/repartidor/asignados': 'Entregas asignadas', '/admin/pedidos': 'Gestionar pedidos',
   '/entregas/tracking': 'Seguimiento de entregas', '/admin/productos': 'Gestionar productos',
   '/admin/usuarios': 'Gestionar usuarios', '/admin': 'Panel de administración', '/supervisor': 'Panel de supervisión',
+  '/produccion/personalizaciones': 'Personalizaciones por preparar',
 };
 
 export default function DashboardPage() {
@@ -41,6 +44,7 @@ export default function DashboardPage() {
   const areas = [
     { id: 'compras', nombre: 'Compras', grupos: ['compras'] },
     { id: 'entregas', nombre: 'Entregas', grupos: ['entregas'] },
+    { id: 'produccion', nombre: 'Producción', grupos: ['produccion'] },
     { id: 'administracion', nombre: 'Administración', grupos: ['administracion', 'tracking', 'supervision'] },
   ].map(area => {
     const vistos = new Set<string>();
@@ -52,7 +56,7 @@ export default function DashboardPage() {
     if (area.id === 'administracion') items.sort((a, b) => Number(b.path === '/admin/pedidos') - Number(a.path === '/admin/pedidos'));
     return { ...area, items };
   }).filter(area => area.items.length);
-  const inicial = esAdmin || roles.includes('SUPERVISOR') ? 'administracion' : roles.includes('REPARTIDOR') ? 'entregas' : 'compras';
+  const inicial = esAdmin || roles.includes('SUPERVISOR') ? 'administracion' : roles.includes('PRODUCCION') ? 'produccion' : roles.includes('REPARTIDOR') ? 'entregas' : 'compras';
   const activa = areas.find(a => a.id === seleccion) || areas.find(a => a.id === inicial) || areas[0];
   const texto = activa && textos[activa.id];
   const principal = activa?.items[0];

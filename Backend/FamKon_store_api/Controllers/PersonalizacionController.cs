@@ -96,7 +96,7 @@ namespace FamKon_store_api.Controllers
             }
         }
 
-        // ─── Preparación de productos personalizados (supervisor / admin) ──
+        // ─── Preparación de productos personalizados (produccion / supervisor / admin) ──
         [HttpGet("pendientes")]
         public async Task<ActionResult> Pendientes()
         {
@@ -144,13 +144,13 @@ namespace FamKon_store_api.Controllers
         }
 
         /// <summary>
-        /// La preparacion de personalizaciones es exclusiva de SUPERVISOR y ADMIN:
+        /// La preparacion de personalizaciones es exclusiva de PRODUCCION, SUPERVISOR y ADMIN:
         /// el repartidor tambien tiene GESTIONAR_ENTREGAS, por eso se valida el rol.
         /// </summary>
         private async Task<bool> PuedePreparar(long usuario)
         {
             var permisos = await _permisos.ListarPermisosAsync(usuario);
-            return permisos.Any(p => p.CodigoRol is "SUPERVISOR" or "ADMIN")
+            return permisos.Any(p => p.CodigoRol is "PRODUCCION" or "SUPERVISOR" or "ADMIN")
                 && permisos.Any(p => p.CodigoPermiso == "GESTIONAR_ENTREGAS");
         }
 

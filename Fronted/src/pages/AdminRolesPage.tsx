@@ -7,6 +7,7 @@ export default function AdminRolesPage() {
   const roles = [
     { codigo: "ADMIN",      nombre: "Administrador", color: "bg-red-100 text-red-700" },
     { codigo: "SUPERVISOR", nombre: "Supervisor",    color: "bg-purple-100 text-purple-700" },
+    { codigo: "PRODUCCION", nombre: "Produccion",    color: "bg-teal-100 text-teal-700" },
     { codigo: "REPARTIDOR", nombre: "Repartidor",    color: "bg-blue-100 text-blue-700" },
     { codigo: "COMPRADOR",  nombre: "Comprador",     color: "bg-amber-100 text-amber-700" },
   ];

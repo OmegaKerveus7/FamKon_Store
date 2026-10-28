@@ -160,7 +160,7 @@ export default function LoginPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => navigate("/login/facial")}
+              onClick={() => navigate("/login/facial", { state: { pista: identificador.trim() || undefined, volverA: state?.volverA } })}
               className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-700 transition hover:border-amber-400 hover:bg-amber-50"
             >
               <ScanFace className="h-6 w-6 text-amber-600" />

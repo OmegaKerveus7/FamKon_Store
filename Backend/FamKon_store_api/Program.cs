@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 
 internal class Program
 {
@@ -112,6 +113,13 @@ internal class Program
         });
 
         builder.Services.AddAuthorization();
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            // Nginx (mismo servidor) ya envía X-Forwarded-For y X-Forwarded-Proto.
+            // Solo se confían los proxies conocidos (loopback) para no aceptar
+            // cabeceras arbitrarias de los clientes.
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        });
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(options =>
         {
@@ -129,6 +137,7 @@ internal class Program
             app.UseSwaggerUI();
         }
 
+        app.UseForwardedHeaders();
         app.UseCors("PermitirFrontend");
         app.UseAuthentication();
         app.UseAuthorization();

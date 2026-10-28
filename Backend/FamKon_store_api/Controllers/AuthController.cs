@@ -146,6 +146,23 @@ namespace FamKon_store_api.Controllers
                 });
             }
 
+            // Cuenta heredada de la base compartida: existe pero no pertenece a
+            // ningun sitio, asi que no puede operar en la tienda.
+            if (authUser.IdSitio is null)
+            {
+                await RegistrarBitacoraAsync(
+                    idUsuario: authUser.IdUsuario,
+                    identificador: identificador,
+                    metodo: "CONTRASENA",
+                    resultado: "N",
+                    motivo: "Usuario sin sitio asignado.");
+                return Ok(new LoginResponse
+                {
+                    CodigoS = 403,
+                    Mensaje = "Esta cuenta no esta asociada a la tienda. Contacte al administrador."
+                });
+            }
+
             if (authUser.Activo != "S")
             {
                 await RegistrarBitacoraAsync(

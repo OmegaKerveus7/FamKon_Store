@@ -40,6 +40,10 @@ internal class Program
         builder.Services.AddScoped<IPasswordRecoveryStore, PasswordRecoveryStore>();
         builder.Services.AddScoped<IPasswordCodeSender, PasswordCodeSender>();
         builder.Services.AddScoped<PasswordRecoveryService>();
+        // Límites ajustables con RateLimit:* en appsettings (peticiones por minuto).
+        var limiteIpPorMinuto = builder.Configuration.GetValue("RateLimit:IpPorMinuto", 240);
+        var limiteUsuarioPorMinuto = builder.Configuration.GetValue("RateLimit:UsuarioPorMinuto", 300);
+        var limiteAuthPorMinuto = builder.Configuration.GetValue("RateLimit:AuthPorMinuto", 10);
         builder.Services.AddRateLimiter(options =>
         {
             options.AddPolicy("rastreo", context => RateLimitPartition.GetFixedWindowLimiter(
@@ -48,9 +52,30 @@ internal class Program
             options.AddPolicy("password", context => RateLimitPartition.GetFixedWindowLimiter(
                 context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
+            // Login, registro y envío de códigos: pocas veces por minuto y por IP.
+            options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = limiteAuthPorMinuto, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+            // Tope general para todo el API: por IP y, si hay token, también por usuario
+            // (cubre a quien rote de IP con un mismo token). Se aplica el más restrictivo.
+            options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
+                PartitionedRateLimiter.Create<HttpContext, string>(context => RateLimitPartition.GetSlidingWindowLimiter(
+                    "ip:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown"),
+                    _ => new SlidingWindowRateLimiterOptions { PermitLimit = limiteIpPorMinuto, Window = TimeSpan.FromMinutes(1), SegmentsPerWindow = 6, QueueLimit = 0 })),
+                PartitionedRateLimiter.Create<HttpContext, string>(context =>
+                {
+                    var usuario = context.User.FindFirst("sub")?.Value;
+                    return string.IsNullOrEmpty(usuario)
+                        ? RateLimitPartition.GetNoLimiter("anonimo")
+                        : RateLimitPartition.GetSlidingWindowLimiter(
+                            "usr:" + usuario,
+                            _ => new SlidingWindowRateLimiterOptions { PermitLimit = limiteUsuarioPorMinuto, Window = TimeSpan.FromMinutes(1), SegmentsPerWindow = 6, QueueLimit = 0 });
+                }));
             options.OnRejected = async (context, cancellationToken) =>
             {
                 context.HttpContext.Response.StatusCode = 429;
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var espera))
+                    context.HttpContext.Response.Headers.RetryAfter = ((int)espera.TotalSeconds).ToString();
                 await context.HttpContext.Response.WriteAsJsonAsync(new { mensaje = "Demasiadas solicitudes. Espera unos minutos antes de intentar de nuevo." }, cancellationToken);
             };
         });
@@ -119,6 +144,8 @@ internal class Program
             // Solo se confían los proxies conocidos (loopback) para no aceptar
             // cabeceras arbitrarias de los clientes.
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            // En el VPS nginx llega al contenedor por el bridge de Docker (172.16.0.0/12), no por loopback.
+            options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse("172.16.0.0"), 12));
         });
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(options =>

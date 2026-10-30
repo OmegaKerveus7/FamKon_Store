@@ -20,7 +20,7 @@ namespace FamKon_store_api.Controllers
             _logger = logger;
         }
 
-        [HttpPost("registro/comprobar-correo")]
+        [HttpPost("registro/comprobar-correo"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public async Task<ActionResult> ComprobarCorreo([FromBody] ComprobarCorreoRequest request)
         {
             if (!RegistroValidacion.CorreoValido(request.Correo))
@@ -42,7 +42,7 @@ namespace FamKon_store_api.Controllers
             public string Correo { get; set; } = string.Empty;
         }
 
-        [HttpPost("registro")]
+        [HttpPost("registro"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public async Task<ActionResult<RegistroResponse>> Registrar([FromBody] RegistroRequest request, [FromServices] CredencialService credencial, [FromServices] RegistroRostroService rostros)
         {
             if (!RegistroValidacion.CorreoValido(request.Correo))

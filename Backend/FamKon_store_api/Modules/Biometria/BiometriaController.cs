@@ -26,6 +26,7 @@ public sealed class BiometriaController(
     BitacoraService bitacora, ILogger<BiometriaController> logger) : ControllerBase
 {
     [HttpPost("login")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
     [HttpPost("/api/famkon/login/facial")]
     public Task<ActionResult> Login(AccesoFacialRequest request, CancellationToken ct) =>
         EjecutarAsync("LOGIN", "captura-facial", async contexto => {

@@ -27,7 +27,7 @@ namespace FamKon_store_api.Controllers
             _logger = logger;
         }
 
-        [HttpPost("verificacion/enviar-codigo")]
+        [HttpPost("verificacion/enviar-codigo"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public async Task<ActionResult<EnviarCodigoResponse>> EnviarCodigo([FromBody] EnviarCodigoRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Codigo) || request.Codigo.Length != 6 || !request.Codigo.All(char.IsDigit))

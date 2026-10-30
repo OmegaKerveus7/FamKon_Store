@@ -66,7 +66,7 @@ namespace FamKon_store_api.Controllers
             }
         }
 
-        [HttpPost("login_basic")]
+        [HttpPost("login_basic"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public async Task<ActionResult<LoginResponse>> LoginBasico([FromBody] LoginRequest request)
         {
             var tieneCorreo = !string.IsNullOrWhiteSpace(request.Correo);
@@ -304,7 +304,7 @@ namespace FamKon_store_api.Controllers
             });
         }
 
-        [HttpPost("refresh-token")]
+        [HttpPost("refresh-token"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public ActionResult RefreshToken([FromBody] RefreshTokenRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Token))

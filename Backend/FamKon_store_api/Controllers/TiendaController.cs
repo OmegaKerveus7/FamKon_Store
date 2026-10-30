@@ -44,6 +44,7 @@ namespace FamKon_store_api.Controllers
         // ═══════════════════════════════════════════════════════════════
 
         [HttpGet("productos")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("catalogo")]
         public async Task<ActionResult> ListarProductos(
             [FromQuery] long idSitio = 1,
             [FromQuery] long? idCategoria = null,
@@ -58,6 +59,7 @@ namespace FamKon_store_api.Controllers
         }
 
         [HttpGet("productos/{id}")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("catalogo")]
         public async Task<ActionResult> ObtenerProducto(long id)
         {
             var producto = await _catalogo.ObtenerProductoAsync(id);
@@ -68,6 +70,7 @@ namespace FamKon_store_api.Controllers
         }
 
         [HttpGet("categorias")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("catalogo")]
         public async Task<ActionResult> ListarCategorias([FromQuery] string soloActivas = "S")
         {
             try
@@ -180,6 +183,7 @@ namespace FamKon_store_api.Controllers
         }
 
         [HttpGet("productos/{id:long}/imagen")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("catalogo")]
         public async Task<ActionResult> ImagenProducto(long id, [FromServices] ArchivoService archivos, [FromServices] FamKon_store_api.BD.DBContext db, [FromQuery] long? archivo = null)
         {
             var producto = await _catalogo.ObtenerProductoAsync(id);

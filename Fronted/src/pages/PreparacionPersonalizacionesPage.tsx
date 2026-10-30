@@ -24,7 +24,7 @@ import {
 } from "../api/famkon";
 import { ESTADOS_COMPRA } from "../domain/compras";
 import { esLlaveroCircular } from "../domain/formaProducto";
-import { recorteHtml } from "../domain/impresion";
+import { recorteHtml, empacarEnHojas, ANCHO_HOJA_CM, ALTO_HOJA_CM, SEPARACION_CM } from "../domain/impresion";
 
 type Vista = "supervisor" | "produccion" | "admin";
 
@@ -71,6 +71,17 @@ const ESTILOS_IMPRESION = `
   .ticket-numero { margin: 0.6mm 0 1.6mm; font-size: 5.2mm; font-weight: 800; line-height: 1.05; word-break: break-all; }
   .ticket-linea { margin: 0.5mm 0; font-size: 2.9mm; line-height: 1.25; }
   .ticket-linea strong { font-weight: 700; }
+  .hoja {
+    width: ${ANCHO_HOJA_CM}cm; min-height: ${ALTO_HOJA_CM}cm;
+    padding-top: 2mm; page-break-after: always; break-after: page;
+  }
+  .hoja:last-child { page-break-after: auto; break-after: auto; }
+  .rejilla { display: flex; flex-direction: column; gap: ${SEPARACION_CM}cm; align-items: stretch; }
+  .fila { display: flex; flex-wrap: nowrap; align-items: flex-start; justify-content: center; gap: ${SEPARACION_CM}cm; break-inside: avoid; }
+  .celda { display: flex; flex-direction: column; align-items: center; gap: 1mm; break-inside: avoid; }
+  .pie { margin: 0; font-size: 7pt; color: #334155; text-align: center; line-height: 1.2; }
+  .tickets { display: grid; grid-template-columns: repeat(2, 8.5cm); gap: ${SEPARACION_CM}cm; align-items: start; }
+  .hoja-titulo { margin: 0 0 4mm; font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #b45309; }
 `;
 
 function etiquetaEstado(estado: string, nombre: string): string {
@@ -165,7 +176,7 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
   const [busqueda, setBusqueda] = useState("");
   const [guardando, setGuardando] = useState<number | null>(null);
   const [copiado, setCopiado] = useState<number | null>(null);
-  const [imprimiendo, setImprimiendo] = useState<number | "todas" | null>(null);
+  const [imprimiendo, setImprimiendo] = useState<number | "todas" | "todo" | null>(null);
 
   const cargar = useCallback(async (signal?: AbortSignal, visible = false) => {
     if (visible) setCargando(true);
@@ -299,6 +310,74 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
     </section>`;
   }
 
+  /**
+   * Impresión compacta: todos los productos en una sola lista, rellenando las
+   * hojas (entran varios por hoja según el tamaño) y continuando en otra hoja
+   * cuando ya no caben. Los tickets de entrega van al final, dos por fila.
+   */
+  async function imprimirTodo(lista: PreparacionPersonalizada[], clave: number | "todas" | "todo") {
+    if (!lista.length || imprimiendo !== null) return;
+    setImprimiendo(clave);
+    setError("");
+    const ventana = window.open("", "_blank", "width=900,height=1000");
+    if (!ventana) {
+      setError("Permití las ventanas emergentes para poder imprimir las fichas.");
+      setImprimiendo(null);
+      return;
+    }
+    ventana.document.write("<p style='font-family:sans-serif;padding:24px'>Preparando las imágenes…</p>");
+    try {
+      const cargados = await Promise.all(
+        lista.map(async (item) => {
+          const [ladoA, ladoB] = await Promise.all([
+            archivoComoDataUrl(item.idArchivoLadoA),
+            archivoComoDataUrl(item.idArchivoLadoB),
+          ]);
+          const { ancho, alto } = medidas(item);
+          return { item, ladoA, ladoB, ancho, alto };
+        }),
+      );
+
+      const porId = new Map(cargados.map((c) => [c.item.idPedidoDetalle, c]));
+      const hojas = empacarEnHojas(
+        cargados.map((c) => ({ id: c.item.idPedidoDetalle, anchoCm: c.ancho, altoCm: c.alto })),
+      );
+
+      const paginas = hojas.map((hoja) => {
+        const filas = hoja.filas.map((contenido) => {
+          const celdas = contenido.map((entrada) => {
+            const c = porId.get(entrada.id)!;
+            const circular = esLlaveroCircular(c.item.producto, c.item.sku, null);
+            const par = `<div class="pareja">${recorteHtml(c.ladoA, c.ancho, c.alto, circular)}${recorteHtml(c.ladoB, c.ancho, c.alto, circular)}</div>`;
+            const pie = `<p class="pie">${escapar(c.item.numeroPedido)} · ${escapar(c.item.producto)} × ${c.item.cantidad}</p>`;
+            return `<div class="celda">${par}${pie}</div>`;
+          });
+          return `<div class="fila">${celdas.join("")}</div>`;
+        });
+        return `<article class="hoja"><div class="rejilla">${filas.join("")}</div></article>`;
+      });
+
+      // Un ticket por pedido, al final (dos por fila).
+      const pedidos = new Map<number, PreparacionPersonalizada>();
+      for (const item of lista) if (!pedidos.has(item.idPedido)) pedidos.set(item.idPedido, item);
+      if (pedidos.size) {
+        const tickets = [...pedidos.values()].map((item) => ticketHtml(item)).join("");
+        paginas.push(
+          `<article class="hoja"><p class="hoja-titulo">Tickets de entrega</p><div class="tickets">${tickets}</div></article>`,
+        );
+      }
+
+      ventana.document.open();
+      ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>FamKon · Personalizaciones</title><style>${ESTILOS_IMPRESION}</style></head><body>${paginas.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`);
+      ventana.document.close();
+    } catch (e) {
+      setError((e as Error).message);
+      ventana.close();
+    } finally {
+      setImprimiendo(null);
+    }
+  }
+
   async function imprimir(lista: PreparacionPersonalizada[], clave: number | "todas") {
     if (!lista.length || imprimiendo !== null) return;
     setImprimiendo(clave);
@@ -358,11 +437,19 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
           </button>
           <button
             type="button"
-            onClick={() => void imprimir(pendientesVisibles, "todas")}
+            onClick={() => void imprimirTodo(pendientesVisibles, "todas")}
             disabled={!pendientesVisibles.length || imprimiendo !== null}
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-60 sm:flex-none"
           >
             {imprimiendo === "todas" ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />} Imprimir pendientes
+          </button>
+          <button
+            type="button"
+            onClick={() => void imprimirTodo(visibles, "todo")}
+            disabled={!visibles.length || imprimiendo !== null}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-3 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-60 sm:flex-none"
+          >
+            {imprimiendo === "todo" ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />} Imprimir todo
           </button>
         </div>
       </header>

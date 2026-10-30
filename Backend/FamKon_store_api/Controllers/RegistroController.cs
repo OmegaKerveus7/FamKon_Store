@@ -65,6 +65,15 @@ namespace FamKon_store_api.Controllers
                     Mensaje = "Los campos 'nombres' y 'apellidos' son obligatorios."
                 });
 
+            if (!RegistroValidacion.NombreValido(request.Nombres))
+                return Ok(new RegistroResponse { CodigoS = 400, Mensaje = "El campo 'nombres' solo puede contener letras." });
+
+            if (!RegistroValidacion.NombreValido(request.Apellidos))
+                return Ok(new RegistroResponse { CodigoS = 400, Mensaje = "El campo 'apellidos' solo puede contener letras." });
+
+            if (!RegistroValidacion.FechaNacimientoValida(request.FechaNacimiento.ToString("yyyy-MM-dd")))
+                return Ok(new RegistroResponse { CodigoS = 400, Mensaje = "La fecha de nacimiento debe ser anterior a hoy." });
+
             byte[] original, editada;
             RostroRegistro rostro;
             try { rostro = rostros.Obtener(request.SolicitudRostro, request.FotoOriginalBase64); original = rostro.Original; editada = CredencialService.Imagen(request.FotoEditadaBase64 ?? Convert.ToBase64String(rostro.Segmentada)); CredencialPdf.ColorTema(request.TemaCredencial); }

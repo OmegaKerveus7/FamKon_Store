@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 import { checkEstado } from "../api/famkon";
@@ -44,7 +44,7 @@ export default function IndexPage() {
   }, [navigate, error, usuario]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center overflow-x-auto overflow-y-auto gap-4 bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-4">
       <img src="/images/logo-famkon.png" alt="Logo FamKon" className="h-24 w-24 object-contain" />
       {error ? (
         <>

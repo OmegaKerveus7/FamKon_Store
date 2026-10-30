@@ -44,6 +44,12 @@ internal class Program
         var limiteIpPorMinuto = builder.Configuration.GetValue("RateLimit:IpPorMinuto", 240);
         var limiteUsuarioPorMinuto = builder.Configuration.GetValue("RateLimit:UsuarioPorMinuto", 300);
         var limiteAuthPorMinuto = builder.Configuration.GetValue("RateLimit:AuthPorMinuto", 10);
+        // La identificación facial consume el servicio externo de rostros y una
+        // petición puede tardar un minuto: se limita mas fuerte que el resto.
+        var limiteBiometriaPorMinuto = builder.Configuration.GetValue("RateLimit:BiometriaPorMinuto", 5);
+        var limiteCatalogoPorMinuto = builder.Configuration.GetValue("RateLimit:CatalogoPorMinuto", 120);
+        // Peticiones simultáneas admitidas en todo el API.
+        var limiteConcurrencia = builder.Configuration.GetValue("RateLimit:Concurrencia", 60);
         builder.Services.AddRateLimiter(options =>
         {
             options.AddPolicy("rastreo", context => RateLimitPartition.GetFixedWindowLimiter(
@@ -56,6 +62,14 @@ internal class Program
             options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
                 context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = limiteAuthPorMinuto, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+            // Acceso facial: pocas veces por minuto y por IP (consume el servicio externo).
+            options.AddPolicy("biometria", context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = limiteBiometriaPorMinuto, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+            // Catálogo público: lo consulta cualquiera, incluso sin sesión.
+            options.AddPolicy("catalogo", context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = limiteCatalogoPorMinuto, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
             // Tope general para todo el API: por IP y, si hay token, también por usuario
             // (cubre a quien rote de IP con un mismo token). Se aplica el más restrictivo.
             options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
@@ -70,7 +84,11 @@ internal class Program
                         : RateLimitPartition.GetSlidingWindowLimiter(
                             "usr:" + usuario,
                             _ => new SlidingWindowRateLimiterOptions { PermitLimit = limiteUsuarioPorMinuto, Window = TimeSpan.FromMinutes(1), SegmentsPerWindow = 6, QueueLimit = 0 });
-                }));
+                }),
+                // Tope de peticiones simultáneas: si el servidor está saturado se
+                // rechazan de inmediato las nuevas en vez de acumularlas.
+                PartitionedRateLimiter.Create<HttpContext, string>(_ => RateLimitPartition.GetConcurrencyLimiter(
+                    "global", _ => new ConcurrencyLimiterOptions { PermitLimit = limiteConcurrencia, QueueLimit = 0 })));
             options.OnRejected = async (context, cancellationToken) =>
             {
                 context.HttpContext.Response.StatusCode = 429;

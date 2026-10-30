@@ -26,7 +26,7 @@ public sealed class BiometriaController(
     BitacoraService bitacora, ILogger<BiometriaController> logger) : ControllerBase
 {
     [HttpPost("login")]
-    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("biometria")]
     [HttpPost("/api/famkon/login/facial")]
     public Task<ActionResult> Login(AccesoFacialRequest request, CancellationToken ct) =>
         EjecutarAsync("LOGIN", "captura-facial", async contexto => {
@@ -48,6 +48,7 @@ public sealed class BiometriaController(
         });
 
     [Authorize]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("biometria")]
     [HttpPost("enrolar")]
     public Task<ActionResult> Enrolar(EnrolamientoFacialRequest request, CancellationToken ct) =>
         EjecutarAsync("ENROLAMIENTO", "cuenta-autenticada", async contexto => {

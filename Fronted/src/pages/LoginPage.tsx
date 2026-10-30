@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+﻿import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ScanFace, QrCode, Loader2, Eye, EyeOff, Mail, Lock, ArrowRight, PackageSearch } from "lucide-react";
 import { login } from "../api/famkon";
@@ -62,7 +62,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-slate-100 px-4 pt-32 pb-6 sm:px-8">
+    <div className="flex min-h-dvh items-start justify-center overflow-x-auto overflow-y-auto sm:items-center bg-slate-100 px-4 pt-32 pb-6 sm:px-8">
       <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl lg:grid-cols-[0.95fr_1.05fr]">
         <aside className="hidden flex-col justify-center border-r border-amber-100 bg-amber-50/60 p-10 lg:flex">
           <img src="/images/slogan-famkon.png" alt="FamKon" className="mx-auto w-full max-w-sm object-contain mix-blend-multiply" />

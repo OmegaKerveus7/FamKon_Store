@@ -1,4 +1,4 @@
-import { rutaPersonalBloqueada } from '../domain/vistasRol';
+﻿import { rutaPersonalBloqueada } from '../domain/vistasRol';
 import { useState, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -27,7 +27,7 @@ export default function RequirePermiso({
   // Si no hay permisos cargados, intentar cargarlos una vez
   if (permisos.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex min-h-screen items-start justify-center overflow-x-auto overflow-y-auto sm:items-center bg-slate-50">
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm text-center">
           <p className="text-sm font-medium text-slate-600 mb-4">Cargando permisos...</p>
           <button

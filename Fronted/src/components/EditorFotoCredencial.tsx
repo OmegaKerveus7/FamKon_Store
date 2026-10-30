@@ -74,6 +74,8 @@ export default function EditorFotoCredencial({
     alto: number;
   } | null>(null);
   const siguienteId = useRef(1);
+  // Último objeto tocado: evita colocar dos por un doble toque.
+  const ultimoToque = useRef<{ codigo: string; en: number }>({ codigo: '', en: 0 });
 
   const [foto, setFoto] = useState<FotoCarnet>();
   const [filtro, setFiltro] = useState<FiltroFoto>('original');
@@ -194,6 +196,10 @@ export default function EditorFotoCredencial({
   const deshabilitado = !foto && !cargando;
 
   function agregarObjeto(item: { codigo: Efecto; nombre: string; icono: string }) {
+    // Un doble toque (o el rebote del dedo en móvil) no debe colocar dos.
+    const ahora = Date.now();
+    if (ultimoToque.current.codigo === item.codigo && ahora - ultimoToque.current.en < 350) return;
+    ultimoToque.current = { codigo: item.codigo, en: ahora };
     // Si ya hay uno igual, se coloca un poco corrido para que se vea.
     const repetidos = colocados.filter((o) => o.codigo === item.codigo).length;
     const corrido = Math.min(repetidos * 18, 90);
@@ -213,6 +219,22 @@ export default function EditorFotoCredencial({
   function quitarObjeto(id: number) {
     setColocados((prev) => prev.filter((o) => o.id !== id));
     if (seleccionadoId === id) setSeleccionadoId(null);
+  }
+
+  /** Quita el último objeto colocado (deshacer). */
+  function deshacer() {
+    setColocados((prev) => {
+      if (!prev.length) return prev;
+      const ultimo = prev[prev.length - 1];
+      if (ultimo.id === seleccionadoId) setSeleccionadoId(null);
+      return prev.slice(0, -1);
+    });
+  }
+
+  /** Quita todos los objetos colocados. */
+  function quitarTodos() {
+    setColocados([]);
+    setSeleccionadoId(null);
   }
 
   function centrarSeleccionado() {
@@ -309,7 +331,7 @@ export default function EditorFotoCredencial({
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+          <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto px-4 py-5 sm:px-6">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)] lg:items-start lg:gap-8">
               <div className="mx-auto w-full max-w-[210px] sm:max-w-[250px] lg:sticky lg:top-0 lg:mx-0 lg:max-w-none">
                 <div className="relative rounded-2xl border border-slate-200 bg-slate-100 p-2 shadow-sm">
@@ -405,13 +427,33 @@ export default function EditorFotoCredencial({
                             type="button"
                             onClick={() => quitarObjeto(objeto.id)}
                             aria-label={`Quitar ${objeto.nombre}`}
-                            className="rounded-full p-0.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                            title={`Quitar ${objeto.nombre}`}
+                            className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                           >
-                            <X size={12} />
+                            <X size={14} />
                           </button>
                         </span>
                       );
                     })}
+                  </div>
+                )}
+
+                {colocados.length > 0 && (
+                  <div className="mt-2 flex flex-wrap justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={deshacer}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition hover:border-orange-300 hover:text-orange-700"
+                    >
+                      <RotateCcw size={12} /> Deshacer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={quitarTodos}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 size={12} /> Quitar todos
+                    </button>
                   </div>
                 )}
 
@@ -522,7 +564,7 @@ export default function EditorFotoCredencial({
                     Objetos divertidos <span className="font-normal text-slate-400">(podés poner varios)</span>
                   </h3>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    Tocá un objeto para agregarlo. Cada uno se mueve y se agranda por separado.
+                    Tocá un objeto para agregarlo. Cada uno se mueve y se agranda por separado, y lo podés quitar con la ✕, con Deshacer o con Quitar todos.
                   </p>
 
                   <div role="group" aria-label="Objetos divertidos" className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">

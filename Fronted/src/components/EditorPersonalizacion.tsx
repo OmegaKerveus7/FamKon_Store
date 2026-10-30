@@ -578,7 +578,7 @@ const EditorPersonalizacion = forwardRef<EditorPersonalizacionHandle, Props>(
                 </button>
               </div>
 
-              <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto overscroll-contain p-3 sm:gap-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+              <div className="grid min-h-0 flex-1 gap-3 overflow-x-auto overflow-y-auto overscroll-contain p-3 sm:gap-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
                 <div className="space-y-3 sm:space-y-4">
                   {esNfc && (
                     <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-2.5 sm:p-3">

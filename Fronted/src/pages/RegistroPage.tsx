@@ -1,9 +1,10 @@
-import VistaPreviaCarnet from '../components/VistaPreviaCarnet';
+﻿import VistaPreviaCarnet from '../components/VistaPreviaCarnet';
 import { comprasRequest } from '../api/compras';
 import EditorFotoCredencial from '../components/EditorFotoCredencial';
 import { getCountries, getCountryCallingCode, getExampleNumber, type CountryCode } from "libphonenumber-js/max";
 import ejemplosTelefono from "libphonenumber-js/mobile/examples";
-import { REGLA_PASSWORD, validarPassword, validarTelefono, normalizarTelefono } from "../utils/registroValidacion";
+import { REGLA_PASSWORD, validarPassword, validarTelefono, normalizarTelefono, validarNombre, validarCorreo, validarFechaNacimiento, hoyEnISO, limpiarNombre, limpiarCorreo } from "../utils/registroValidacion";
+import { analizarCaptura } from "../utils/calidadFoto";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -33,6 +34,12 @@ import {
 } from "../api/famkon";
 
 type Paso = "datos" | "verificar";
+
+/** Campos del paso 1 con su mensaje de error. */
+type ErroresRegistro = Partial<Record<
+  "nombres" | "apellidos" | "correo" | "telefono" | "nickname" | "contrasena" | "confirmacion" | "fechaNacimiento" | "foto",
+  string
+>>;
 
 const MINUTOS_EXPIRACION = 5;
 const nombresPaises = new Intl.DisplayNames(["es"], { type: "region" });
@@ -159,6 +166,7 @@ export default function RegistroPage() {
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState(() => borradorInicial.registrado ? (borradorInicial.mensaje ?? "") : "");
   const [persistenciaOk, setPersistenciaOk] = useState(true);
+  const [erroresCampo, setErroresCampo] = useState<ErroresRegistro>({});
 
   // ─── Paso 1: datos del usuario ──────────────────────────────────
   const [nombres, setNombres] = useState(() => borradorInicial.nombres ?? "");
@@ -384,36 +392,106 @@ export default function RegistroPage() {
     } catch(e) { setErrorRostro(mensajeErrorSegmentacion(e)); }
     finally { setSegmentando(false); }
   }
-  function capturarFoto() {
+  async function capturarFoto() {
     if(segmentando)return;
     const imagen = cameraRef.current?.capturar();
     if (!imagen) { setError("Primero activa la cámara."); return; }
+    // Revisión local de luz y nitidez: si la foto no sirve se avisa sin
+    // enviar el rostro al servidor.
+    const analisis = await analizarCaptura(imagen);
+    if (!analisis.ok) {
+      setErrorRostro(analisis.mensaje);
+      return;
+    }
     void prepararRostro(imagen);
   }
 
-  function validarPaso1(): string | null {
-    if (!nombres.trim() || !apellidos.trim()) return "Nombres y apellidos son obligatorios.";
-    if (estadoCorreo === "registrado") return "Este correo ya está registrado. Inicia sesión o utiliza otro correo.";
-    if (correo.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) return "Ingresa un correo válido.";
-    if (!nickname.trim()) return "El nombre de usuario es obligatorio.";
-    if (!validarPassword(contrasena)) return REGLA_PASSWORD;
-    if (contrasena !== confirmacion) return "Las contraseñas no coinciden.";
-    if (!fechaNacimiento) return "La fecha de nacimiento es obligatoria.";
-    if (!foto) return "Debes tomar una fotografía.";
-    if (segmentando) return "Estamos preparando tu fotografía automáticamente. Espera un momento.";
-    if (!solicitudRostro || !fotoEditada) return errorRostro || "Toma una fotografía para preparar tu carnet automáticamente.";
-    if (!telefonoValido) {
-      return `Ingresa un teléfono válido para ${nombresPaises.of(paisTelefono)}. ${ayudaTelefono}`;
+  /** Al corregir un campo se revalida al instante y se actualiza su mensaje. */
+  function cambiarCampo(campo: keyof ErroresRegistro, valor: string, aplicar: (v: string) => void) {
+    aplicar(valor);
+    setErroresCampo((prev) => {
+      const siguiente = { ...prev };
+      const problema = problemaDeCampo(campo, valor);
+      if (problema) siguiente[campo] = problema;
+      else delete siguiente[campo];
+      // Si cambia la contraseña, el aviso de la confirmación tambien cambia.
+      if (campo === "contrasena") {
+        const otro = problemaDeCampo("confirmacion", confirmacion);
+        if (otro) siguiente.confirmacion = otro;
+        else delete siguiente.confirmacion;
+      }
+      return siguiente;
+    });
+  }
+
+  /** Mensaje de un campo concreto (o undefined si esta bien). */
+  function problemaDeCampo(campo: keyof ErroresRegistro, valor: string): string | undefined {
+    switch (campo) {
+      case "nombres":
+        if (!valor.trim()) return "Los nombres son obligatorios.";
+        if (!validarNombre(valor)) return "Los nombres solo pueden tener letras.";
+        return undefined;
+      case "apellidos":
+        if (!valor.trim()) return "Los apellidos son obligatorios.";
+        if (!validarNombre(valor)) return "Los apellidos solo pueden tener letras.";
+        return undefined;
+      case "correo":
+        if (!valor.trim()) return "El correo es obligatorio.";
+        if (!validarCorreo(valor)) return "Ingresa un correo válido, con un solo @ y dominio (ejemplo: nombre@gmail.com.gt).";
+        if (estadoCorreo === "registrado") return "Este correo ya está registrado. Inicia sesión o utiliza otro correo.";
+        return undefined;
+      case "nickname":
+        return valor.trim() ? undefined : "El nombre de usuario es obligatorio.";
+      case "contrasena":
+        return validarPassword(valor) ? undefined : REGLA_PASSWORD;
+      case "confirmacion":
+        if (!valor) return "Confirma tu contraseña.";
+        return valor === contrasena ? undefined : "Las contraseñas no coinciden.";
+      case "fechaNacimiento":
+        if (!valor) return "La fecha de nacimiento es obligatoria.";
+        return validarFechaNacimiento(valor) ? undefined : "Ingresa una fecha de nacimiento anterior a hoy.";
+      case "telefono":
+        return validarTelefono(valor, paisTelefono)
+          ? undefined
+          : `Ingresa un teléfono válido para ${nombresPaises.of(paisTelefono)}. ${ayudaTelefono}`;
+      default:
+        return undefined;
     }
-    return null;
+  }
+
+  /**
+   * Validación del paso 1 con un mensaje por campo: así el usuario sabe
+   * exactamente qué corregir sin tener que leer un aviso general.
+   */
+  function validarPaso1(): ErroresRegistro {
+    const errores: ErroresRegistro = {};
+    const revisar = (campo: keyof ErroresRegistro, valor: string) => {
+      const problema = problemaDeCampo(campo, valor);
+      if (problema) errores[campo] = problema;
+    };
+    revisar("nombres", nombres);
+    revisar("apellidos", apellidos);
+    revisar("correo", correo);
+    revisar("nickname", nickname);
+    revisar("contrasena", contrasena);
+    revisar("confirmacion", confirmacion);
+    revisar("fechaNacimiento", fechaNacimiento);
+    revisar("telefono", telefono);
+    if (!foto) errores.foto = "Debes tomar una fotografía.";
+    else if (segmentando) errores.foto = "Estamos preparando tu fotografía automáticamente. Espera un momento.";
+    else if (!solicitudRostro || !fotoEditada) errores.foto = errorRostro || "Toma una fotografía para preparar tu carnet automáticamente.";
+    return errores;
   }
 
   function irAPaso2(event: FormEvent) {
     event.preventDefault();
     setError("");
-    const errorValidacion = validarPaso1();
-    if (errorValidacion) {
-      setError(errorValidacion);
+    const errores = validarPaso1();
+    setErroresCampo(errores);
+    if (Object.keys(errores).length > 0) {
+      // El aviso general resume el primer problema; el detalle va bajo el campo.
+      const primero = Object.values(errores)[0];
+      setError(primero);
       return;
     }
     setPaso("verificar");
@@ -587,7 +665,7 @@ export default function RegistroPage() {
     window.location.assign("/registro");
   }
 
-  if (registrado) return <main className="flex min-h-dvh items-center justify-center bg-slate-100 p-4"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white p-7 shadow-xl"><img src="/images/slogan-famkon.png" alt="FamKon" className="h-16 max-w-full object-contain" /><div className="rounded-xl bg-emerald-50 p-4"><h1 className="text-2xl font-bold text-slate-900">Tu cuenta está creada</h1><p role="status" className="mt-2 text-sm text-emerald-800">{mensaje}</p></div><p className="text-sm leading-relaxed text-slate-600">Revisá el medio de notificación seleccionado para recibir tu credencial. También podrás consultarla en Mi perfil.</p>{volverA && <p className="rounded-xl bg-amber-50 p-3 text-sm font-medium text-amber-900">Tu carrito quedó guardado. Iniciá sesión para continuar con la compra.</p>}<button onClick={()=>navigate('/login', { state: { volverA } })} className="w-full rounded-xl bg-amber-500 p-3 text-sm font-semibold">Iniciar sesión con contraseña</button><button onClick={()=>navigate('/login/carnet')} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold">Acceder con mi credencial</button><button onClick={reiniciarBorradorYRecargar} className="w-full text-center text-xs font-medium text-slate-400 hover:text-slate-600">Crear otra cuenta</button></section></main>;
+  if (registrado) return <main className="flex min-h-dvh items-start justify-center overflow-x-auto overflow-y-auto sm:items-center bg-slate-100 p-4"><section className="w-full max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white p-7 shadow-xl"><img src="/images/slogan-famkon.png" alt="FamKon" className="h-16 max-w-full object-contain" /><div className="rounded-xl bg-emerald-50 p-4"><h1 className="text-2xl font-bold text-slate-900">Tu cuenta está creada</h1><p role="status" className="mt-2 text-sm text-emerald-800">{mensaje}</p></div><p className="text-sm leading-relaxed text-slate-600">Revisá el medio de notificación seleccionado para recibir tu credencial. También podrás consultarla en Mi perfil.</p>{volverA && <p className="rounded-xl bg-amber-50 p-3 text-sm font-medium text-amber-900">Tu carrito quedó guardado. Iniciá sesión para continuar con la compra.</p>}<button onClick={()=>navigate('/login', { state: { volverA } })} className="w-full rounded-xl bg-amber-500 p-3 text-sm font-semibold">Iniciar sesión con contraseña</button><button onClick={()=>navigate('/login/carnet')} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold">Acceder con mi credencial</button><button onClick={reiniciarBorradorYRecargar} className="w-full text-center text-xs font-medium text-slate-400 hover:text-slate-600">Crear otra cuenta</button></section></main>;
 
 
   // ─── Render ─────────────────────────────────────────────────────
@@ -645,6 +723,7 @@ export default function RegistroPage() {
         {paso === "datos" && (
           <form
             onSubmit={irAPaso2}
+            noValidate
             className="grid items-start gap-5 bg-slate-50/60 p-4 sm:p-6 lg:grid-cols-[1.1fr_0.9fr]"
           >
             <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
@@ -658,14 +737,22 @@ export default function RegistroPage() {
                 id="nombres"
                 label="Nombres"
                 value={nombres}
-                onChange={setNombres}
+                error={erroresCampo.nombres}
+                patron="[A-Za-zÀ-ÿ'’\\- ]+"
+                sanear={limpiarNombre}
+                sugerencia="Solo letras."
+                onChange={(valor) => cambiarCampo("nombres", valor, setNombres)}
                 autoComplete="given-name"
               />
               <Campo
                 id="apellidos"
                 label="Apellidos"
                 value={apellidos}
-                onChange={setApellidos}
+                error={erroresCampo.apellidos}
+                patron="[A-Za-zÀ-ÿ'’\\- ]+"
+                sanear={limpiarNombre}
+                sugerencia="Solo letras."
+                onChange={(valor) => cambiarCampo("apellidos", valor, setApellidos)}
                 autoComplete="family-name"
               />
               </div>
@@ -674,10 +761,16 @@ export default function RegistroPage() {
                 label="Correo electrónico"
                 type="email"
                 value={correo}
-                onChange={(valor) => {
-                  setCorreo(valor);
-                  if (valor.trim().toLowerCase() !== correoNormalizado) setConsultaCorreo(null);
-                }}
+                error={erroresCampo.correo}
+                patron="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
+                sanear={limpiarCorreo}
+                sugerencia="Un correo con un solo @ y dominio, por ejemplo nombre@gmail.com.gt."
+                onChange={(valor) =>
+                  cambiarCampo("correo", valor, (v) => {
+                    setCorreo(v);
+                    if (v.trim().toLowerCase() !== correoNormalizado) setConsultaCorreo(null);
+                  })
+                }
                 autoComplete="email"
               />
               {estadoCorreo && (
@@ -712,13 +805,16 @@ export default function RegistroPage() {
                     autoComplete="tel-national"
                     required
                     value={telefono}
-                    onChange={(event) => setTelefono(event.target.value)}
+                    onChange={(event) => cambiarCampo("telefono", event.target.value, setTelefono)}
                     placeholder={ejemploTelefono}
-                    aria-describedby="telefono-ayuda telefono-estado"
-                    aria-invalid={!!telefono && !telefonoValido}
+                    aria-describedby="telefono-ayuda telefono-estado telefono-error"
+                    aria-invalid={erroresCampo.telefono ? true : undefined}
                     className="min-w-0 flex-1 px-3 py-2.5 text-sm outline-none"
                   />
                 </div>
+                {erroresCampo.telefono && (
+                  <p id="telefono-error" role="alert" className="text-xs font-medium text-red-600">{erroresCampo.telefono}</p>
+                )}
                 <p id="telefono-ayuda" className="text-xs text-slate-600">{ayudaTelefono}</p>
                 <p id="telefono-estado" role="status" className={`text-xs ${telefonoValido ? "text-emerald-700" : "text-red-700"}`}>
                   {telefono && (telefonoValido ? "El número cumple el formato del país seleccionado." : "Revisa la cantidad de dígitos y el formato para el país seleccionado.")}
@@ -729,7 +825,8 @@ export default function RegistroPage() {
                 id="nickname"
                 label="Nombre de usuario"
                 value={nickname}
-                onChange={setNickname}
+                error={erroresCampo.nickname}
+                onChange={(valor) => cambiarCampo("nickname", valor, setNickname)}
                 autoComplete="username"
               />
               <Campo
@@ -737,7 +834,9 @@ export default function RegistroPage() {
                 label="Fecha de nacimiento"
                 type="date"
                 value={fechaNacimiento}
-                onChange={setFechaNacimiento}
+                error={erroresCampo.fechaNacimiento}
+                max={hoyEnISO()}
+                onChange={(valor) => cambiarCampo("fechaNacimiento", valor, setFechaNacimiento)}
               />
               </div>
               <div className="border-t border-slate-100 pt-4"><h3 className="text-sm font-semibold text-slate-800">Protegé tu cuenta</h3><p className="mt-1 text-xs text-slate-500">Elegí una contraseña que no uses en otros sitios.</p></div>
@@ -746,7 +845,8 @@ export default function RegistroPage() {
                 label="Contraseña"
                 type="password"
                 value={contrasena}
-                onChange={setContrasena}
+                error={erroresCampo.contrasena}
+                onChange={(valor) => cambiarCampo("contrasena", valor, setContrasena)}
                 autoComplete="new-password"
                 minLength={8}
               />
@@ -761,7 +861,8 @@ export default function RegistroPage() {
                 label="Confirmar contraseña"
                 type="password"
                 value={confirmacion}
-                onChange={setConfirmacion}
+                error={erroresCampo.confirmacion}
+                onChange={(valor) => cambiarCampo("confirmacion", valor, setConfirmacion)}
                 autoComplete="new-password"
                 minLength={8}
               />
@@ -771,7 +872,6 @@ export default function RegistroPage() {
               <h2 className="text-lg font-semibold text-slate-800">Tu foto y credencial</h2><p className="text-xs leading-relaxed text-slate-500">Tomá una foto de frente y con buena iluminación. La usaremos para tu credencial y el acceso facial.</p>
 
               <CameraCapture ref={cameraRef} guiaRostro verificando={segmentando} />
-
               <button
                 type="button"
                 onClick={capturarFoto}
@@ -784,6 +884,7 @@ export default function RegistroPage() {
 
               {segmentando && <p role="status" className="text-sm">Detectando y segmentando tu rostro…</p>}
               {errorRostro && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{errorRostro}</p>}
+              {erroresCampo.foto && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">{erroresCampo.foto}</p>}
               {rostro && <EditorFotoCredencial segmentada original={rostro} onChange={setFotoEditada} />}
               {fotoEditada && <VistaPreviaCarnet foto={fotoEditada} nickname={nickname} tema={temaCredencial} onTema={setTemaCredencial} />}
               {foto && (
@@ -829,7 +930,7 @@ export default function RegistroPage() {
 
               <button
                 type="submit"
-                disabled={segmentando || !solicitudRostro || !fotoEditada}
+                disabled={segmentando}
                 className="disabled:opacity-50 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400"
               >
                 {segmentando ? "Preparando tu carnet…" : "Continuar a verificación"}
@@ -1044,6 +1145,14 @@ interface CampoProps {
   type?: string;
   autoComplete?: string;
   minLength?: number;
+  max?: string;
+  error?: string;
+  /** Patrón HTML (para el navegador) del valor esperado. */
+  patron?: string;
+  /** Limpia lo que se escribe: impide escribir caracteres no permitidos. */
+  sanear?: (valor: string) => string;
+  /** Ayuda bajo el campo (por ejemplo, qué caracteres se admiten). */
+  sugerencia?: string;
   onChange: (value: string) => void;
 }
 
@@ -1054,6 +1163,11 @@ function Campo({
   type = "text",
   autoComplete,
   minLength,
+  max,
+  error,
+  patron,
+  sanear,
+  sugerencia,
   onChange,
 }: CampoProps) {
   return (
@@ -1067,10 +1181,27 @@ function Campo({
         value={value}
         required
         minLength={minLength}
+        max={max}
+        pattern={patron}
         autoComplete={autoComplete}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : sugerencia ? `${id}-ayuda` : undefined}
+        onChange={(event) => onChange(sanear ? sanear(event.target.value) : event.target.value)}
+        className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition focus:ring-2 ${
+          error
+            ? "border-red-300 bg-red-50/40 focus:border-red-400 focus:ring-red-200"
+            : "border-slate-300 focus:border-amber-500 focus:ring-amber-200"
+        }`}
       />
+      {error ? (
+        <p id={`${id}-error`} role="alert" className="text-xs font-medium text-red-600">
+          {error}
+        </p>
+      ) : sugerencia ? (
+        <p id={`${id}-ayuda`} className="text-xs text-slate-500">
+          {sugerencia}
+        </p>
+      ) : null}
     </div>
   );
 }

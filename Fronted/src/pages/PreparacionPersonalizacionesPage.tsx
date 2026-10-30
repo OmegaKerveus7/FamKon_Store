@@ -176,7 +176,7 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
   const [busqueda, setBusqueda] = useState("");
   const [guardando, setGuardando] = useState<number | null>(null);
   const [copiado, setCopiado] = useState<number | null>(null);
-  const [imprimiendo, setImprimiendo] = useState<number | "todas" | "todo" | null>(null);
+  const [imprimiendo, setImprimiendo] = useState<number | "productos" | "etiquetas" | "todo" | null>(null);
 
   const cargar = useCallback(async (signal?: AbortSignal, visible = false) => {
     if (visible) setCargando(true);
@@ -311,11 +311,15 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
   }
 
   /**
-   * Impresión compacta: todos los productos en una sola lista, rellenando las
-   * hojas (entran varios por hoja según el tamaño) y continuando en otra hoja
-   * cuando ya no caben. Los tickets de entrega van al final, dos por fila.
+   * Impresión compacta: los productos (par A/B) y las etiquetas (tickets) se
+   * pueden imprimir por separado, para usar impresoras y hojas distintas.
+   * `solo` decide que se imprime en esta ventana.
    */
-  async function imprimirTodo(lista: PreparacionPersonalizada[], clave: number | "todas" | "todo") {
+  async function imprimirTodo(
+    lista: PreparacionPersonalizada[],
+    clave: number | "productos" | "etiquetas" | "todo",
+    solo: "productos" | "etiquetas" | "todo" = "todo",
+  ) {
     if (!lista.length || imprimiendo !== null) return;
     setImprimiendo(clave);
     setError("");
@@ -338,37 +342,50 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
         }),
       );
 
-      const porId = new Map(cargados.map((c) => [c.item.idPedidoDetalle, c]));
-      const hojas = empacarEnHojas(
-        cargados.map((c) => ({ id: c.item.idPedidoDetalle, anchoCm: c.ancho, altoCm: c.alto })),
-      );
+      const paginas: string[] = [];
 
-      const paginas = hojas.map((hoja) => {
-        const filas = hoja.filas.map((contenido) => {
-          const celdas = contenido.map((entrada) => {
-            const c = porId.get(entrada.id)!;
-            const circular = esLlaveroCircular(c.item.producto, c.item.sku, null);
-            const par = `<div class="pareja">${recorteHtml(c.ladoA, c.ancho, c.alto, circular)}${recorteHtml(c.ladoB, c.ancho, c.alto, circular)}</div>`;
-            const pie = `<p class="pie">${escapar(c.item.numeroPedido)} · ${escapar(c.item.producto)} × ${c.item.cantidad}</p>`;
-            return `<div class="celda">${par}${pie}</div>`;
-          });
-          return `<div class="fila">${celdas.join("")}</div>`;
-        });
-        return `<article class="hoja"><div class="rejilla">${filas.join("")}</div></article>`;
-      });
-
-      // Un ticket por pedido, al final (dos por fila).
-      const pedidos = new Map<number, PreparacionPersonalizada>();
-      for (const item of lista) if (!pedidos.has(item.idPedido)) pedidos.set(item.idPedido, item);
-      if (pedidos.size) {
-        const tickets = [...pedidos.values()].map((item) => ticketHtml(item)).join("");
-        paginas.push(
-          `<article class="hoja"><p class="hoja-titulo">Tickets de entrega</p><div class="tickets">${tickets}</div></article>`,
+      if (solo !== "etiquetas") {
+        // Productos: repartidos en filas que llenan el ancho de la hoja.
+        const porId = new Map(cargados.map((c) => [c.item.idPedidoDetalle, c]));
+        const hojas = empacarEnHojas(
+          cargados.map((c) => ({ id: c.item.idPedidoDetalle, anchoCm: c.ancho, altoCm: c.alto })),
         );
+        for (const hoja of hojas) {
+          const filas = hoja.filas.map((contenido) => {
+            const celdas = contenido.map((entrada) => {
+              const c = porId.get(entrada.id)!;
+              const circular = esLlaveroCircular(c.item.producto, c.item.sku, null);
+              const par = `<div class="pareja">${recorteHtml(c.ladoA, c.ancho, c.alto, circular)}${recorteHtml(c.ladoB, c.ancho, c.alto, circular)}</div>`;
+              const pie = `<p class="pie">${escapar(c.item.numeroPedido)} · ${escapar(c.item.producto)} × ${c.item.cantidad}</p>`;
+              return `<div class="celda">${par}${pie}</div>`;
+            });
+            return `<div class="fila">${celdas.join("")}</div>`;
+          });
+          paginas.push(`<article class="hoja"><div class="rejilla">${filas.join("")}</div></article>`);
+        }
       }
 
+      if (solo !== "productos") {
+        // Etiquetas: un ticket por pedido, dos por fila.
+        const pedidos = new Map<number, PreparacionPersonalizada>();
+        for (const item of lista) if (!pedidos.has(item.idPedido)) pedidos.set(item.idPedido, item);
+        if (pedidos.size) {
+          const tickets = [...pedidos.values()].map((item) => ticketHtml(item)).join("");
+          paginas.push(
+            `<article class="hoja"><p class="hoja-titulo">Etiquetas de entrega</p><div class="tickets">${tickets}</div></article>`,
+          );
+        }
+      }
+
+      if (!paginas.length) {
+        ventana.close();
+        setImprimiendo(null);
+        return;
+      }
+
+      const titulo = solo === "etiquetas" ? "Etiquetas" : solo === "productos" ? "Productos" : "Personalizaciones";
       ventana.document.open();
-      ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>FamKon · Personalizaciones</title><style>${ESTILOS_IMPRESION}</style></head><body>${paginas.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`);
+      ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>FamKon · ${titulo}</title><style>${ESTILOS_IMPRESION}</style></head><body>${paginas.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`);
       ventana.document.close();
     } catch (e) {
       setError((e as Error).message);
@@ -378,7 +395,7 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
     }
   }
 
-  async function imprimir(lista: PreparacionPersonalizada[], clave: number | "todas") {
+  async function imprimir(lista: PreparacionPersonalizada[], clave: number) {
     if (!lista.length || imprimiendo !== null) return;
     setImprimiendo(clave);
     setError("");
@@ -437,15 +454,23 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
           </button>
           <button
             type="button"
-            onClick={() => void imprimirTodo(pendientesVisibles, "todas")}
+            onClick={() => void imprimirTodo(pendientesVisibles, "productos", "productos")}
             disabled={!pendientesVisibles.length || imprimiendo !== null}
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-60 sm:flex-none"
           >
-            {imprimiendo === "todas" ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />} Imprimir pendientes
+            {imprimiendo === "productos" ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />} Imprimir productos
           </button>
           <button
             type="button"
-            onClick={() => void imprimirTodo(visibles, "todo")}
+            onClick={() => void imprimirTodo(pendientesVisibles, "etiquetas", "etiquetas")}
+            disabled={!pendientesVisibles.length || imprimiendo !== null}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60 sm:flex-none"
+          >
+            {imprimiendo === "etiquetas" ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />} Imprimir etiquetas
+          </button>
+          <button
+            type="button"
+            onClick={() => void imprimirTodo(visibles, "todo", "todo")}
             disabled={!visibles.length || imprimiendo !== null}
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-3 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-60 sm:flex-none"
           >
@@ -455,7 +480,8 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
       </header>
 
       <p className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        Al imprimir, elegí <strong>escala 100 %</strong> (sin “ajustar a la página”) para que las medidas en centímetros salgan exactas.
+        Al imprimir, elegí <strong>escala 100 %</strong> (sin “ajustar a la página”) para que las medidas en centímetros salgan exactas.{" "}
+        <strong>Imprimir productos</strong> y <strong>Imprimir etiquetas</strong> abren ventanas distintas: así podés usar una impresora y hojas diferentes para cada cosa.
       </p>
 
       <section className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">

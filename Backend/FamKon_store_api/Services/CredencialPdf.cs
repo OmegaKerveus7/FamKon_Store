@@ -31,6 +31,7 @@ public static class CredencialPdf
         var principal = ColorTema(tema);
         var acento = ColorAcento(tema);
         var logo = Path.Combine(AppContext.BaseDirectory, "Assets", "logo-famkon.png");
+        var logoUniversidad = Path.Combine(AppContext.BaseDirectory, "Assets", "logo-umg.png");
 
         return Document.Create(document => document.Page(page =>
         {
@@ -45,12 +46,15 @@ public static class CredencialPdf
                 .AlignMiddle()
                 .Row(row =>
                 {
-                    row.ConstantItem(38).Height(38).Background(Colors.White).Padding(4).Image(logo).FitArea();
+                    // Escudo de la Universidad Mariano Galvez (fondo transparente).
+                    row.ConstantItem(40).Height(40).AlignCenter().AlignMiddle()
+                        .Background(Colors.White).Padding(2).Image(logoUniversidad).FitArea();
                     row.RelativeItem().PaddingLeft(12).Column(column =>
                     {
-                        column.Item().Text("FamKon").FontSize(17).ExtraBold().FontColor(Colors.White);
-                        column.Item().Text("CREDENCIAL DIGITAL").FontSize(7).SemiBold().FontColor("#cbd5e1").LetterSpacing(0.18f);
+                        column.Item().Text("Universidad Mariano Gálvez").FontSize(13).ExtraBold().FontColor(Colors.White);
+                        column.Item().Text("CREDENCIAL FAMKON").FontSize(7).SemiBold().FontColor("#cbd5e1").LetterSpacing(0.18f);
                     });
+                    row.AutoItem().AlignMiddle().PaddingRight(8).Height(20).Image(logo).FitArea();
                     row.AutoItem().AlignMiddle().Background(acento).PaddingHorizontal(10).PaddingVertical(5)
                         .Text("ACCESO SEGURO").FontSize(7).Bold().FontColor(principal);
                 });
@@ -94,7 +98,7 @@ public static class CredencialPdf
                 .AlignMiddle()
                 .Row(row =>
                 {
-                    row.RelativeItem().Text("FamKon · Tu identidad, tu estilo").FontSize(7).SemiBold().FontColor(Colors.White);
+                    row.RelativeItem().Text("FamKon · Tienda de la Universidad Mariano Gálvez").FontSize(7).SemiBold().FontColor(Colors.White);
                     row.AutoItem().Text("Documento personal").FontSize(7).FontColor("#cbd5e1");
                 });
         })).GeneratePdf();

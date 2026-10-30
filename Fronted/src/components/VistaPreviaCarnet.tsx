@@ -35,16 +35,19 @@ export default function VistaPreviaCarnet({ foto, nickname, tema, onTema }: { fo
         <div className="relative overflow-hidden p-4 text-white sm:p-5" style={{ backgroundColor: actual.fondo }}>
           <span className="absolute -right-8 -top-12 h-32 w-32 rounded-full border-[22px] opacity-15" style={{ borderColor: actual.acento }} />
           <div className="relative flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/95 p-1 shadow-sm">
-                <img src="/images/logo-famkon.png" alt="FamKon" className="h-full w-full object-contain" />
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/95 p-0.5 shadow-sm">
+                <img src="/images/logo-umg.png" alt="Universidad Mariano Gálvez" className="h-full w-full object-contain" />
               </span>
               <div className="min-w-0">
-                <p className="truncate text-sm font-extrabold tracking-wide">FamKon</p>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/65">Credencial digital</p>
+                <p className="truncate text-[11px] font-extrabold leading-tight tracking-wide">Universidad Mariano Gálvez</p>
+                <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-white/65">Credencial FamKon</p>
               </div>
             </div>
-            <IdCard className="h-6 w-6 shrink-0 text-white/70" />
+            <div className="flex shrink-0 items-center gap-2">
+              <img src="/images/logo-famkon.png" alt="FamKon" className="h-7 w-auto" />
+              <IdCard className="h-5 w-5 text-white/70" />
+            </div>
           </div>
         </div>
 

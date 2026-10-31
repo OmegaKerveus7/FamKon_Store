@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { recorteHtml, empacarEnHojas } from '../src/domain/impresion';
+import {
+  recorteHtml,
+  empacarEnHojas,
+  areaUtil,
+  cabeEnHoja,
+  medidasPar,
+  PAPELES,
+} from '../src/domain/impresion';
 
 describe('Impresión de personalizaciones', () => {
   test('el recorte normal descuenta 0.5 cm y redondea las esquinas', () => {
@@ -59,5 +66,60 @@ describe('Empaquetado de la impresión', () => {
 
   test('sin productos no hay hojas', () => {
     expect(empacarEnHojas([])).toEqual([]);
+  });
+});
+
+describe('Papel de impresión', () => {
+  const carta = areaUtil(PAPELES.carta);
+  const foto = areaUtil(PAPELES.foto);
+  const llavero = (id: number) => ({ id, anchoCm: 3.1, altoCm: 4.5 });
+  const tarjeta = (id: number) => ({ id, anchoCm: 8.5, altoCm: 5.5 });
+  const circular = (id: number) => ({ id, anchoCm: 4, altoCm: 4 });
+
+  test('el área útil descuenta los márgenes de cada papel', () => {
+    expect(carta).toEqual({ ancho: 19.1, alto: 25.5 });
+    expect(foto).toEqual({ ancho: 9, alto: 14 });
+  });
+
+  test('en carta todos los pares van lado a lado', () => {
+    for (const item of [llavero(1), tarjeta(2), circular(3)]) {
+      expect(medidasPar(item, carta.ancho).vertical).toBe(false);
+    }
+  });
+
+  test('en papel foto la tarjeta apila A y B, y llavero y circular van lado a lado', () => {
+    expect(medidasPar(tarjeta(1), foto.ancho).vertical).toBe(true);
+    expect(medidasPar(llavero(2), foto.ancho).vertical).toBe(false);
+    expect(medidasPar(circular(3), foto.ancho).vertical).toBe(false);
+  });
+
+  test('los productos de la tienda caben en los dos papeles sin cambiar su tamaño', () => {
+    for (const item of [llavero(1), tarjeta(2), circular(3)]) {
+      expect(cabeEnHoja(item, carta.ancho, carta.alto)).toBe(true);
+      expect(cabeEnHoja(item, foto.ancho, foto.alto)).toBe(true);
+    }
+  });
+
+  test('lo que no entra ni apilado se detecta (no se reescala)', () => {
+    expect(cabeEnHoja({ id: 1, anchoCm: 12, altoCm: 5 }, foto.ancho, foto.alto)).toBe(false);
+    expect(cabeEnHoja({ id: 2, anchoCm: 8.5, altoCm: 8 }, foto.ancho, foto.alto)).toBe(false);
+  });
+
+  test('en papel foto el empaque marca la tarjeta como vertical y respeta el orden', () => {
+    const hojas = empacarEnHojas([tarjeta(1), llavero(2), circular(3)], foto.ancho, foto.alto);
+    const colocados = hojas.flatMap((h) => h.filas).flat();
+    expect(colocados.map((i) => i.id)).toEqual([1, 2, 3]);
+    expect(colocados.find((i) => i.id === 1)?.vertical).toBe(true);
+    expect(colocados.find((i) => i.id === 2)?.vertical).toBe(false);
+  });
+
+  test('cada hoja foto respeta el alto útil', () => {
+    const items = Array.from({ length: 10 }, (_, i) => tarjeta(i + 1));
+    const hojas = empacarEnHojas(items, foto.ancho, foto.alto);
+    for (const hoja of hojas) {
+      const alto = hoja.filas.reduce((suma, fila) => suma + Math.max(...fila.map((i) => medidasPar(i, foto.ancho).alto)) + 0.6, 0);
+      expect(alto).toBeLessThanOrEqual(foto.alto + 0.6);
+    }
+    expect(hojas.flatMap((h) => h.filas).flat().length).toBe(10);
   });
 });

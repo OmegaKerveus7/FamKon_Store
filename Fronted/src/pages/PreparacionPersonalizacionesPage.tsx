@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Check,
@@ -24,7 +24,18 @@ import {
 } from "../api/famkon";
 import { ESTADOS_COMPRA } from "../domain/compras";
 import { esLlaveroCircular } from "../domain/formaProducto";
-import { recorteHtml, empacarEnHojas, ANCHO_HOJA_CM, ALTO_HOJA_CM, SEPARACION_CM } from "../domain/impresion";
+import { cabeEnChip, grabarUrlEnChip, mensajeErrorNfc, nfcSoportado, urlParaChip } from "../domain/nfc";
+import {
+  recorteHtml,
+  empacarEnHojas,
+  areaUtil,
+  cabeEnHoja,
+  medidasPar,
+  PAPELES,
+  PAPEL_POR_DEFECTO,
+  SEPARACION_CM,
+  type PapelClave,
+} from "../domain/impresion";
 
 type Vista = "supervisor" | "produccion" | "admin";
 
@@ -40,8 +51,24 @@ const RESUMEN_VACIO: PreparacionesResumen = {
   totalLineas: 0,
 };
 
-const ESTILOS_IMPRESION = `
-  @page { size: A4; margin: 12mm; }
+const PAPEL_KEY = "famkon.papel_impresion";
+
+function papelGuardado(): PapelClave {
+  try {
+    const valor = localStorage.getItem(PAPEL_KEY);
+    return valor === "carta" || valor === "foto" ? valor : PAPEL_POR_DEFECTO;
+  } catch {
+    return PAPEL_POR_DEFECTO;
+  }
+}
+
+/** Estilos de la ventana de impresión para el papel elegido (los diseños siempre salen a su tamaño real en cm). */
+function estilosImpresion(clave: PapelClave): string {
+  const papel = PAPELES[clave];
+  const { ancho, alto } = areaUtil(papel);
+  const columnasTicket = Math.max(1, Math.floor((ancho + SEPARACION_CM) / (ANCHO_POR_DEFECTO_CM + SEPARACION_CM)));
+  return `
+  @page { size: ${papel.tamanoCss}; margin: ${papel.margenMm}mm; }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #fff; color: #0f172a; }
   .ficha {
@@ -53,6 +80,7 @@ const ESTILOS_IMPRESION = `
     display: flex; align-items: center; justify-content: center; gap: 8mm;
     break-inside: avoid;
   }
+  .pareja.vertical { flex-direction: column; }
   .recorte {
     position: relative; display: flex; align-items: center; justify-content: center;
     background: #fff; overflow: hidden;
@@ -72,7 +100,7 @@ const ESTILOS_IMPRESION = `
   .ticket-linea { margin: 0.5mm 0; font-size: 2.9mm; line-height: 1.25; }
   .ticket-linea strong { font-weight: 700; }
   .hoja {
-    width: ${ANCHO_HOJA_CM}cm; min-height: ${ALTO_HOJA_CM}cm;
+    width: ${ancho}cm; min-height: ${alto - 0.1}cm;
     padding-top: 2mm; page-break-after: always; break-after: page;
   }
   .hoja:last-child { page-break-after: auto; break-after: auto; }
@@ -80,9 +108,10 @@ const ESTILOS_IMPRESION = `
   .fila { display: flex; flex-wrap: nowrap; align-items: flex-start; justify-content: center; gap: ${SEPARACION_CM}cm; break-inside: avoid; }
   .celda { display: flex; flex-direction: column; align-items: center; gap: 1mm; break-inside: avoid; }
   .pie { margin: 0; font-size: 7pt; color: #334155; text-align: center; line-height: 1.2; }
-  .tickets { display: grid; grid-template-columns: repeat(2, 8.5cm); gap: ${SEPARACION_CM}cm; align-items: start; }
+  .tickets { display: grid; grid-template-columns: repeat(${columnasTicket}, ${ANCHO_POR_DEFECTO_CM}cm); gap: ${SEPARACION_CM}cm; align-items: start; }
   .hoja-titulo { margin: 0 0 4mm; font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #b45309; }
 `;
+}
 
 function etiquetaEstado(estado: string, nombre: string): string {
   return ESTADOS_COMPRA[estado] ?? (nombre || estado.replaceAll("_", " "));
@@ -177,6 +206,11 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
   const [guardando, setGuardando] = useState<number | null>(null);
   const [copiado, setCopiado] = useState<number | null>(null);
   const [imprimiendo, setImprimiendo] = useState<number | "productos" | "etiquetas" | "todo" | null>(null);
+  const [papel, setPapel] = useState<PapelClave>(papelGuardado);
+  const [grabandoNfc, setGrabandoNfc] = useState<number | null>(null);
+  const [resultadoNfc, setResultadoNfc] = useState<{ id: number; ok: boolean; texto: string } | null>(null);
+  const cancelarNfc = useRef<AbortController | null>(null);
+  const puedeGrabarNfc = nfcSoportado();
 
   const cargar = useCallback(async (signal?: AbortSignal, visible = false) => {
     if (visible) setCargando(true);
@@ -280,6 +314,57 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
     }
   }
 
+  /** Graba en el chip la URL que eligió el cliente (Android + Chrome). No marca el producto como preparado. */
+  async function grabarNfc(item: PreparacionPersonalizada) {
+    if (grabandoNfc !== null) {
+      cancelarNfc.current?.abort();
+      return;
+    }
+    const url = urlParaChip(item.urlNfc);
+    if (!url) {
+      setResultadoNfc({ id: item.idPedidoDetalle, ok: false, texto: "La URL del cliente no es una dirección http/https válida." });
+      return;
+    }
+    const control = new AbortController();
+    cancelarNfc.current = control;
+    setGrabandoNfc(item.idPedidoDetalle);
+    setResultadoNfc(null);
+    try {
+      await grabarUrlEnChip(url, control.signal);
+      setResultadoNfc({
+        id: item.idPedidoDetalle,
+        ok: true,
+        texto: `Chip grabado con la URL del pedido ${item.numeroPedido}. Acercalo otra vez para comprobar que abre la página.`,
+      });
+    } catch (e) {
+      setResultadoNfc({ id: item.idPedidoDetalle, ok: false, texto: mensajeErrorNfc(e) });
+    } finally {
+      cancelarNfc.current = null;
+      setGrabandoNfc(null);
+    }
+  }
+
+  function elegirPapel(clave: PapelClave) {
+    setPapel(clave);
+    try {
+      localStorage.setItem(PAPEL_KEY, clave);
+    } catch {
+      /* sin almacenamiento: solo se pierde la preferencia */
+    }
+  }
+
+  /** Productos que no entran en el papel elegido (ni apilando A y B): imprimirlos los reescalaría. */
+  function mensajeNoCabe(lista: PreparacionPersonalizada[]): string | null {
+    const { ancho: anchoHoja, alto: altoHoja } = areaUtil(PAPELES[papel]);
+    const fuera = lista.filter((item) => {
+      const { ancho, alto } = medidas(item);
+      return !cabeEnHoja({ id: item.idPedidoDetalle, anchoCm: ancho, altoCm: alto }, anchoHoja, altoHoja);
+    });
+    if (!fuera.length) return null;
+    const nombres = [...new Set(fuera.map((item) => `${item.producto} (${medidas(item).ancho} × ${medidas(item).alto} cm)`))].join(", ");
+    return `No cabe en papel ${PAPELES[papel].nombre} sin cambiar su tamaño: ${nombres}. Elegí otro papel.`;
+  }
+
   async function fichaHtml(items: PreparacionPersonalizada[]): Promise<string> {
     const parejas: string[] = [];
     for (const item of items) {
@@ -289,7 +374,8 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
       ]);
       const { ancho, alto } = medidas(item);
       const circular = esLlaveroCircular(item.producto, item.sku, null);
-      parejas.push(`<div class="pareja">${recorteHtml(ladoA, ancho, alto, circular)}${recorteHtml(ladoB, ancho, alto, circular)}</div>`);
+      const { vertical } = medidasPar({ id: item.idPedidoDetalle, anchoCm: ancho, altoCm: alto }, areaUtil(PAPELES[papel]).ancho);
+      parejas.push(`<div class="pareja${vertical ? " vertical" : ""}">${recorteHtml(ladoA, ancho, alto, circular)}${recorteHtml(ladoB, ancho, alto, circular)}</div>`);
     }
     // Ticket de entrega fuera de la ficha individual: roba espacio de la hoja (las etiquetas se imprimen aparte).
     // return `<article class="ficha">${parejas.join("")}${ticketHtml(items[0])}</article>`;
@@ -323,6 +409,11 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
     solo: "productos" | "etiquetas" | "todo" = "todo",
   ) {
     if (!lista.length || imprimiendo !== null) return;
+    const noCabe = solo === "etiquetas" ? null : mensajeNoCabe(lista);
+    if (noCabe) {
+      setError(noCabe);
+      return;
+    }
     setImprimiendo(clave);
     setError("");
     const ventana = window.open("", "_blank", "width=900,height=1000");
@@ -349,15 +440,18 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
       if (solo !== "etiquetas") {
         // Productos: repartidos en filas que llenan el ancho de la hoja.
         const porId = new Map(cargados.map((c) => [c.item.idPedidoDetalle, c]));
+        const area = areaUtil(PAPELES[papel]);
         const hojas = empacarEnHojas(
           cargados.map((c) => ({ id: c.item.idPedidoDetalle, anchoCm: c.ancho, altoCm: c.alto })),
+          area.ancho,
+          area.alto,
         );
         for (const hoja of hojas) {
           const filas = hoja.filas.map((contenido) => {
             const celdas = contenido.map((entrada) => {
               const c = porId.get(entrada.id)!;
               const circular = esLlaveroCircular(c.item.producto, c.item.sku, null);
-              const par = `<div class="pareja">${recorteHtml(c.ladoA, c.ancho, c.alto, circular)}${recorteHtml(c.ladoB, c.ancho, c.alto, circular)}</div>`;
+              const par = `<div class="pareja${entrada.vertical ? " vertical" : ""}">${recorteHtml(c.ladoA, c.ancho, c.alto, circular)}${recorteHtml(c.ladoB, c.ancho, c.alto, circular)}</div>`;
               const pie = `<p class="pie">${escapar(c.item.numeroPedido)} · ${escapar(c.item.producto)} × ${c.item.cantidad}</p>`;
               return `<div class="celda">${par}${pie}</div>`;
             });
@@ -368,7 +462,7 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
       }
 
       if (solo !== "productos") {
-        // Etiquetas: un ticket por pedido, dos por fila.
+        // Etiquetas: un ticket por pedido, tantos por fila como quepan en el papel.
         const pedidos = new Map<number, PreparacionPersonalizada>();
         for (const item of lista) if (!pedidos.has(item.idPedido)) pedidos.set(item.idPedido, item);
         if (pedidos.size) {
@@ -387,7 +481,7 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
 
       const titulo = solo === "etiquetas" ? "Etiquetas" : solo === "productos" ? "Productos" : "Personalizaciones";
       ventana.document.open();
-      ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>FamKon · ${titulo}</title><style>${ESTILOS_IMPRESION}</style></head><body>${paginas.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`);
+      ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>FamKon · ${titulo}</title><style>${estilosImpresion(papel)}</style></head><body>${paginas.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`);
       ventana.document.close();
     } catch (e) {
       setError((e as Error).message);
@@ -399,6 +493,11 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
 
   async function imprimir(lista: PreparacionPersonalizada[], clave: number) {
     if (!lista.length || imprimiendo !== null) return;
+    const noCabe = mensajeNoCabe(lista);
+    if (noCabe) {
+      setError(noCabe);
+      return;
+    }
     setImprimiendo(clave);
     setError("");
     const ventana = window.open("", "_blank", "width=900,height=1000");
@@ -420,7 +519,7 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
       for (const items of porPedido.values()) fichas.push(await fichaHtml(items));
 
       ventana.document.open();
-      ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>FamKon · Personalizaciones</title><style>${ESTILOS_IMPRESION}</style></head><body>${fichas.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`);
+      ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>FamKon · Personalizaciones</title><style>${estilosImpresion(papel)}</style></head><body>${fichas.join("")}<script>window.onload = () => setTimeout(() => window.print(), 300);</script></body></html>`);
       ventana.document.close();
     } catch (e) {
       setError((e as Error).message);
@@ -446,6 +545,19 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <label className="inline-flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 sm:flex-none">
+            Papel
+            <select
+              value={papel}
+              onChange={(evento) => elegirPapel(evento.target.value as PapelClave)}
+              className="min-w-0 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-sm font-medium text-slate-800 outline-none focus:border-amber-400"
+              aria-label="Papel de impresión"
+            >
+              {Object.values(PAPELES).map((opcion) => (
+                <option key={opcion.clave} value={opcion.clave}>{opcion.nombre}</option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             onClick={() => void cargar(undefined, true)}
@@ -482,7 +594,7 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
       </header>
 
       <p className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        Al imprimir, elegí <strong>escala 100 %</strong> (sin “ajustar a la página”) para que las medidas en centímetros salgan exactas.{" "}
+        Al imprimir, elegí <strong>escala 100 %</strong> (sin “ajustar a la página”) y en el diálogo el mismo papel que elegiste arriba ({PAPELES[papel].nombre}) para que las medidas en centímetros salgan exactas.{" "}
         <strong>Imprimir productos</strong> y <strong>Imprimir etiquetas</strong> abren ventanas distintas: así podés usar una impresora y hojas diferentes para cada cosa.
       </p>
 
@@ -638,6 +750,29 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
                             {copiado === item.idPedidoDetalle ? <Check size={13} /> : <Copy size={13} />}
                             {copiado === item.idPedidoDetalle ? "Copiada" : "Copiar"}
                           </button>
+                          {puedeGrabarNfc && (
+                            <button
+                              type="button"
+                              onClick={() => void grabarNfc(item)}
+                              disabled={grabandoNfc !== null && grabandoNfc !== item.idPedidoDetalle}
+                              className="inline-flex items-center gap-1 rounded-lg bg-sky-700 px-2 py-1 text-[11px] font-bold text-white transition hover:bg-sky-800 disabled:opacity-50"
+                            >
+                              {grabandoNfc === item.idPedidoDetalle
+                                ? <><Loader2 size={13} className="animate-spin" /> Acerca el chip… (cancelar)</>
+                                : <><Nfc size={13} /> Grabar NFC</>}
+                            </button>
+                          )}
+                          {item.urlNfc && !cabeEnChip(item.urlNfc) && (
+                            <p className="w-full text-[11px] text-amber-700">Esta URL es larga: puede no caber en un chip NTAG213.</p>
+                          )}
+                          {!puedeGrabarNfc && (
+                            <p className="w-full text-[11px] text-slate-500">Para grabar el chip abrí esta página en un Android con Chrome y NFC activado.</p>
+                          )}
+                          {resultadoNfc?.id === item.idPedidoDetalle && (
+                            <p role="status" className={`w-full text-[11px] font-semibold ${resultadoNfc.ok ? "text-emerald-700" : "text-red-700"}`}>
+                              {resultadoNfc.texto}
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <p className="mt-2 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-500">Este producto no requiere NFC.</p>

@@ -440,13 +440,23 @@ const EditorPersonalizacion = forwardRef<EditorPersonalizacionHandle, Props>(
       });
     }
 
-    function elegirImagen(lado: "A" | "B", archivo: File | null) {
+    async function elegirImagen(lado: "A" | "B", archivo: File | null) {
       setError("");
       if (!archivo) {
         actualizarLado(lado, { archivo: null, ajuste: ajusteVacio() });
         return;
       }
-      actualizarLado(lado, { archivo, ajuste: ajusteVacio() });
+      try {
+        // En el móvil el File del selector sigue atado al archivo original (galería/cámara/nube)
+        // y deja de leerse al cambiar de lado; se copia a memoria para que no se pierda.
+        const copia = new File([await archivo.arrayBuffer()], archivo.name, {
+          type: archivo.type,
+          lastModified: archivo.lastModified,
+        });
+        actualizarLado(lado, { archivo: copia, ajuste: ajusteVacio() });
+      } catch {
+        setError(`No se pudo leer la imagen del lado ${lado}. Elige otra.`);
+      }
     }
 
     function aplicar() {
@@ -629,31 +639,36 @@ const EditorPersonalizacion = forwardRef<EditorPersonalizacionHandle, Props>(
                     )}
                   </div>
 
-                  {ladoActivo === "A" && permiteA && (
-                    <EditorLado
-                      lado="A"
-                      valor={borrador.ladoA}
-                      destino={destino}
-                      permitirImagenes={permitirImagenes}
-                      onImagen={(archivo) => elegirImagen("A", archivo)}
-                      onAjuste={(ajuste) => actualizarLado("A", { ajuste })}
-                      onMensaje={(mensaje) => actualizarLado("A", { mensaje })}
-                      onQuitarImagen={() => actualizarLado("A", { archivo: null, ajuste: ajusteVacio() })}
-                      onError={setError}
-                    />
+                  {/* Ambos lados quedan montados (solo se oculta el inactivo) para no recrear la imagen al cambiar de lado. */}
+                  {permiteA && (
+                    <div hidden={ladoActivo !== "A"}>
+                      <EditorLado
+                        lado="A"
+                        valor={borrador.ladoA}
+                        destino={destino}
+                        permitirImagenes={permitirImagenes}
+                        onImagen={(archivo) => elegirImagen("A", archivo)}
+                        onAjuste={(ajuste) => actualizarLado("A", { ajuste })}
+                        onMensaje={(mensaje) => actualizarLado("A", { mensaje })}
+                        onQuitarImagen={() => actualizarLado("A", { archivo: null, ajuste: ajusteVacio() })}
+                        onError={setError}
+                      />
+                    </div>
                   )}
-                  {ladoActivo === "B" && permiteB && (
-                    <EditorLado
-                      lado="B"
-                      valor={borrador.ladoB}
-                      destino={destino}
-                      permitirImagenes={permitirImagenes}
-                      onImagen={(archivo) => elegirImagen("B", archivo)}
-                      onAjuste={(ajuste) => actualizarLado("B", { ajuste })}
-                      onMensaje={(mensaje) => actualizarLado("B", { mensaje })}
-                      onQuitarImagen={() => actualizarLado("B", { archivo: null, ajuste: ajusteVacio() })}
-                      onError={setError}
-                    />
+                  {permiteB && (
+                    <div hidden={ladoActivo !== "B"}>
+                      <EditorLado
+                        lado="B"
+                        valor={borrador.ladoB}
+                        destino={destino}
+                        permitirImagenes={permitirImagenes}
+                        onImagen={(archivo) => elegirImagen("B", archivo)}
+                        onAjuste={(ajuste) => actualizarLado("B", { ajuste })}
+                        onMensaje={(mensaje) => actualizarLado("B", { mensaje })}
+                        onQuitarImagen={() => actualizarLado("B", { archivo: null, ajuste: ajusteVacio() })}
+                        onError={setError}
+                      />
+                    </div>
                   )}
 
                   {error && (

@@ -291,7 +291,9 @@ export default function PreparacionPersonalizacionesPage({ vista = "supervisor" 
       const circular = esLlaveroCircular(item.producto, item.sku, null);
       parejas.push(`<div class="pareja">${recorteHtml(ladoA, ancho, alto, circular)}${recorteHtml(ladoB, ancho, alto, circular)}</div>`);
     }
-    return `<article class="ficha">${parejas.join("")}${ticketHtml(items[0])}</article>`;
+    // Ticket de entrega fuera de la ficha individual: roba espacio de la hoja (las etiquetas se imprimen aparte).
+    // return `<article class="ficha">${parejas.join("")}${ticketHtml(items[0])}</article>`;
+    return `<article class="ficha">${parejas.join("")}</article>`;
   }
 
   /** Ticket de entrega: mismo tamaño que la tarjeta, con pedido y destinatario. */

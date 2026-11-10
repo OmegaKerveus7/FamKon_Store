@@ -10,21 +10,21 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     server: {
       host: "0.0.0.0",
-      port: 5173,
+      port: 5147,
       strictPort: true,
       allowedHosts: [
         "famkon.site",
         "www.famkon.site",
         "localhost",
         "127.0.0.1",
-        "24.144.102.159",
+        "212.47.75.12",
         ".ngrok.io",
         ".ngrok-free.app",
       ],
       watch: {
         usePolling: true,
       },
-      // Proxy solo en desarrollo - en producción Nginx maneja /api → backend:5299
+      // Proxy solo en desarrollo
       ...(isDev && {
         proxy: {
           "/api": {
@@ -35,10 +35,10 @@ export default defineConfig(({ mode }) => {
         },
       }),
     },
-    // Para build de producción: define la URL base de la API via variable de entorno
+    // En producción, apuntamos al subdominio seguro de la API
     define: {
       "import.meta.env.VITE_API_BASE_URL": JSON.stringify(
-        process.env.VITE_API_BASE_URL || "/api/famkon"
+        process.env.VITE_API_BASE_URL || (isDev ? "/api/famkon" : "https://api.famkon.site")
       ),
     },
   };

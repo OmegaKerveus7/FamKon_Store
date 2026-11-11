@@ -28,10 +28,13 @@ Properties/launchSettings.json
 # Configuración con secretos
 appsettings.json
 appsettings.Development.json
+appsettings.Production.json
 .env
 
 # Sistema
 .DS_Store
-Thumbs.db**/.idea/
+Thumbs.db
 **/.idea/
-**/.idea/
+
+# Documentación local (no se sube al repositorio)
+AGENTS.md

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using FamKon_store_api.Services;
 foreach(var metodo in new[]{"EFECTIVO","TARJETA"}) {
- var detail=JsonSerializer.SerializeToElement(new{pedido=new{idPedido=61,numeroPedido="FK-DEMO-61",cliente="Comprador de prueba",fechaPedido="2026-09-30",metodoPago=metodo,estadoPago=metodo=="EFECTIVO"?"PENDIENTE":"APROBADO",entorno="TEST",idModalidadEntrega=1,direccionEntrega="",subtotal=59.98m,cargoEntrega=0m,total=59.98m},productos=Enumerable.Range(1,metodo=="EFECTIVO"?2:65).Select(i=>new{nombreProducto="Producto personalizado de ejemplo "+i,cantidad=1,subtotal=29.99m})});
+ var detail=JsonSerializer.SerializeToElement(new{pedido=new{idPedido=61,numeroPedido="FK-DEMO-61",cliente="Comprador de prueba",fechaPedido="2026-09-30",metodoPago=metodo,estadoPago=metodo=="EFECTIVO"?"PENDIENTE":"APROBADO",entorno="TEST",idModalidadEntrega=1,direccionEntrega="",subtotal=59.98m,cargoEntrega=0m,total=59.98m},productos=Enumerable.Range(1,metodo=="EFECTIVO"?2:65).Select(i=>new{nombreProducto="Producto personalizado de ejemplo "+i,cantidad=1,precioUnitario=29.99m,precioPersonaliza=0m,subtotal=29.99m})});
  var pdf=ConstanciaPdf.Crear(detail,"https://famkon.site","Campus central");
  if(System.Text.Encoding.ASCII.GetString(pdf,0,4)!="%PDF"||pdf.Length<1000)throw new Exception("PDF inválido");
  File.WriteAllBytes($"/tmp/constancia-backend-{metodo}.pdf",pdf);

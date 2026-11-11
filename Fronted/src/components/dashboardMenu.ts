@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Tag,
   MapPin,
+  Palette,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 
@@ -45,8 +46,8 @@ export const MENU_GROUPS: MenuGroup[] = [
     icon: Tag,
     codigoRol: "COMPRADOR",
     items: [
-      { codigo: "VER_CATALOGO",  path: "/comprador/catalogo", label: "Catalogo",  icon: Store },
-      { codigo: "VER_CARRITO",   path: "/comprador/carrito",  label: "Mi Carrito", icon: ShoppingCart },
+      { codigo: "VER_CATALOGO",  path: "/catalogo", label: "Catalogo",  icon: Store },
+      { codigo: "VER_CARRITO",   path: "/carrito",  label: "Mi Carrito", icon: ShoppingCart },
       { codigo: "VER_TRACKING",  path: "/comprador/tracking", label: "Mis pedidos", icon: Truck },
       { codigo: "VER_HISTORICO", path: "/comprador/historico", label: "Historico", icon: History },
     ],
@@ -67,6 +68,16 @@ export const MENU_GROUPS: MenuGroup[] = [
     codigoRol: "SUPERVISOR",
     items: [
       { codigo: "GESTIONAR_ENTREGAS", path: "/entregas/tracking", label: "Tracking General", icon: Truck },
+      { codigo: "GESTIONAR_ENTREGAS", path: "/supervisor/personalizaciones", label: "Personalizaciones", icon: Palette },
+    ],
+  },
+  {
+    id: "produccion",
+    label: "Produccion",
+    icon: Palette,
+    codigoRol: "PRODUCCION",
+    items: [
+      { codigo: "GESTIONAR_ENTREGAS",   path: "/produccion/personalizaciones", label: "Personalizaciones", icon: Palette },
     ],
   },
   {
@@ -87,6 +98,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     codigoRol: "ADMIN",
     items: [
       { codigo: "VER_DASHBOARD", path: "/admin/pedidos", label: "Gestión de pedidos", icon: ClipboardList },
+      { codigo: "GESTIONAR_ENTREGAS", path: "/admin/personalizaciones", label: "Personalizaciones", icon: Palette },
       { codigo: "VER_DASHBOARD",         path: "/admin",              label: "Dashboard Admin",    icon: BarChart3 },
       { codigo: "GESTIONAR_USUARIOS",    path: "/admin/usuarios",     label: "Gestor Usuarios",    icon: Users },
       { codigo: "GESTIONAR_CATALOGOS",   path: "/admin/catalogos",    label: "Catalogos",          icon: Boxes },

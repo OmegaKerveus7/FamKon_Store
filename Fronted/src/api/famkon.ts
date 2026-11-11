@@ -6,6 +6,21 @@ export interface EstadoResponse {
   fecha: string;
 }
 
+export interface EventoAcceso {
+  id: number; fecha: string; usuario: string; metodo: string;
+  resultado: string; ip: string; motivo: string;
+}
+export interface NotificacionCompra { id: number; idPedido: number; numeroPedido: string; estado: string; mensaje: string; fecha: string; leida: boolean }
+export const listarNotificaciones = (signal?: AbortSignal) => request<{ items: NotificacionCompra[]; noLeidas: number }>('/notificaciones', { signal });
+export const leerNotificacion = (id: number) => request<void>(`/notificaciones/${id}/leida`, { method: 'PUT' });
+export function listarBitacora(filtros: { pagina: number; resultado: string; metodo: string; busqueda: string }, signal?: AbortSignal) {
+  const qs = new URLSearchParams({ pagina: String(filtros.pagina) });
+  if (filtros.resultado) qs.set('resultado', filtros.resultado);
+  if (filtros.metodo) qs.set('metodo', filtros.metodo);
+  if (filtros.busqueda.trim()) qs.set('busqueda', filtros.busqueda.trim());
+  return request<{ eventos: EventoAcceso[]; total: number; pagina: number; tamanoPagina: number }>(`/admin/bitacora?${qs}`, { signal });
+}
+
 export interface Usuario {
   idUsuario: number;
   correo: string | null;
@@ -100,27 +115,159 @@ function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+/** Decodifica el payload del JWT (sin validar la firma) para leer el vencimiento. */
+function decodificarPayload(token: string): { exp?: number } | null {
+  try {
+    const parte = token.split(".")[1];
+    if (!parte) return null;
+    const base64 = parte.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`)
+        .join(""),
+    );
+    return JSON.parse(json) as { exp?: number };
+  } catch {
+    return null;
+  }
+}
+
+/** Indica si al token le queda menos del margen indicado (o ya venció). */
+export function tokenPorVencer(token: string, margenMs = 90_000): boolean {
+  const payload = decodificarPayload(token);
+  if (!payload || typeof payload.exp !== "number") return false;
+  return payload.exp * 1000 - Date.now() <= margenMs;
+}
+
+/** true si hay un token presente que todavía no venció. */
+export function sesionActiva(): boolean {
+  const token = getToken();
+  if (!token) return false;
+  const payload = decodificarPayload(token);
+  if (!payload || typeof payload.exp !== "number") return true;
+  return payload.exp * 1000 > Date.now();
+}
+
+let refrescoEnCurso: Promise<{ token: string | null; invalido: boolean }> | null = null;
+
+/**
+ * Renueva el JWT una sola vez aunque haya varias peticiones en paralelo.
+ * Si no hay red, conserva la sesión (no invalida al usuario).
+ */
+export function renovarSesion(): Promise<{ token: string | null; invalido: boolean }> {
+  const actual = getToken();
+  if (!actual) return Promise.resolve({ token: null, invalido: true });
+  if (refrescoEnCurso) return refrescoEnCurso;
+
+  const promesa = (async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/refresh-token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: actual }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.status === 401 || res.status === 403) return { token: null, invalido: true };
+      if (!res.ok) return { token: actual, invalido: false };
+      const data = (await res.json()) as RefreshTokenResponse;
+      if (data.codigoS === 200 && data.token) {
+        guardarToken(data.token);
+        return { token: data.token, invalido: false };
+      }
+      if (data.codigoS === 401 || data.codigoS === 403) return { token: null, invalido: true };
+      return { token: actual, invalido: false };
+    } catch {
+      // Error de red o timeout: la sesión sigue siendo válida, se reintenta luego.
+      return { token: actual, invalido: false };
+    }
+  })();
+
+  refrescoEnCurso = promesa;
+  promesa.finally(() => {
+    if (refrescoEnCurso === promesa) refrescoEnCurso = null;
+  });
+  return promesa;
+}
+
+function limpiarSesionLocal() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem("famkon.usuario");
+  localStorage.removeItem("famkon.permisos");
+}
+
+/**
+ * @param opciones.anonimoPermitido rutas públicas (catálogo, detalle, estado):
+ * si la sesión está vencida se limpia en silencio y se reintenta sin token,
+ * en vez de expulsar al visitante a /login.
+ */
 async function request<T>(
   path: string,
   init?: RequestInit,
+  opciones?: { anonimoPermitido?: boolean },
 ): Promise<T> {
-  const token = getToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(init?.headers as Record<string, string> || {}),
+  const anonimoPermitido = opciones?.anonimoPermitido === true;
+  let token = getToken();
+
+  const cerrarSesionLocal = () => {
+    limpiarSesionLocal();
+    if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
   };
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers,
-  });
+  // Renovar antes de que venza evita el 401 y el consecuente logout.
+  if (token && tokenPorVencer(token, 90_000)) {
+    const renovado = await renovarSesion();
+    if (renovado.invalido) {
+      if (anonimoPermitido) {
+        token = null;
+        limpiarSesionLocal();
+      } else {
+        cerrarSesionLocal();
+        throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+      }
+    } else {
+      token = renovado.token ?? token;
+    }
+  }
 
-  if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem("famkon.usuario");
-    window.location.href = "/login";
-    throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+  const enviar = (t: string | null) =>
+    fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(t ? { Authorization: `Bearer ${t}` } : {}),
+        ...((init?.headers as Record<string, string>) || {}),
+      },
+    });
+
+  let res = await enviar(token);
+
+  // Un 401 aislado no debería sacar al usuario: se intenta renovar y repetir.
+  if (res.status === 401 && token) {
+    const renovado = await renovarSesion();
+    if (renovado.invalido || !renovado.token) {
+      if (anonimoPermitido) {
+        limpiarSesionLocal();
+        token = null;
+        res = await enviar(null);
+      } else {
+        cerrarSesionLocal();
+        throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+      }
+    } else {
+      token = renovado.token;
+      res = await enviar(token);
+      if (res.status === 401) {
+        if (anonimoPermitido) {
+          limpiarSesionLocal();
+          token = null;
+          res = await enviar(null);
+        } else {
+          cerrarSesionLocal();
+          throw new Error("Sesión expirada. Inicie sesión nuevamente.");
+        }
+      }
+    }
   }
 
   if (!res.ok) {
@@ -144,7 +291,7 @@ async function request<T>(
 
 export async function checkEstado(): Promise<{ ok: boolean; estado: EstadoResponse | null }> {
   try {
-    const estado = await request<EstadoResponse>("/estado");
+    const estado = await request<EstadoResponse>("/estado", undefined, { anonimoPermitido: true });
     return { ok: estado.codigo === 200, estado };
   } catch {
     return { ok: false, estado: null };
@@ -159,7 +306,7 @@ export async function login(
   return request<LoginApiResponse>("/login_basic", {
     method: "POST",
     body: JSON.stringify({ correo, nickname, contrasena }),
-  });
+  }, { anonimoPermitido: true });
 }
 
 export async function comprobarCorreo(correo: string, signal?: AbortSignal) {
@@ -176,7 +323,7 @@ export async function registrarComprador(
   return request<RegistroResponse>("/registro", {
     method: "POST",
     body: JSON.stringify(datos),
-  });
+  }, { anonimoPermitido: true });
 }
 
 export async function enviarCodigoVerificacion(
@@ -253,11 +400,15 @@ export function obtenerToken(): string | null {
   return getToken();
 }
 
-export async function refreshToken(token: string): Promise<RefreshTokenResponse> {
-  return request<RefreshTokenResponse>("/refresh-token", {
-    method: "POST",
-    body: JSON.stringify({ token }),
-  });
+export async function refreshToken(_token: string): Promise<RefreshTokenResponse> {
+  const resultado = await renovarSesion();
+  if (resultado.invalido) {
+    return { codigoS: 401, mensaje: "Token inválido o expirado.", token: null };
+  }
+  if (!resultado.token) {
+    return { codigoS: 500, mensaje: "No se pudo renovar la sesión.", token: null };
+  }
+  return { codigoS: 200, mensaje: "Token renovado.", token: resultado.token };
 }
 
 // ─── Interfaces de la Tienda ────────────────────────────────────────────────
@@ -276,6 +427,11 @@ export interface Producto {
   activo: string;
   imagen?: string;
   idArchivoImagen?: number | null;
+  /** Tamano real de impresion en cm (null = usar el valor por defecto). */
+  anchoCm?: number | null;
+  altoCm?: number | null;
+  /** Unidades disponibles en inventario. */
+  existencia?: number;
 }
 
 export interface Categoria {
@@ -286,15 +442,86 @@ export interface Categoria {
 }
 
 export interface CarritoItem {
+  idArchivoImagen?: number | null;
   idDetalle: number;
   idProducto: number;
   producto: string;
   sku: string;
   idPersonalizacion: number | null;
+  idArchivoLadoA?: number | null;
+  idArchivoLadoB?: number | null;
+  mensajeLadoA?: string | null;
+  mensajeLadoB?: string | null;
+  configLadoA?: string | null;
+  configLadoB?: string | null;
+  bloqueada?: string;
+  comentario?: string | null;
   cantidad: number;
   precioUnitario: number;
   precioPersonaliza: number;
   subtotal: number;
+}
+
+export interface PersonalizacionContenido {
+  idArchivoLadoA?: number | null;
+  idArchivoLadoB?: number | null;
+  mensajeLadoA?: string | null;
+  mensajeLadoB?: string | null;
+  configLadoA?: string | null;
+  configLadoB?: string | null;
+}
+
+export interface Personalizacion extends PersonalizacionContenido {
+  idPersonalizacion: number;
+  idUsuario: number | null;
+  idProducto: number | null;
+  bloqueada: string;
+  producto?: string | null;
+  skuProducto?: string | null;
+  fechaCreacion?: string | null;
+}
+
+/** Producto personalizado de un pedido que el repartidor/supervisor debe preparar. */
+export interface PreparacionPersonalizada {
+  idPedidoDetalle: number;
+  idPedido: number;
+  numeroPedido: string;
+  estado: string;
+  estadoNombre: string;
+  comprador: string | null;
+  telefono: string | null;
+  areaEntrega: string | null;
+  direccion: string | null;
+  repartidor: string | null;
+  producto: string;
+  sku: string;
+  cantidad: number;
+  idPersonalizacion: number | null;
+  idArchivoLadoA: number | null;
+  idArchivoLadoB: number | null;
+  mensajeLadoA: string | null;
+  mensajeLadoB: string | null;
+  configLadoA: string | null;
+  configLadoB: string | null;
+  urlNfc: string | null;
+  preparada: boolean;
+  fechaPreparacion: string | null;
+  anchoCm: number | null;
+  altoCm: number | null;
+}
+
+export interface PreparacionesResumen {
+  pedidos: number;
+  lineasPendientes: number;
+  productosPendientes: number;
+  lineasPreparadas: number;
+  totalLineas: number;
+}
+
+export interface PreparacionesPersonalizadas {
+  codigoS: number;
+  resumen: PreparacionesResumen;
+  items: PreparacionPersonalizada[];
 }
 
 export interface Carrito {
@@ -336,6 +563,7 @@ export interface PedidoDetalle {
   precioUnitario: number;
   precioPersonaliza: number;
   subtotal: number;
+  indicaciones?: string | null;
 }
 
 // ─── Funciones de la Tienda ─────────────────────────────────────────────────
@@ -344,8 +572,25 @@ export interface PedidoDetalle {
 type ApiResponse = Record<string, any>;
 
 export async function listarCategorias(): Promise<Categoria[]> {
-  const res = await request<ApiResponse>("/categorias");
+  const res = await request<ApiResponse>("/categorias", undefined, { anonimoPermitido: true });
   return (res.categorias as Categoria[]) ?? [];
+}
+
+export interface AreaEntregaCatalogo {
+  idAreaEntrega: number; codigo: string; nombre: string; tipoArea: string;
+  referencia: string; cargoEntrega: number;
+}
+export const actualizarTarifaEntrega = (id: number, cargoEntrega: number) => request(`/admin/entrega-areas/${id}/tarifa`, { method: 'PUT', body: JSON.stringify({ cargoEntrega }) });
+export interface MetodoPagoCatalogo {
+  idMetodoPago: number; codigo: string; nombre: string; requiereProveedor: string;
+}
+export async function listarAreasEntregaCatalogo(): Promise<AreaEntregaCatalogo[]> {
+  const res = await request<ApiResponse>('/entrega-areas');
+  return res.areas ?? [];
+}
+export async function listarMetodosPagoCatalogo(): Promise<MetodoPagoCatalogo[]> {
+  const res = await request<ApiResponse>('/metodos-pago', undefined, { anonimoPermitido: true });
+  return res.metodos ?? [];
 }
 
 export async function listarProductos(
@@ -356,6 +601,8 @@ export async function listarProductos(
   const qs = params.toString();
   const res = await request<ApiResponse>(
     `/productos${qs ? `?${qs}` : ""}`,
+    undefined,
+    { anonimoPermitido: true },
   );
   return (res.productos as Producto[]) ?? [];
 }
@@ -363,14 +610,15 @@ export async function listarProductos(
 export async function obtenerProducto(
   id: number,
 ): Promise<Producto | null> {
-  const res = await request<ApiResponse>(`/productos/${id}`);
+  const res = await request<ApiResponse>(`/productos/${id}`, undefined, { anonimoPermitido: true });
   return (res.producto as Producto) ?? null;
 }
 
 export async function obtenerCarrito(
   idSitio = 1,
 ): Promise<Carrito> {
-  const res = await request<ApiResponse>(`/carrito?idSitio=${idSitio}`);
+  // Rutas públicas: un 401 (token vencido) no debe expulsar al visitante.
+  const res = await request<ApiResponse>(`/carrito?idSitio=${idSitio}`, undefined, { anonimoPermitido: true });
   return (res.carrito as Carrito) ?? {
     idCarrito: 0,
     idUsuario: 0,
@@ -386,7 +634,8 @@ export async function agregarAlCarritoAPI(data: {
   cantidad: number;
   idSitio?: number;
   idPersonalizacion?: number | null;
-  precioPersonaliza?: number;
+  personalizacion?: PersonalizacionContenido | null;
+  comentario?: string;
 }): Promise<{ idDetalle: number }> {
   const res = await request<ApiResponse>("/carrito/productos", {
     method: "POST",
@@ -395,10 +644,87 @@ export async function agregarAlCarritoAPI(data: {
       cantidad: data.cantidad,
       idSitio: data.idSitio ?? 1,
       idPersonalizacion: data.idPersonalizacion ?? null,
-      precioPersonaliza: data.precioPersonaliza ?? 0,
+      personalizacion: data.personalizacion ?? null,
+      comentario: data.comentario?.trim() || null,
     }),
   });
   return { idDetalle: res.idDetalle as number };
+}
+
+export async function subirImagenPersonalizacionAPI(
+  archivo: File,
+  lado: "A" | "B",
+): Promise<number> {
+  const body = new FormData();
+  body.append("archivo", archivo);
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}/personalizaciones/imagen?lado=${lado}`, {
+    method: "POST",
+    body,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("famkon.usuario");
+    window.location.href = "/login";
+    throw new Error("Sesión expirada. Inicia sesión nuevamente.");
+  }
+  const texto = await res.text();
+  let data: { mensaje?: string; idArchivo?: number };
+  try {
+    data = JSON.parse(texto) as { mensaje?: string; idArchivo?: number };
+  } catch {
+    throw new Error(`No se pudo subir la imagen (HTTP ${res.status}).`);
+  }
+  if (!res.ok || !data.idArchivo) throw new Error(data.mensaje || "No se pudo subir la imagen.");
+  return data.idArchivo;
+}
+
+export async function crearPersonalizacionAPI(
+  idProducto: number,
+  contenido: PersonalizacionContenido,
+): Promise<number> {
+  const res = await request<ApiResponse>("/personalizaciones", {
+    method: "POST",
+    body: JSON.stringify({ idProducto, ...contenido }),
+  });
+  return res.idPersonalizacion as number;
+}
+
+export async function actualizarPersonalizacionAPI(
+  id: number,
+  contenido: PersonalizacionContenido,
+): Promise<Personalizacion> {
+  const res = await request<ApiResponse>(`/personalizaciones/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(contenido),
+  });
+  return res.personalizacion as Personalizacion;
+}
+
+export async function obtenerPersonalizacionAPI(id: number): Promise<Personalizacion | null> {
+  const res = await request<ApiResponse>(`/personalizaciones/${id}`);
+  return (res.personalizacion as Personalizacion) ?? null;
+}
+
+export function listarPreparacionesPersonalizadas(signal?: AbortSignal) {
+  return request<PreparacionesPersonalizadas>("/personalizaciones/pendientes", { signal });
+}
+
+export interface ResultadoPreparacion {
+  codigoS: number;
+  preparada: boolean;
+  idPedido: number;
+  estadoPedido: string | null;
+  avanzado: boolean;
+  motivo: string | null;
+}
+
+export function marcarPersonalizacionPreparada(idPedidoDetalle: number, preparada: boolean) {
+  return request<ResultadoPreparacion>(
+    `/personalizaciones/${idPedidoDetalle}/preparada`,
+    { method: "POST", body: JSON.stringify({ preparada }) },
+  );
 }
 
 export async function actualizarCantidadCarritoAPI(
@@ -457,28 +783,6 @@ export async function consultarTracking(
     `/tracking/${encodeURIComponent(tokenHash)}`,
   );
   return (res.pasos as TrackingPaso[]) ?? [];
-}
-
-// ─── Funciones compatibilidad (localStorage) ──────────────────────────────────
-
-const CARRITO_KEY = "famkon.carrito";
-
-export function obtenerCarritoLocal(): CarritoItem[] {
-  const raw = localStorage.getItem(CARRITO_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-export function guardarCarritoLocal(items: CarritoItem[]) {
-  localStorage.setItem(CARRITO_KEY, JSON.stringify(items));
-}
-
-export function vaciarCarrito() {
-  localStorage.removeItem(CARRITO_KEY);
 }
 
 // ─── Gestor de Usuarios (Admin) ──────────────────────────────────────────────
@@ -647,6 +951,7 @@ export interface ProductoAdminBody {
   precioBase: number;
   permiteLadoA: "S" | "N";
   permiteLadoB: "S" | "N";
+  existencia?: number;
 }
 
 interface ResultadoProducto {
@@ -687,6 +992,12 @@ export async function actualizarProductoAdmin(id: number, body: ProductoAdminBod
 export async function cambiarEstadoProductoAdmin(id: number, activo: "S" | "N") {
   return comprobarResultadoProducto(await request<ResultadoProducto>(`/admin/productos/${id}/estado`, {
     method: "PUT", body: JSON.stringify({ activo }),
+  }));
+}
+
+export async function actualizarExistenciaProducto(id: number, existencia: number) {
+  return comprobarResultadoProducto(await request<ResultadoProducto>(`/admin/productos/${id}/existencia`, {
+    method: "PUT", body: JSON.stringify({ existencia }),
   }));
 }
 
@@ -851,6 +1162,33 @@ export async function subirEvidenciaEntrega(
 export function urlArchivoEvidencia(idArchivo: number): string {
   return `${BASE_URL}/archivos/${idArchivo}`;
 }
+
+export function urlImagenProducto(idProducto: number): string {
+  return `${BASE_URL}/productos/${idProducto}/imagen`;
+}
+
+export async function subirImagenProducto(archivo: File): Promise<number> {
+  const body = new FormData();
+  body.append('archivo', archivo);
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}/admin/productos/imagen`, {
+    method: 'POST', body, headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('famkon.usuario');
+    window.location.href = '/login';
+    throw new Error('Sesión expirada. Inicia sesión nuevamente.');
+  }
+  const texto = await res.text();
+  let data;
+  try { data = JSON.parse(texto); } catch { throw new Error(`La API de imágenes no devolvió JSON (HTTP ${res.status}). Reinicia el backend actualizado y revisa el proxy de /api.`); }
+  if (!res.ok || !data.idArchivo) throw new Error(data.mensaje || 'No se pudo subir la imagen.');
+  return data.idArchivo;
+}
+
+export const obtenerGaleriaProducto = (id: number) => request<number[]>(`/productos/${id}/galeria`);
+export const guardarGaleriaProducto = (id: number, imagenes: number[]) => request(`/admin/productos/${id}/galeria`, { method: 'PUT', body: JSON.stringify(imagenes) });
 
 export async function listarEntregasDeTodosRepartidores(): Promise<EntregaRepartidor[]> {
   const repartidores = await listarRepartidoresActivos();

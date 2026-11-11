@@ -17,7 +17,8 @@ namespace FamKon_store_api.Services
     public class AuthUserRow
     {
         public long IdUsuario { get; set; }
-        public long IdSitio { get; set; }
+        /// null si la cuenta no esta asociada a ningun sitio (base compartida).</summary>
+        public long? IdSitio { get; set; }
         public string Correo { get; set; } = string.Empty;
         public string Nickname { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
@@ -137,10 +138,13 @@ namespace FamKon_store_api.Services
                     return null;
                 }
 
+                var ordSitio = reader.GetOrdinal("ID_SITIO");
                 var row = new AuthUserRow
                 {
                     IdUsuario = reader.GetInt64(reader.GetOrdinal("ID_USUARIO")),
-                    IdSitio = reader.GetInt64(reader.GetOrdinal("ID_SITIO")),
+                    // Una cuenta heredada de la base compartida puede no tener sitio:
+                    // se lee sin romper el login para poder informar al usuario.
+                    IdSitio = reader.IsDBNull(ordSitio) ? null : reader.GetInt64(ordSitio),
                     Correo = reader.GetString(reader.GetOrdinal("CORREO")),
                     Nickname = reader.GetString(reader.GetOrdinal("NICKNAME")),
                     PasswordHash = reader.GetString(reader.GetOrdinal("PASSWORD_HASH")),

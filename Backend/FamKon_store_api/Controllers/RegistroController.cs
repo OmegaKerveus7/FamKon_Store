@@ -20,7 +20,7 @@ namespace FamKon_store_api.Controllers
             _logger = logger;
         }
 
-        [HttpPost("registro/comprobar-correo")]
+        [HttpPost("registro/comprobar-correo"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public async Task<ActionResult> ComprobarCorreo([FromBody] ComprobarCorreoRequest request)
         {
             if (!RegistroValidacion.CorreoValido(request.Correo))
@@ -42,7 +42,7 @@ namespace FamKon_store_api.Controllers
             public string Correo { get; set; } = string.Empty;
         }
 
-        [HttpPost("registro")]
+        [HttpPost("registro"), Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
         public async Task<ActionResult<RegistroResponse>> Registrar([FromBody] RegistroRequest request, [FromServices] CredencialService credencial, [FromServices] RegistroRostroService rostros)
         {
             if (!RegistroValidacion.CorreoValido(request.Correo))
@@ -64,6 +64,15 @@ namespace FamKon_store_api.Controllers
                     CodigoS = 400,
                     Mensaje = "Los campos 'nombres' y 'apellidos' son obligatorios."
                 });
+
+            if (!RegistroValidacion.NombreValido(request.Nombres))
+                return Ok(new RegistroResponse { CodigoS = 400, Mensaje = "El campo 'nombres' solo puede contener letras." });
+
+            if (!RegistroValidacion.NombreValido(request.Apellidos))
+                return Ok(new RegistroResponse { CodigoS = 400, Mensaje = "El campo 'apellidos' solo puede contener letras." });
+
+            if (!RegistroValidacion.FechaNacimientoValida(request.FechaNacimiento.ToString("yyyy-MM-dd")))
+                return Ok(new RegistroResponse { CodigoS = 400, Mensaje = "La fecha de nacimiento debe ser anterior a hoy." });
 
             byte[] original, editada;
             RostroRegistro rostro;

@@ -4,6 +4,8 @@ public sealed class BiometriaException(string codigo, string mensaje, int estado
 {
     public string Codigo { get; } = codigo;
     public int Estado { get; } = estado;
+    /// Referencias ya comparadas: el cliente puede continuar sin repetirlas.
+    public long[]? Comparados { get; init; }
 }
 
 public static class ImagenBiometrica

@@ -1,13 +1,16 @@
-import { useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+﻿import { useRef, useState } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { loginCarnet } from "../api/famkon";
+import { fusionarCarritoLocal } from "../api/carritoLocal";
 import { useAuth } from "../context/AuthContext";
+import { rutaTrasIngreso } from "../domain/carritoVisitante";
 import QrScanner from "../components/QrScanner";
 
 export default function CarnetLoginPage() {
   const enCurso = useRef(false);
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { iniciarSesion } = useAuth();
   const [qrDetectado, setQrDetectado] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -25,7 +28,8 @@ export default function CarnetLoginPage() {
         throw new Error(respuesta.mensaje || "No se pudo reconocer el carnet.");
       }
       iniciarSesion(respuesta.usuario, respuesta.token);
-      navigate("/inicio", { replace: true });
+      await fusionarCarritoLocal().catch(() => undefined);
+      navigate(rutaTrasIngreso(respuesta.usuario.roles, state?.volverA), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo reconocer el carnet.");
     } finally {
@@ -40,7 +44,7 @@ export default function CarnetLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-amber-50 via-orange-100 to-slate-100 p-4">
+    <div className="flex min-h-dvh items-start justify-center overflow-x-auto overflow-y-auto sm:items-center bg-slate-100 p-4">
       <div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl">
         <div className="mb-6 flex items-center gap-3">
           <Link

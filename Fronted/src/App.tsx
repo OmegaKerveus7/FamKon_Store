@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
+import RastreoPage from "./pages/RastreoPage";
 import IndexPage from "./pages/IndexPage";
 import LoginPage from "./pages/LoginPage";
 import RecuperarPasswordPage from "./pages/RecuperarPasswordPage";
@@ -26,6 +27,7 @@ import AdminCatalogosPage from "./pages/AdminCatalogosPage";
 import AdminRolesPage from "./pages/AdminRolesPage";
 import AdminBitacoraPage from "./pages/AdminBitacoraPage";
 import AdminConfiguracionPage from "./pages/AdminConfiguracionPage";
+import PreparacionPersonalizacionesPage from "./pages/PreparacionPersonalizacionesPage";
 import RequirePermiso from "./components/RequirePermiso";
 import DashboardLayout from "./components/DashboardLayout";
 
@@ -36,16 +38,33 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return children;
 }
 
+/** Las rutas viejas del comprador ahora apuntan a la tienda pública. */
+function RedirigirProducto() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/producto/${id ?? ""}`} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
       {/* Rutas publicas (sin dashboard) */}
       <Route path="/" element={<IndexPage />} />
+      <Route path="/rastreo" element={<RastreoPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/recuperar-contrasena" element={<RecuperarPasswordPage />} />
       <Route path="/registro" element={<RegistroPage />} />
       <Route path="/login/facial" element={<FacialLoginPage />} />
       <Route path="/login/carnet" element={<CarnetLoginPage />} />
+
+      {/* Tienda pública: se puede ver, armar el carrito y comprar sin sesión */}
+      <Route path="/catalogo" element={<CatalogoPage />} />
+      <Route path="/producto/:id" element={<ProductoDetallePage />} />
+      <Route path="/carrito" element={<CarritoPage />} />
+
+      {/* Rutas viejas del comprador: ahora la tienda es pública */}
+      <Route path="/comprador/catalogo" element={<Navigate to="/catalogo" replace />} />
+      <Route path="/comprador/producto/:id" element={<RedirigirProducto />} />
+      <Route path="/comprador/carrito" element={<Navigate to="/carrito" replace />} />
 
       {/* Dashboard protegido con sidebar + topbar */}
       <Route
@@ -59,30 +78,6 @@ export default function App() {
         <Route path="/perfil" element={<PerfilPage />} />
 
         {/* Rutas del comprador */}
-        <Route
-          path="/comprador/catalogo"
-          element={
-            <RequirePermiso codigoPermiso="VER_CATALOGO">
-              <CatalogoPage />
-            </RequirePermiso>
-          }
-        />
-        <Route
-          path="/comprador/producto/:id"
-          element={
-            <RequirePermiso codigoPermiso="VER_CATALOGO">
-              <ProductoDetallePage />
-            </RequirePermiso>
-          }
-        />
-        <Route
-          path="/comprador/carrito"
-          element={
-            <RequirePermiso codigoPermiso="VER_CARRITO">
-              <CarritoPage />
-            </RequirePermiso>
-          }
-        />
         <Route
           path="/comprador/tracking"
           element={
@@ -104,6 +99,9 @@ export default function App() {
         <Route path="/comprador/checkout" element={<RequirePermiso codigoPermiso="CREAR_PEDIDO"><CheckoutPage /></RequirePermiso>} />
         <Route path="/repartidor" element={<Navigate to="/repartidor/asignados" replace />} />
         <Route path="/repartidor/asignados" element={<RequirePermiso codigoPermiso="VER_PEDIDOS_ASIGNADOS"><PedidosPage vista="repartidor" /></RequirePermiso>} />
+        <Route path="/supervisor/personalizaciones" element={<RequirePermiso codigoRol="SUPERVISOR" codigoPermiso="GESTIONAR_ENTREGAS"><PreparacionPersonalizacionesPage vista="supervisor" /></RequirePermiso>} />
+        <Route path="/produccion/personalizaciones" element={<RequirePermiso codigoRol="PRODUCCION" codigoPermiso="GESTIONAR_ENTREGAS"><PreparacionPersonalizacionesPage vista="produccion" /></RequirePermiso>} />
+        <Route path="/admin/personalizaciones" element={<RequirePermiso codigoRol="ADMIN" codigoPermiso="GESTIONAR_ENTREGAS"><PreparacionPersonalizacionesPage vista="admin" /></RequirePermiso>} />
         <Route path="/repartidor/registrar" element={<Navigate to="/repartidor/asignados" replace />} />
         <Route path="/repartidor/cambiar-estado" element={<Navigate to="/repartidor/asignados" replace />} />
         <Route path="/admin/pedidos" element={<RequirePermiso codigoPermiso="VER_DASHBOARD"><PedidosPage vista="admin" /></RequirePermiso>} />

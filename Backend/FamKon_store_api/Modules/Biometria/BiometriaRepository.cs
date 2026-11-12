@@ -9,10 +9,13 @@ namespace FamKon_store_api.Modules.Biometria;
 
 public sealed record UsuarioBiometrico(Usuario Usuario, long? FotoOriginal, long? FotoSegmentada);
 
+/// <summary>Candidato a comparar con la captura, con la prioridad que le asigno la pista.</summary>
+public sealed record CandidatoBiometrico(UsuarioBiometrico Usuario, int Prioridad);
+
 public interface IBiometriaRepository
 {
     Task<UsuarioBiometrico?> BuscarAsync(string? identificador, long? id, CancellationToken ct);
-    Task<IReadOnlyList<UsuarioBiometrico>> ListarReferenciasAsync(int limite, CancellationToken ct);
+    Task<IReadOnlyList<CandidatoBiometrico>> ListarCandidatosAsync(string? pista, string? ip, int limite, CancellationToken ct);
     Task<byte[]?> FotoAsync(long id, long idUsuario, CancellationToken ct);
     Task GuardarAsync(UsuarioBiometrico usuario, byte[] original, byte[] segmentada, CancellationToken ct);
 }
@@ -49,25 +52,51 @@ public sealed class BiometriaRepository(DBContext db) : IBiometriaRepository
         return resultado;
     }
 
-    public async Task<IReadOnlyList<UsuarioBiometrico>> ListarReferenciasAsync(int limite, CancellationToken ct)
+    public async Task<IReadOnlyList<CandidatoBiometrico>> ListarCandidatosAsync(string? pista, string? ip, int limite, CancellationToken ct)
     {
         using var connection = db.CreateConnection();
         await connection.OpenAsync(ct);
         using var command = connection.CreateCommand();
         command.BindByName = true;
         command.CommandText = """
-            SELECT ID_USUARIO, ID_FOTO_ORIGINAL, ID_FOTO_MODIFICADA FROM USUARIO
-             WHERE ACTIVO = 'S' AND BLOQUEADO = 'N'
-               AND (ID_FOTO_ORIGINAL IS NOT NULL OR ID_FOTO_MODIFICADA IS NOT NULL)
-             ORDER BY ID_USUARIO FETCH FIRST :limite ROWS ONLY
+            SELECT U.ID_USUARIO, U.NICKNAME, U.CORREO, U.ID_FOTO_ORIGINAL, U.ID_FOTO_MODIFICADA,
+                   CASE
+                     WHEN :pista IS NOT NULL AND LENGTH(:pista) > 0
+                          AND (INSTR(LOWER(U.NICKNAME), :pista) > 0 OR INSTR(LOWER(U.CORREO), :pista) > 0) THEN 1
+                     WHEN :ip IS NOT NULL AND LENGTH(:ip) > 0 AND EXISTS (
+                          SELECT 1 FROM BITACORA_ACCESO B
+                           WHERE B.ID_USUARIO = U.ID_USUARIO
+                             AND REPLACE(B.DIRECCION_IP, '::ffff:', '') = REPLACE(:ip, '::ffff:', '')
+                             AND B.METODO_ACCESO = 'FACIAL' AND B.RESULTADO = 'S') THEN 2
+                     ELSE 3
+                   END AS PRIORIDAD
+              FROM USUARIO U
+             WHERE U.ACTIVO = 'S' AND U.BLOQUEADO = 'N'
+               AND (U.ID_FOTO_ORIGINAL IS NOT NULL OR U.ID_FOTO_MODIFICADA IS NOT NULL)
+             ORDER BY PRIORIDAD, U.ID_USUARIO
+             FETCH FIRST :limite ROWS ONLY
             """;
+        command.Parameters.Add("pista", OracleDbType.Varchar2).Value = (object?)pista ?? DBNull.Value;
+        command.Parameters.Add("ip", OracleDbType.Varchar2).Value = (object?)ip ?? DBNull.Value;
         command.Parameters.Add("limite", OracleDbType.Int32).Value = limite;
         using var reader = await command.ExecuteReaderAsync(ct);
-        var usuarios = new List<UsuarioBiometrico>();
+        var candidatos = new List<CandidatoBiometrico>();
         while (await reader.ReadAsync(ct))
-            usuarios.Add(new(new Usuario { IdUsuario = reader.GetInt64(0) },
-                reader.IsDBNull(1) ? null : reader.GetInt64(1), reader.IsDBNull(2) ? null : reader.GetInt64(2)));
-        return usuarios;
+        {
+            var usuario = new Usuario
+            {
+                IdUsuario = reader.GetInt64(0),
+                Nickname = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                Correo = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                Activo = "S",
+                Bloqueado = "N",
+            };
+            var referencia = new UsuarioBiometrico(usuario,
+                reader.IsDBNull(3) ? null : reader.GetInt64(3),
+                reader.IsDBNull(4) ? null : reader.GetInt64(4));
+            candidatos.Add(new CandidatoBiometrico(referencia, reader.GetInt32(5)));
+        }
+        return candidatos;
     }
 
     public async Task<byte[]?> FotoAsync(long id, long idUsuario, CancellationToken ct)

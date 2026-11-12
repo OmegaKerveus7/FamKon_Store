@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import type { Usuario, Permiso } from "../api/famkon";
-import { guardarToken, eliminarToken, obtenerToken, refreshToken, obtenerPermisos } from "../api/famkon";
+import { guardarToken, eliminarToken, obtenerToken, renovarSesion, tokenPorVencer, sesionActiva, obtenerPermisos } from "../api/famkon";
 
 interface AuthContextValue {
   usuario: Usuario | null;
@@ -14,6 +14,8 @@ interface AuthContextValue {
   tienePermiso: (codigoPermiso: string) => boolean;
   tieneRol: (codigoRol: string) => boolean;
   registrarActividad: () => void;
+  /** true mientras se renueva la sesión al volver a la pestaña. */
+  renovandoSesion: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -21,12 +23,14 @@ const STORAGE_KEY = "famkon.usuario";
 const PERMISOS_KEY = "famkon.permisos";
 export const ACTIVIDAD_KEY = "famkon.ultima_actividad";
 
-// 2 horas de sesión. Aviso un minuto antes del cierre.
-export const TIMEOUT_INACTIVIDAD_MS = 2 * 60 * 60 * 1000;
+// Una hora de inactividad. Aviso un minuto antes del cierre.
+export const TIMEOUT_INACTIVIDAD_MS = 60 * 60 * 1000;
 export const AVISO_INACTIVIDAD_MS = 60 * 1000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(() => {
+    // Sin un token vigente no hay sesión: el visitante entra como usuario anónimo.
+    if (!sesionActiva()) return null;
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     try {
@@ -36,7 +40,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const [token, setToken] = useState<string | null>(obtenerToken);
+  const [token, setToken] = useState<string | null>(() => {
+    // Un token vencido no cuenta como sesión: se limpia para que la tienda
+    // siga siendo pública y no se expulse al visitante a /login.
+    const guardado = obtenerToken();
+    if (!guardado) return null;
+    if (!sesionActiva()) {
+      eliminarToken();
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PERMISOS_KEY);
+      return null;
+    }
+    return guardado;
+  });
   const [permisos, setPermisos] = useState<Permiso[]>(() => {
     const raw = localStorage.getItem(PERMISOS_KEY);
     if (!raw) return [];
@@ -48,9 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isRefreshingRef = useRef<boolean>(false);
   const actividadRef = useRef<number>(Date.now());
   const avisoActivoRef = useRef<boolean>(false);
+  const [renovandoSesion, setRenovandoSesion] = useState(false);
 
   const cerrarSesion = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
@@ -60,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null);
     setToken(null);
     setPermisos([]);
-    isRefreshingRef.current = false;
+    setRenovandoSesion(false);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -68,28 +84,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const renovarToken = useCallback(async (): Promise<boolean> => {
-    if (isRefreshingRef.current) return false;
-    const currentToken = obtenerToken();
-    if (!currentToken) return false;
-
-    try {
-      isRefreshingRef.current = true;
-      const respuesta = await refreshToken(currentToken);
-      if (respuesta.codigoS === 200 && respuesta.token) {
-        guardarToken(respuesta.token);
-        setToken(respuesta.token);
-        actividadRef.current = Date.now();
-        localStorage.setItem(ACTIVIDAD_KEY, String(actividadRef.current));
-        return true;
-      }
+    const actual = obtenerToken();
+    if (!actual) return false;
+    const resultado = await renovarSesion();
+    if (resultado.invalido) {
       cerrarSesion();
       return false;
-    } catch {
-      cerrarSesion();
-      return false;
-    } finally {
-      isRefreshingRef.current = false;
     }
+    if (resultado.token) {
+      setToken(resultado.token);
+      return true;
+    }
+    return false;
   }, [cerrarSesion]);
 
   const cargarPermisos = useCallback(async () => {
@@ -144,25 +150,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     avisoActivoRef.current = false;
   }
 
-  // ─── Timers: auto-refresh cada 8 min + inactividad de 2 horas ─────────────
+  // ─── Refresco proactivo del JWT cada 5 minutos ────────────────────────────
   useEffect(() => {
     if (!token) return;
 
-    // Auto-refresh cada 8 minutos mientras el usuario este activo.
-    // Solo refrescamos si la ultima actividad fue hace menos de 1 min
-    // (asi no gastamos tokens en sesiones abandonadas).
-    intervalRef.current = setInterval(async () => {
-      const inactivoPor = Date.now() - actividadRef.current;
-      if (inactivoPor < 60 * 1000) {
-        await renovarToken();
-      }
-    }, 8 * 60 * 1000);
+    intervalRef.current = setInterval(() => {
+      void renovarToken();
+    }, 5 * 60 * 1000);
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+    };
+  }, [token, renovarToken]);
+
+  // ─── Al volver a la pestaña (móvil) renovar antes de que expire ───────────
+  useEffect(() => {
+    if (!token) return;
+
+    const alVolver = () => {
+      if (document.visibilityState !== "visible") return;
+      const actual = obtenerToken();
+      if (!actual) return;
+      if (!tokenPorVencer(actual, 10 * 60 * 1000)) return;
+      setRenovandoSesion(true);
+      void renovarToken().finally(() => setRenovandoSesion(false));
+    };
+
+    document.addEventListener("visibilitychange", alVolver);
+    window.addEventListener("focus", alVolver);
+    window.addEventListener("online", alVolver);
+    return () => {
+      document.removeEventListener("visibilitychange", alVolver);
+      window.removeEventListener("focus", alVolver);
+      window.removeEventListener("online", alVolver);
     };
   }, [token, renovarToken]);
 
@@ -187,6 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tienePermiso,
         tieneRol,
         registrarActividad,
+        renovandoSesion,
       }}
     >
       {children}

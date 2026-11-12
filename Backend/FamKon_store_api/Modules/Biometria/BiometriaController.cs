@@ -8,6 +8,10 @@ namespace FamKon_store_api.Modules.Biometria;
 public sealed class AccesoFacialRequest
 {
     public string ImagenCompararBase64 { get; set; } = "";
+    /// Pista opcional: nickname o correo para acotar la búsqueda del rostro.
+    public string? Pista { get; set; }
+    /// Referencias ya comparadas en intentos anteriores: no se repiten.
+    public long[]? IdsDescartados { get; set; }
 }
 public sealed class EnrolamientoFacialRequest
 {
@@ -22,20 +26,29 @@ public sealed class BiometriaController(
     BitacoraService bitacora, ILogger<BiometriaController> logger) : ControllerBase
 {
     [HttpPost("login")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("biometria")]
     [HttpPost("/api/famkon/login/facial")]
     public Task<ActionResult> Login(AccesoFacialRequest request, CancellationToken ct) =>
         EjecutarAsync("LOGIN", "captura-facial", async contexto => {
-            var validado = await service.IdentificarAsync(request.ImagenCompararBase64, ct);
-            contexto.IdUsuario = validado.IdUsuario;
+            // La pista y la IP acotan la galería; la IP real llega por el proxy
+            // (X-Forwarded-For) thanks a UseForwardedHeaders.
+            var pista = NormalizarPista(request.Pista);
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var descartados = (request.IdsDescartados ?? Array.Empty<long>())
+                .Where(id => id > 0).Distinct().Take(200).ToArray();
+            var resultado = await service.IdentificarAsync(request.ImagenCompararBase64, pista, ip, descartados, ct);
+            contexto.IdUsuario = resultado.Usuario.IdUsuario;
             return new {
                 codigoS = 200, codigo = "BIO_LOGIN_OK", mensaje = "Identidad facial verificada.",
                 referencia = contexto.Referencia,
-                token = jwt.GenerateToken(validado.IdUsuario, validado.Nickname, validado.Correo, validado.Roles ?? ""),
-                usuario = validado
+                comparados = resultado.Comparados,
+                token = jwt.GenerateToken(resultado.Usuario.IdUsuario, resultado.Usuario.Nickname, resultado.Usuario.Correo, resultado.Usuario.Roles ?? ""),
+                usuario = resultado.Usuario
             };
         });
 
     [Authorize]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("biometria")]
     [HttpPost("enrolar")]
     public Task<ActionResult> Enrolar(EnrolamientoFacialRequest request, CancellationToken ct) =>
         EjecutarAsync("ENROLAMIENTO", "cuenta-autenticada", async contexto => {
@@ -77,6 +90,14 @@ public sealed class BiometriaController(
         public string Referencia { get; } = Guid.NewGuid().ToString("N");
     }
 
+    /// <summary>Normaliza la pista (nickname o correo) que acota la búsqueda.</summary>
+    private static string? NormalizarPista(string? pista)
+    {
+        if (string.IsNullOrWhiteSpace(pista)) return null;
+        var valor = pista.Trim().ToLowerInvariant();
+        return valor.Length is > 0 and <= 100 ? valor : null;
+    }
+
     private async Task<ActionResult> EjecutarAsync(string operacion, string? identificador, Func<Contexto, Task<object>> ejecutar)
     {
         var contexto = new Contexto();
@@ -95,7 +116,7 @@ public sealed class BiometriaController(
         catch (BiometriaException ex)
         {
             codigo = ex.Codigo;
-            return Ok(new { codigoS = ex.Estado, codigo, mensaje = ex.Message, referencia = contexto.Referencia });
+            return Ok(new { codigoS = ex.Estado, codigo, mensaje = ex.Message, referencia = contexto.Referencia, comparados = ex.Comparados ?? Array.Empty<long>() });
         }
         catch (OperationCanceledException)
         {

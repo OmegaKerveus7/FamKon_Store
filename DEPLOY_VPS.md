@@ -29,6 +29,20 @@ El frontend mostraba pantalla en blanco tras login porque:
 
 ---
 
+## Despliegue actual en la VPS (build estático) — 2026-10-31
+
+El frontend ya **no** corre con el servidor de desarrollo de Vite (abrir la home bajaba ~17 MB y tardaba 24 s o más). Ahora nginx sirve el build compilado desde `/var/www/famkon.site/current`.
+
+- Desplegar el frontend: `./deploy-frontend-vps.sh` (compila, sube a `/var/www/famkon.site/releases/<fecha>` y cambia el enlace `current`; define `SSHPASS` si se usa contraseña). Ya **no** hay que copiar archivos de `src/` a `/root/Frontend_Store`.
+- Volver atrás: apuntar `current` a un release anterior, por ejemplo
+  `ln -sfn /var/www/famkon.site/releases/<release-anterior> /var/www/famkon.site/current.tmp && mv -Tf /var/www/famkon.site/current.tmp /var/www/famkon.site/current`
+  (se conservan los 5 últimos). Los cambios en nginx se revierten con `/root/famkon.nginx.bak-20261031` (`nginx -t && nginx -s reload`).
+- `/etc/nginx/sites-enabled/famkon`: `location /api/` sigue yendo al API (`127.0.0.1:5299`); `location /` sirve `root /var/www/famkon.site/current` con `try_files $uri $uri/ /index.html` y `Cache-Control: no-cache`; `/assets/` lleva caché de 1 año (los archivos tienen hash); `gzip_types` incluye JS, CSS, JSON, SVG y wasm.
+- El contenedor `cont-famkon-store-frontend` (Vite dev, puerto 5147) sigue arriba pero ya no recibe tráfico; se puede detener cuando se confirme que todo va bien.
+- El archivo `nginx-famkon.conf` de este repo trae límites anti-DDoS (`limit_req`/`limit_conn` por IP) que **no** están aplicados en la VPS: no copiarlo completo sin revisar, porque muchos usuarios de la universidad comparten IP.
+
+---
+
 ## Pasos de despliegue en VPS
 
 ### 1. Build del frontend

@@ -32,11 +32,43 @@ public class ComprasController(CompraService compras,RecurrenteService pagos,Arc
     private long Actor=>long.Parse(User.FindFirst("sub")!.Value);
     private static bool VistaValida(string vista)=>vista is "cliente" or "admin" or "repartidor";
     [HttpGet("configuracion")]
-    public IActionResult Configuracion()=>Ok(new{direccionTienda=config["Tienda:Direccion"]??"Campus central",horario="Lunes a domingo, 8:00 a. m. a 5:00 p. m.",cargoDomicilio=25,cargoTienda=0,tarjetaDisponible=pagos.Disponible,entorno=pagos.Entorno,recaptchaSiteKey=recaptcha.SiteKey});
+    public async Task<IActionResult> Configuracion([FromServices] CatalogoService catalogo) {
+        var areas = await catalogo.ListarAreasEntregaAsync(1, "S");
+        var tienda = areas.Single(a => a.Codigo == "FK_TIENDA");
+        var domicilio = areas.Single(a => a.Codigo == "FK_DOMICILIO");
+        return Ok(new{direccionTienda=config["Tienda:Direccion"]??tienda.Nombre,horario=tienda.Referencia,cargoDomicilio=domicilio.CargoEntrega,cargoTienda=tienda.CargoEntrega,tarjetaDisponible=pagos.Disponible,entorno=pagos.Entorno,recaptchaSiteKey=recaptcha.SiteKey});
+    }
     [HttpGet]
     public async Task<IActionResult> Listar([FromQuery]string vista="cliente",[FromQuery]int pagina=1,[FromQuery]string? estado=null,[FromQuery]string? busqueda=null) {
         if(!VistaValida(vista))return BadRequest(); if(vista=="admin"&&!await compras.EsAdmin(Actor))return Forbid();
         return Ok(await compras.Listar(Actor,vista,Math.Clamp(pagina,1,100000),estado,busqueda?.Trim()));
+    }
+    [HttpGet("bandeja-admin")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> BandejaAdmin([FromQuery] long desde = 0) {
+        if (!await compras.EsAdmin(Actor)) return Forbid();
+        using var c = await compras.Abrir(Actor);
+        using var resumen = CompraService.Comando(c, """
+            SELECT NVL(MAX(P.ID_PEDIDO),0) ULTIMO,
+              COUNT(CASE WHEN P.ID_PEDIDO>:desde THEN 1 END) NUEVOS,
+              COUNT(CASE WHEN E.CODIGO IN ('GENERADO','PAGO_PENDIENTE','PAGO_CONFIRMADO') THEN 1 END) SIN_ACEPTAR,
+              COUNT(CASE WHEN E.CODIGO='EN_ELABORACION' THEN 1 END) EN_PREPARACION,
+              COUNT(CASE WHEN E.CODIGO='LISTO_ENTREGA' AND NVL(A.ACTIVAS,0)=0 THEN 1 END) SIN_ASIGNAR
+            FROM PEDIDO P JOIN ESTADO_PEDIDO E ON E.ID_ESTADO_PEDIDO=P.ID_ESTADO_PEDIDO
+            LEFT JOIN (SELECT EN.ID_PEDIDO,COUNT(*) ACTIVAS FROM ENTREGA EN
+              JOIN ESTADO_ENTREGA EE ON EE.ID_ESTADO_ENTREGA=EN.ID_ESTADO_ENTREGA
+              WHERE EE.CODIGO IN ('ASIGNADA','EN_RUTA') GROUP BY EN.ID_PEDIDO) A ON A.ID_PEDIDO=P.ID_PEDIDO
+            """, ("desde", Math.Max(0, desde)));
+        var datos = (await CompraService.Leer(resumen)).Single();
+        using var pendientes = CompraService.Comando(c, """
+            SELECT P.ID_PEDIDO,P.NUMERO_PEDIDO,E.CODIGO ESTADO,
+              TO_CHAR(P.FECHA_PEDIDO,'YYYY-MM-DD"T"HH24:MI:SS.FF3TZH:TZM') FECHA_PEDIDO
+            FROM PEDIDO P JOIN ESTADO_PEDIDO E ON E.ID_ESTADO_PEDIDO=P.ID_ESTADO_PEDIDO
+            WHERE E.CODIGO IN ('GENERADO','PAGO_PENDIENTE','PAGO_CONFIRMADO','EN_ELABORACION','LISTO_ENTREGA','COMPRADOR_NO_ENCONTRADO')
+            ORDER BY CASE WHEN E.CODIGO IN ('GENERADO','PAGO_PENDIENTE','PAGO_CONFIRMADO') THEN 0 ELSE 1 END,
+              P.FECHA_PEDIDO,P.ID_PEDIDO FETCH NEXT 8 ROWS ONLY
+            """);
+        return Ok(new { resumen = datos, pendientes = await CompraService.Leer(pendientes) });
     }
     [HttpGet("repartidores")]
     public async Task<IActionResult> Repartidores() {if(!await compras.EsAdmin(Actor))return Forbid();return Ok(await compras.Repartidores(Actor));}
@@ -87,17 +119,31 @@ public class ComprasController(CompraService compras,RecurrenteService pagos,Arc
         if(p.GetProperty("estado").GetString() is not ("ENTREGADO" or "RECOGIDO"))return Conflict(new{mensaje="El comprobante está disponible al finalizar la entrega."});
         string E(string? s)=>WebUtility.HtmlEncode(s??"");
         string V(JsonElement el,string key)=>el.TryGetProperty(key,out var v)?E(v.ToString()):"";
+        string Fecha(JsonElement el,string key) {
+            if(!el.TryGetProperty(key,out var value)||!DateTimeOffset.TryParse(value.ToString(),out var date))return "—";
+            return E(date.ToOffset(TimeSpan.FromHours(-6)).ToString("dd/MM/yyyy · hh:mm tt",new System.Globalization.CultureInfo("es-GT")));
+        }
+        string Dinero(JsonElement el,string key) {
+            if(!el.TryGetProperty(key,out var value)||!decimal.TryParse(value.ToString(),System.Globalization.NumberStyles.Any,System.Globalization.CultureInfo.InvariantCulture,out var amount))return "Q 0.00";
+            return E($"Q {amount:N2}");
+        }
         var entrega=json.GetProperty("entregas").EnumerateArray().First(x=>x.GetProperty("estado").GetString() is "ENTREGADA" or "RECOGIDA");
-        var rows=string.Join("",json.GetProperty("productos").EnumerateArray().Select(x=>$"<tr><td>{V(x,"nombreProducto")}</td><td>{V(x,"cantidad")}</td><td>Q{V(x,"subtotal")}</td></tr>"));
-        var html=$$"""
-        <!doctype html><html lang="es"><meta charset="utf-8"><title>Comprobante {{V(p,"numeroPedido")}}</title>
-        <style>body{font:16px system-ui;max-width:760px;margin:48px auto;padding:24px;color:#172033}h1{color:#b45309}table{width:100%;border-collapse:collapse}td,th{padding:12px;text-align:left;border-bottom:1px solid #ddd}small{color:#64748b}</style>
-        <h1>FamKon · Comprobante de entrega</h1><p>Pedido <b>{{V(p,"numeroPedido")}}</b> · {{V(p,"estadoNombre")}}</p>
-        <p>Cliente: {{V(p,"cliente")}}<br>Recibió: {{V(entrega,"nombreReceptor")}}<br>Fecha de recepción: {{V(entrega,"fechaEntrega")}}</p>
-        <p>Destino: {{(p.GetProperty("idModalidadEntrega").GetInt32()==1?E(config["Tienda:Direccion"]??"Campus central"):V(p,"direccionEntrega"))}}</p>
-        <table><thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead><tbody>{{rows}}</tbody></table>
-        <p>Envío: Q{{V(p,"cargoEntrega")}} · <b>Total: Q{{V(p,"total")}}</b></p><p>Pago: {{V(p,"metodoPago")}} · {{V(p,"estadoPago")}}</p>
-        <small>Constancia de recepción del pedido. No sustituye una factura fiscal.</small></html>
+        var rows=string.Join("",json.GetProperty("productos").EnumerateArray().Select(x=>$"<tr><td><strong>{V(x,"nombreProducto")}</strong><small>{V(x,"skuProducto")}</small></td><td class=number>{V(x,"cantidad")}</td><td class=number>{Dinero(x,"subtotal")}</td></tr>"));
+        var recogida=p.GetProperty("idModalidadEntrega").GetInt32()==1;
+        var destino=recogida?E(config["Tienda:Direccion"]??"Campus central"):V(p,"direccionEntrega");
+        var ubicacion=recogida?"Recogida en tienda":E(string.Join(", ",new[]{V(p,"municipio"),V(p,"departamento")}.Where(x=>!string.IsNullOrWhiteSpace(x))));
+        var pago=V(p,"metodoPago").Replace("_"," "); var estadoPago=V(p,"estadoPago").Replace("_"," ");
+        var html=$$$"""
+        <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comprobante {{{V(p,"numeroPedido")}}}</title>
+        <style>
+        *{box-sizing:border-box}body{margin:0;background:#f1f5f9;color:#0f172a;font:15px/1.5 Inter,Segoe UI,system-ui,sans-serif}.page{width:min(860px,calc(100% - 32px));margin:32px auto;background:#fff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;box-shadow:0 18px 50px #0f172a12}.hero{position:relative;padding:34px 42px;background:#0f172a;color:#fff}.hero:after{content:"";position:absolute;inset:auto 0 0;height:5px;background:#f97316}.brand{font-size:28px;font-weight:800;letter-spacing:-.03em}.brand span{color:#fb923c}.eyebrow{margin:4px 0 0;color:#94a3b8;font-size:10px;font-weight:700;letter-spacing:.18em}.hero-grid{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-top:28px}.hero h1{margin:0;font-size:21px}.order{margin:7px 0 0;color:#cbd5e1}.status{display:inline-flex;padding:7px 12px;border-radius:999px;background:#dcfce7;color:#166534;font-size:12px;font-weight:800;text-transform:uppercase}.content{padding:34px 42px}.cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}.card{padding:18px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc}.label{margin:0 0 4px;color:#64748b;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.value{margin:0;font-weight:650}.muted{margin:3px 0 0;color:#64748b;font-size:13px}.section-title{margin:30px 0 12px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}th{padding:11px 14px;background:#f1f5f9;color:#475569;font-size:10px;text-align:left;text-transform:uppercase}td{padding:14px;border-top:1px solid #e2e8f0}td small{display:block;margin-top:2px;color:#94a3b8;font-size:10px}.number{text-align:right}.summary{display:grid;grid-template-columns:1fr 280px;gap:28px;align-items:start;margin-top:22px}.payment{padding:16px;border-radius:12px;background:#fff7ed;color:#9a3412}.totals{display:grid;grid-template-columns:1fr auto;gap:8px 18px}.totals span{color:#64748b}.totals strong{padding-top:12px;border-top:1px solid #cbd5e1;font-size:20px}.total-label{padding-top:16px!important;border-top:1px solid #cbd5e1;color:#0f172a!important;font-weight:800}.footer{display:flex;justify-content:space-between;gap:20px;margin-top:34px;padding-top:18px;border-top:1px solid #e2e8f0;color:#64748b;font-size:11px}.print{position:fixed;right:24px;bottom:24px;border:0;border-radius:12px;background:#f97316;color:#fff;padding:12px 18px;font:700 14px inherit;box-shadow:0 10px 24px #f9731640;cursor:pointer}@media(max-width:620px){.page{width:100%;margin:0;border:0;border-radius:0}.hero,.content{padding:26px 20px}.hero-grid{display:block}.status{margin-top:16px}.cards,.summary{grid-template-columns:1fr}.footer{display:block}.print{right:14px;bottom:14px}}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}html,body{background:#fff!important}.page{width:100%;margin:0;border:0;box-shadow:none}.hero{background:#0f172a!important;color:#fff!important}.hero:after{background:#f97316!important}.brand span{color:#fb923c!important}.eyebrow{color:#94a3b8!important}.order{color:#cbd5e1!important}.status{background:#dcfce7!important;color:#166534!important}.card{background:#f8fafc!important}th{background:#f1f5f9!important}.payment{background:#fff7ed!important;color:#9a3412!important}.print{display:none!important}@page{size:A4;margin:10mm}}
+        </style></head><body><main class="page">
+        <header class="hero"><div class="brand">Fam<span>Kon</span></div><p class="eyebrow">TIENDA EN LÍNEA</p><div class="hero-grid"><div><h1>Comprobante de entrega</h1><p class="order">Pedido <strong>{{{V(p,"numeroPedido")}}}</strong></p></div><span class="status">{{{V(p,"estadoNombre")}}}</span></div></header>
+        <div class="content"><section class="cards"><article class="card"><p class="label">Comprador</p><p class="value">{{{V(p,"cliente")}}}</p><p class="muted">Recibió: {{{V(entrega,"nombreReceptor")}}}</p></article><article class="card"><p class="label">Fecha de recepción</p><p class="value">{{{Fecha(entrega,"fechaEntrega")}}}</p><p class="muted">{{{ubicacion}}}</p></article></section>
+        <section class="card" style="margin-top:14px"><p class="label">Destino</p><p class="value">{{{destino}}}</p>{{{(string.IsNullOrWhiteSpace(V(p,"referenciaEntrega"))?"":$"<p class=muted>Referencia: {V(p,"referenciaEntrega")}</p>")}}}</section>
+        <h2 class="section-title">Detalle de productos</h2><table><thead><tr><th>Producto</th><th class=number>Cantidad</th><th class=number>Subtotal</th></tr></thead><tbody>{{{rows}}}</tbody></table>
+        <section class="summary"><div class="payment"><p class="label" style="color:#c2410c">Información del pago</p><p class="value">{{{pago}}}</p><p class="muted" style="color:#9a3412">{{{estadoPago}}}</p></div><div class="totals"><span>Subtotal</span><b>{{{Dinero(p,"subtotal")}}}</b><span>Entrega</span><b>{{{Dinero(p,"cargoEntrega")}}}</b><span class="total-label">Total</span><strong>{{{Dinero(p,"total")}}}</strong></div></section>
+        <footer class="footer"><span>Constancia de recepción del pedido. No sustituye una factura fiscal.</span><span>FamKon · {{{V(p,"numeroPedido")}}}</span></footer></div></main><button class="print" onclick="window.print()">Imprimir comprobante</button></body></html>
         """;
         return File(Encoding.UTF8.GetBytes(html),"text/html; charset=utf-8",$"comprobante-{id}.html");
     }

@@ -17,7 +17,7 @@ namespace FamKon_store_api.Services
             _secretKey = configuration["Jwt:SecretKey"]!;
             _issuer = configuration["Jwt:Issuer"]!;
             _audience = configuration["Jwt:Audience"]!;
-            _expirationMinutes = configuration.GetValue<int>("Jwt:ExpirationMinutes", 120);
+            _expirationMinutes = configuration.GetValue<int>("Jwt:ExpirationMinutes", 60);
         }
 
         public string GenerateToken(long idUsuario, string nickname, string correo, string roles)
@@ -47,7 +47,8 @@ namespace FamKon_store_api.Services
 
         public ClaimsPrincipal? ValidateToken(string token)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
+            // Sin mapear claims: el token usa "sub" y el endpoint de refresh lo busca así.
+            var tokenHandler = new JwtSecurityTokenHandler { MapInboundClaims = false };
             var key = Encoding.UTF8.GetBytes(_secretKey);
 
             try

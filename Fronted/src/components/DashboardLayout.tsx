@@ -1,5 +1,7 @@
+import { AdminPedidosProvider } from '../context/AdminPedidosContext';
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import SessionWarning from "./SessionWarning";
@@ -7,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import {
   TIMEOUT_INACTIVIDAD_MS,
   AVISO_INACTIVIDAD_MS,
+  ACTIVIDAD_KEY,
 } from "../context/AuthContext";
 
 export default function DashboardLayout() {
@@ -21,7 +24,7 @@ export default function DashboardLayout() {
     Math.ceil(AVISO_INACTIVIDAD_MS / 1000),
   );
 
-  const { usuario, token, registrarActividad, renovarToken, cerrarSesion, refrescarPermisos } = useAuth();
+  const { usuario, token, registrarActividad, renovarToken, cerrarSesion, refrescarPermisos, renovandoSesion } = useAuth();
   const navigate = useNavigate();
 
   // ─── Aviso de sesion: aparece 60s antes del logout automatico ────────────────
@@ -70,35 +73,26 @@ export default function DashboardLayout() {
   useEffect(() => {
     if (!usuario) return;
 
-    let timerAviso: ReturnType<typeof setTimeout> | null = null;
-    let timerExpiro: ReturnType<typeof setTimeout> | null = null;
+    if (!localStorage.getItem(ACTIVIDAD_KEY)) registrarActividad();
 
-    function reset() {
-      if (timerAviso) clearTimeout(timerAviso);
-      if (timerExpiro) clearTimeout(timerExpiro);
-      // Aviso un minuto antes del límite de 2 horas.
-      timerAviso = setTimeout(handleAviso, TIMEOUT_INACTIVIDAD_MS - AVISO_INACTIVIDAD_MS);
-      // Expiración al alcanzar el límite de sesión.
-      timerExpiro = setTimeout(handleExpiro, TIMEOUT_INACTIVIDAD_MS);
+    function comprobarInactividad() {
+      const ultimaActividad = Number(localStorage.getItem(ACTIVIDAD_KEY));
+      const inactivoPor = Date.now() - ultimaActividad;
+      if (inactivoPor >= TIMEOUT_INACTIVIDAD_MS) {
+        handleExpiro();
+      } else if (inactivoPor >= TIMEOUT_INACTIVIDAD_MS - AVISO_INACTIVIDAD_MS) {
+        handleAviso();
+        setSegundosRestantes(Math.ceil((TIMEOUT_INACTIVIDAD_MS - inactivoPor) / 1000));
+      } else {
+        setMostrarAviso(false);
+      }
     }
 
-    reset();
+    comprobarInactividad();
+    const timer = setInterval(comprobarInactividad, 1000);
 
-    return () => {
-      if (timerAviso) clearTimeout(timerAviso);
-      if (timerExpiro) clearTimeout(timerExpiro);
-    };
-  }, [usuario, mostrarAviso, handleAviso, handleExpiro]);
-
-  // ─── Countdown visible mientras el aviso esta activo ─────────────────────────
-  useEffect(() => {
-    if (!mostrarAviso) return;
-    setSegundosRestantes(Math.ceil(AVISO_INACTIVIDAD_MS / 1000));
-    const interval = setInterval(() => {
-      setSegundosRestantes((s) => Math.max(0, s - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [mostrarAviso]);
+    return () => clearInterval(timer);
+  }, [usuario, registrarActividad, handleAviso, handleExpiro]);
 
   const handleExtender = useCallback(async () => {
     const ok = await renovarToken();
@@ -126,11 +120,11 @@ export default function DashboardLayout() {
   if (!usuario || !token) return null;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+<AdminPedidosProvider><div className="flex h-dvh w-full min-w-0 overflow-hidden bg-slate-50">
       {movil ? menuMovil && <><button aria-label="Cerrar menú" className="fixed inset-0 z-30 bg-slate-900/40" onClick={() => setMenuMovil(false)} /><div className="fixed inset-y-0 left-0 z-40 flex"><Sidebar colapsado={false} onToggle={() => setMenuMovil(false)} /></div></> : <Sidebar colapsado={colapsado} onToggle={() => setColapsado(v => !v)} />}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar onToggleSidebar={() => movil ? setMenuMovil(v => !v) : setColapsado(v => !v)} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="min-w-0 flex-1 overflow-y-auto p-3 sm:p-6">
           <Outlet />
         </main>
       </div>
@@ -143,6 +137,15 @@ export default function DashboardLayout() {
           onCerrarSesion={handleCerrarSesion}
         />
       )}
-    </div>
+
+      {renovandoSesion && (
+        <div role="status" aria-live="polite" className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm">
+          <div className="flex items-center gap-3 rounded-2xl bg-white px-5 py-4 shadow-xl">
+            <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+            <p className="text-sm font-semibold text-slate-700">Restableciendo sesión…</p>
+          </div>
+        </div>
+      )}
+    </div></AdminPedidosProvider>
   );
 }

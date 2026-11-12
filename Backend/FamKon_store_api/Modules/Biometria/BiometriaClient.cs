@@ -19,13 +19,12 @@ public sealed class BiometriaClient(HttpClient http, IConfiguration config) : IB
         var r = await EnviarAsync<ResponseSegmentar>("Segmentar", new RequestBiometrico { RostroA = Convert.ToBase64String(imagen) }, ct);
         if (!r.Resultado)
         {
-            // No confundir un fallo del proveedor con una fotografía sin rostro.
             if (r.Error?.Contains("NotActivatedException", StringComparison.OrdinalIgnoreCase) == true)
                 throw new BiometriaException("BIO_NO_ACTIVADO", "El servicio facial tiene desactivado el componente de segmentación. El administrador del servicio debe activarlo para continuar.", 503);
-            throw new BiometriaException("BIO_SEGMENTACION_ERROR", "El servicio facial no pudo procesar la fotografía. Intenta más tarde; si persiste, contacta al administrador.", 502);
+            throw new BiometriaException("BIO_SEGMENTACION_ERROR", $"No se pudo procesar la fotografía: {r.Error}. Intenta de nuevo.", 502);
         }
         if (!r.Segmentado)
-            throw new BiometriaException("BIO_ROSTRO_NO_DETECTADO", "No se pudo segmentar el rostro. Mira a la cámara con buena iluminación.", 422);
+            throw new BiometriaException("BIO_ROSTRO_NO_DETECTADO", "No se detectó un rostro válido en la fotografía. Mira a la cámara con buena iluminación y asegúrate de que tu rostro esté visible.", 422);
         if (string.IsNullOrWhiteSpace(r.Rostro))
             throw new BiometriaException("BIO_RESPUESTA_INVALIDA", "El servicio facial no devolvió la imagen segmentada.", 502);
         try { return ImagenBiometrica.Leer(r.Rostro); }
@@ -38,9 +37,9 @@ public sealed class BiometriaClient(HttpClient http, IConfiguration config) : IB
             RostroA = Convert.ToBase64String(referencia), RostroB = Convert.ToBase64String(captura)
         }, ct);
         if (!r.Resultado)
-            throw new BiometriaException("BIO_VERIFICACION_ERROR", "El servicio no pudo completar la comparación facial.", 502);
+            throw new BiometriaException("BIO_VERIFICACION_ERROR", $"El servicio de reconocimiento facial no pudo completar la verificación: {r.Error}. Intenta de nuevo.", 502);
         if (!r.Coincide)
-            throw new BiometriaException("BIO_NO_COINCIDE", "El rostro no coincide con la fotografía registrada.", 401);
+            throw new BiometriaException("BIO_NO_COINCIDE", "El rostro no coincide con tu fotografía registrada. Asegúrate de estar bajo buena iluminación.", 401);
     }
 
     private async Task<T> EnviarAsync<T>(string operacion, RequestBiometrico payload, CancellationToken ct)
@@ -51,19 +50,22 @@ public sealed class BiometriaClient(HttpClient http, IConfiguration config) : IB
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, baseUrl!.TrimEnd('/') + "/api/Rostro/" + operacion);
-            // El proveedor espera RostroA y RostroB con esta capitalización.
             request.Content = JsonContent.Create(payload, options: Json);
             using var response = await http.SendAsync(request, ct);
             if (!response.IsSuccessStatusCode)
-                throw new BiometriaException("BIO_PROVEEDOR_HTTP", "El servicio facial no está disponible. Intenta de nuevo.", 502);
+            {
+                var contenido = await response.Content.ReadAsStringAsync(ct);
+                throw new BiometriaException("BIO_PROVEEDOR_HTTP", $"El servicio facial respondió con error {response.StatusCode}: {contenido}.", 502);
+            }
             return await response.Content.ReadFromJsonAsync<T>(Json, ct)
                 ?? throw new BiometriaException("BIO_RESPUESTA_INVALIDA", "El servicio facial devolvió una respuesta vacía.", 502);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         { throw new BiometriaException("BIO_TIMEOUT", "El servicio facial tardó demasiado. Intenta de nuevo.", 504); }
+        catch (BiometriaException) { throw; }
         catch (HttpRequestException)
-        { throw new BiometriaException("BIO_CONEXION", "No se pudo conectar con el servicio facial.", 502); }
+        { throw new BiometriaException("BIO_CONEXION", "No se pudo conectar con el servicio de reconocimiento facial. Verifica tu conexión a internet.", 502); }
         catch (JsonException)
-        { throw new BiometriaException("BIO_RESPUESTA_INVALIDA", "El servicio facial devolvió una respuesta inválida.", 502); }
+        { throw new BiometriaException("BIO_RESPUESTA_INVALIDA", "El servicio facial devolvió una respuesta con formato inválido.", 502); }
     }
 }

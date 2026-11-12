@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120">
+  <defs>
+    <linearGradient id="navy" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#082B63"/>
+      <stop offset="1" stop-color="#0C65AD"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1">
+      <stop offset="0" stop-color="#F4BD18"/>
+      <stop offset="1" stop-color="#F8D65C"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#082B63" flood-opacity=".18"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#315A86"/>
+    </marker>
+    <style>
+      .title { font: 700 32px 'Segoe UI', Arial, sans-serif; fill: #082B63; }
+      .subtitle { font: 400 17px 'Segoe UI', Arial, sans-serif; fill: #5B6472; }
+      .section { font: 700 21px 'Segoe UI', Arial, sans-serif; fill: #FFFFFF; }
+      .boxTitle { font: 700 18px 'Segoe UI', Arial, sans-serif; fill: #082B63; }
+      .boxText { font: 400 14px 'Segoe UI', Arial, sans-serif; fill: #26364D; }
+      .small { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #5B6472; }
+      .actor { font: 700 15px 'Segoe UI', Arial, sans-serif; fill: #082B63; text-anchor: middle; }
+      .line { stroke: #315A86; stroke-width: 2.4; fill: none; marker-end: url(#arrow); }
+      .dashed { stroke: #7B8EA6; stroke-width: 2; fill: none; stroke-dasharray: 8 7; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1120" fill="#F7F9FC"/>
+  <rect width="1600" height="84" fill="url(#navy)"/>
+  <rect y="80" width="1600" height="4" fill="url(#gold)"/>
+  <text x="800" y="43" text-anchor="middle" style="font:700 32px 'Segoe UI',Arial,sans-serif;fill:#fff">FAMKON STORE — ARQUITECTURA Y PROCESO</text>
+  <text x="800" y="68" text-anchor="middle" style="font:400 14px 'Segoe UI',Arial,sans-serif;fill:#E8F2FF">Usuarios · Desarrollo · Aplicación · Datos · Servicios externos</text>
+
+  <!-- Actors -->
+  <rect x="35" y="118" width="215" height="455" rx="16" fill="#EAF2FB" stroke="#B6CCE5" filter="url(#shadow)"/>
+  <rect x="35" y="118" width="215" height="46" rx="16" fill="url(#navy)"/>
+  <text x="142" y="148" text-anchor="middle" class="section">ACTORES</text>
+  <g transform="translate(142 207)">
+    <circle r="22" fill="#F4BD18"/><circle cy="-8" r="7" fill="#082B63"/><path d="M-13 14 Q0 -3 13 14" fill="none" stroke="#082B63" stroke-width="6" stroke-linecap="round"/>
+    <text y="51" class="actor">Comprador</text><text y="70" class="small" text-anchor="middle">catálogo, carrito, pago</text>
+  </g>
+  <g transform="translate(142 302)">
+    <circle r="22" fill="#F4BD18"/><circle cy="-8" r="7" fill="#082B63"/><path d="M-13 14 Q0 -3 13 14" fill="none" stroke="#082B63" stroke-width="6" stroke-linecap="round"/>
+    <text y="51" class="actor">Repartidor</text><text y="70" class="small" text-anchor="middle">entregas y evidencias</text>
+  </g>
+  <g transform="translate(142 397)">
+    <circle r="22" fill="#F4BD18"/><circle cy="-8" r="7" fill="#082B63"/><path d="M-13 14 Q0 -3 13 14" fill="none" stroke="#082B63" stroke-width="6" stroke-linecap="round"/>
+    <text y="51" class="actor">Producción</text><text y="70" class="small" text-anchor="middle">preparación de diseños</text>
+  </g>
+  <g transform="translate(142 492)">
+    <circle r="22" fill="#F4BD18"/><circle cy="-8" r="7" fill="#082B63"/><path d="M-13 14 Q0 -3 13 14" fill="none" stroke="#082B63" stroke-width="6" stroke-linecap="round"/>
+    <text y="51" class="actor">Supervisor / Admin</text><text y="70" class="small" text-anchor="middle">gestión y seguimiento</text>
+  </g>
+
+  <!-- Development -->
+  <rect x="35" y="620" width="215" height="355" rx="16" fill="#FFF8DF" stroke="#E6C34C" filter="url(#shadow)"/>
+  <rect x="35" y="620" width="215" height="46" rx="16" fill="#B97800"/>
+  <text x="142" y="650" text-anchor="middle" class="section">DESARROLLO</text>
+  <g transform="translate(58 705)">
+    <rect width="169" height="66" rx="10" fill="#FFFFFF" stroke="#E6C34C"/>
+    <text x="84" y="27" text-anchor="middle" class="boxTitle">Equipo desarrollador</text>
+    <text x="84" y="48" text-anchor="middle" class="boxText">análisis · código · pruebas</text>
+  </g>
+  <g transform="translate(58 790)">
+    <rect width="169" height="66" rx="10" fill="#FFFFFF" stroke="#E6C34C"/>
+    <text x="84" y="27" text-anchor="middle" class="boxTitle">GitHub</text>
+    <text x="84" y="48" text-anchor="middle" class="boxText">versionamiento y entregas</text>
+  </g>
+  <g transform="translate(58 875)">
+    <rect width="169" height="66" rx="10" fill="#FFFFFF" stroke="#E6C34C"/>
+    <text x="84" y="27" text-anchor="middle" class="boxTitle">Documentación</text>
+    <text x="84" y="48" text-anchor="middle" class="boxText">manuales y diagramas</text>
+  </g>
+
+  <!-- Main application layers -->
+  <rect x="285" y="118" width="985" height="455" rx="16" fill="#FFFFFF" stroke="#B6CCE5" filter="url(#shadow)"/>
+  <rect x="285" y="118" width="985" height="46" rx="16" fill="url(#navy)"/>
+  <text x="777" y="148" text-anchor="middle" class="section">FLUJO DE LA APLICACIÓN EN PRODUCCIÓN</text>
+
+  <g transform="translate(315 211)">
+    <rect width="235" height="178" rx="12" fill="#EAF2FB" stroke="#8FB5D9"/>
+    <text x="117" y="34" text-anchor="middle" class="boxTitle">1. Frontend</text>
+    <text x="20" y="67" class="boxText">• React 19 + TypeScript</text>
+    <text x="20" y="92" class="boxText">• Vite + Bun</text>
+    <text x="20" y="117" class="boxText">• Tailwind CSS</text>
+    <text x="20" y="142" class="boxText">• rutas y permisos</text>
+    <text x="20" y="167" class="small">/catalogo · /carrito · /admin</text>
+  </g>
+  <g transform="translate(590 211)">
+    <rect width="235" height="178" rx="12" fill="#EAF2FB" stroke="#8FB5D9"/>
+    <text x="117" y="34" text-anchor="middle" class="boxTitle">2. Nginx / HTTPS</text>
+    <text x="20" y="67" class="boxText">• sirve archivos estáticos</text>
+    <text x="20" y="92" class="boxText">• proxy inverso /api</text>
+    <text x="20" y="117" class="boxText">• TLS y compresión</text>
+    <text x="20" y="142" class="boxText">• límites anti-DDoS</text>
+    <text x="20" y="167" class="small">famkon.site → puerto 5299</text>
+  </g>
+  <g transform="translate(865 211)">
+    <rect width="235" height="178" rx="12" fill="#EAF2FB" stroke="#8FB5D9"/>
+    <text x="117" y="34" text-anchor="middle" class="boxTitle">3. Backend API</text>
+    <text x="20" y="67" class="boxText">• ASP.NET Core 8 / C#</text>
+    <text x="20" y="92" class="boxText">• controladores y servicios</text>
+    <text x="20" y="117" class="boxText">• JWT y autorización</text>
+    <text x="20" y="142" class="boxText">• validaciones y rate limit</text>
+    <text x="20" y="167" class="small">REST API · Swagger</text>
+  </g>
+  <g transform="translate(590 429)">
+    <rect width="510" height="105" rx="12" fill="#FFF8DF" stroke="#E6C34C"/>
+    <text x="255" y="33" text-anchor="middle" class="boxTitle">4. Servicios de negocio</text>
+    <text x="255" y="61" text-anchor="middle" class="boxText">Catálogo · carrito · compras · pagos · pedidos · entregas · biometría</text>
+    <text x="255" y="85" text-anchor="middle" class="small">La lógica transaccional se coordina con paquetes PL/SQL</text>
+  </g>
+
+  <path d="M250 320 H315" class="line"/><path d="M550 300 H590" class="line"/><path d="M825 300 H865" class="line"/>
+  <path d="M982 389 V429" class="line"/>
+  <path d="M707 389 V429" class="line"/>
+  <path d="M1100 482 H1245" class="line"/>
+
+  <!-- External services and DB -->
+  <rect x="1290" y="118" width="275" height="455" rx="16" fill="#EEF8F5" stroke="#9AD4C3" filter="url(#shadow)"/>
+  <rect x="1290" y="118" width="275" height="46" rx="16" fill="#16826B"/>
+  <text x="1427" y="148" text-anchor="middle" class="section">DATOS Y SERVICIOS</text>
+  <g transform="translate(1320 205)">
+    <rect width="215" height="102" rx="11" fill="#FFFFFF" stroke="#9AD4C3"/>
+    <text x="107" y="31" text-anchor="middle" class="boxTitle">Oracle Database 21c</text>
+    <text x="18" y="59" class="boxText">tablas · relaciones · BLOB</text>
+    <text x="18" y="82" class="boxText">paquetes PL/SQL · triggers</text>
+  </g>
+  <g transform="translate(1320 337)">
+    <rect width="215" height="102" rx="11" fill="#FFFFFF" stroke="#9AD4C3"/>
+    <text x="107" y="31" text-anchor="middle" class="boxTitle">Servicios externos</text>
+    <text x="18" y="59" class="boxText">pagos · reCAPTCHA</text>
+    <text x="18" y="82" class="boxText">correo · WhatsApp · facial</text>
+  </g>
+  <g transform="translate(1320 469)">
+    <rect width="215" height="72" rx="11" fill="#FFFFFF" stroke="#9AD4C3"/>
+    <text x="107" y="30" text-anchor="middle" class="boxTitle">Archivos y auditoría</text>
+    <text x="107" y="53" text-anchor="middle" class="boxText">imágenes · bitácora · PDF</text>
+  </g>
+  <path d="M1100 280 H1320" class="line"/><path d="M1100 380 H1320" class="dashed"/>
+
+  <!-- Process -->
+  <rect x="285" y="620" width="985" height="355" rx="16" fill="#FFFFFF" stroke="#B6CCE5" filter="url(#shadow)"/>
+  <rect x="285" y="620" width="985" height="46" rx="16" fill="#0C65AD"/>
+  <text x="777" y="650" text-anchor="middle" class="section">PROCESO PRINCIPAL DEL PROGRAMA</text>
+  <g transform="translate(320 710)">
+    <rect width="170" height="78" rx="12" fill="#EAF2FB" stroke="#8FB5D9"/><text x="85" y="32" text-anchor="middle" class="boxTitle">1. Explorar</text><text x="85" y="57" text-anchor="middle" class="boxText">catálogo público</text>
+  </g>
+  <g transform="translate(540 710)">
+    <rect width="170" height="78" rx="12" fill="#EAF2FB" stroke="#8FB5D9"/><text x="85" y="32" text-anchor="middle" class="boxTitle">2. Personalizar</text><text x="85" y="57" text-anchor="middle" class="boxText">texto, imagen, NFC</text>
+  </g>
+  <g transform="translate(760 710)">
+    <rect width="170" height="78" rx="12" fill="#FFF8DF" stroke="#E6C34C"/><text x="85" y="32" text-anchor="middle" class="boxTitle">3. Comprar</text><text x="85" y="57" text-anchor="middle" class="boxText">carrito y pago</text>
+  </g>
+  <g transform="translate(980 710)">
+    <rect width="170" height="78" rx="12" fill="#FFF8DF" stroke="#E6C34C"/><text x="85" y="32" text-anchor="middle" class="boxTitle">4. Preparar</text><text x="85" y="57" text-anchor="middle" class="boxText">producción</text>
+  </g>
+  <g transform="translate(540 850)">
+    <rect width="170" height="78" rx="12" fill="#EEF8F5" stroke="#9AD4C3"/><text x="85" y="32" text-anchor="middle" class="boxTitle">5. Entregar</text><text x="85" y="57" text-anchor="middle" class="boxText">repartidor / área</text>
+  </g>
+  <g transform="translate(760 850)">
+    <rect width="170" height="78" rx="12" fill="#EEF8F5" stroke="#9AD4C3"/><text x="85" y="32" text-anchor="middle" class="boxTitle">6. Actualizar</text><text x="85" y="57" text-anchor="middle" class="boxText">tracking y avisos</text>
+  </g>
+  <g transform="translate(980 850)">
+    <rect width="170" height="78" rx="12" fill="#EEF8F5" stroke="#9AD4C3"/><text x="85" y="32" text-anchor="middle" class="boxTitle">7. Finalizar</text><text x="85" y="57" text-anchor="middle" class="boxText">entregado / recogido</text>
+  </g>
+  <path d="M490 749 H540" class="line"/><path d="M710 749 H760" class="line"/><path d="M930 749 H980" class="line"/><path d="M1065 788 V850" class="line"/><path d="M760 889 H710" class="line"/><path d="M930 889 H980" class="line"/>
+
+  <!-- Class diagram -->
+  <rect x="35" y="1005" width="1530" height="85" rx="14" fill="#082B63"/>
+  <text x="800" y="1035" text-anchor="middle" style="font:700 20px 'Segoe UI',Arial,sans-serif;fill:#fff">CLASES PRINCIPALES</text>
+  <text x="800" y="1063" text-anchor="middle" style="font:400 14px 'Segoe UI',Arial,sans-serif;fill:#E8F2FF">Usuario → Rol → Permiso · Usuario → Carrito → Personalización · Usuario → Pedido → Pago / Entrega</text>
+</svg>
